@@ -122,20 +122,20 @@ function mostrarCliente(data) {
       <div class="cliente-info">
         <div class="stat">
           <div class="stat-label">Puntos</div>
-          <div class="stat-value">${data.puntos_actuales}</div>
+          <div class="stat-value" id="puntos-display">${data.puntos_actuales}</div>
         </div>
         <div class="stat">
           <div class="stat-label">Visitas</div>
-          <div class="stat-value">${data.total_visitas}</div>
+          <div class="stat-value" id="visitas-display">${data.total_visitas}</div>
         </div>
       </div>
       <div class="progress-wrap">
         <div class="progress-label">
           <span>Progreso al premio</span>
-          <span>${data.puntos_actuales % META_PUNTOS}/${META_PUNTOS}</span>
+          <span id="progress-label">${data.puntos_actuales % META_PUNTOS}/${META_PUNTOS}</span>
         </div>
         <div class="progress-track">
-          <div class="progress-fill" style="width:${pct}%"></div>
+          <div class="progress-fill" id="progress-fill" style="width:${pct}%"></div>
         </div>
       </div>
       <button class="btn-registrar" id="registrar">+ Registrar visita</button>
@@ -161,14 +161,18 @@ function mostrarCliente(data) {
     data.puntos_actuales = nuevosPuntos
     data.total_visitas = nuevasVisitas
 
+    const nuevoPct = Math.min(Math.round(((nuevosPuntos % META_PUNTOS) / META_PUNTOS) * 100), 100)
+    document.getElementById('puntos-display').textContent = nuevosPuntos
+    document.getElementById('visitas-display').textContent = nuevasVisitas
+    document.getElementById('progress-label').textContent = `${nuevosPuntos % META_PUNTOS}/${META_PUNTOS}`
+    document.getElementById('progress-fill').style.width = nuevoPct + '%'
+
     const msg = document.getElementById('msg')
-    if (nuevosPuntos % META_PUNTOS === 0) {
+    if (nuevosPuntos > 0 && nuevosPuntos % META_PUNTOS === 0) {
       msg.innerHTML = `<div class="premio-alert">🎉 ¡Premio desbloqueado! Entrega el café gratis.</div>`
     } else {
       msg.innerHTML = `<div class="exito">✓ Visita registrada. Faltan ${META_PUNTOS - (nuevosPuntos % META_PUNTOS)} para el premio.</div>`
     }
-
-    mostrarCliente(data)
   })
 }
 
@@ -302,7 +306,6 @@ export async function paginaCliente(telefono) {
 
   const puntos = data.puntos_actuales
   const pct = puntos === 0 ? 0 : Math.min(Math.round(((puntos % META_PUNTOS) / META_PUNTOS) * 100), 100)
-  const faltan = META_PUNTOS - (puntos % META_PUNTOS)
 
   let mensajeProgreso
   if (puntos === 0) {
@@ -310,7 +313,7 @@ export async function paginaCliente(telefono) {
   } else if (puntos > 0 && puntos % META_PUNTOS === 0) {
     mensajeProgreso = `🎉 ¡Tienes un premio disponible!`
   } else {
-    mensajeProgreso = `Te faltan <strong>${faltan} visitas</strong> para tu próximo premio`
+    mensajeProgreso = `Te faltan <strong>${META_PUNTOS - (puntos % META_PUNTOS)} visitas</strong> para tu próximo premio`
   }
 
   return `
