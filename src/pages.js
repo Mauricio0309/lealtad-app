@@ -2,7 +2,7 @@ import QRCode from 'qrcode'
 import { supabase } from './supabase.js'
 import { navigate } from './router.js'
 
-const META_PUNTOS = 10
+const META_VISITAS = 10
 
 // ─── PÁGINA LOGIN ─────────────────────────────────────────
 export function paginaLogin() {
@@ -49,7 +49,7 @@ export function initLogin() {
       return
     }
 
-    window.location.hash = '#/cajero'
+    window.location.hash = '#/dueno'
     window.dispatchEvent(new Event('hashchange'))
   })
 }
@@ -64,7 +64,10 @@ export function paginaCajero() {
             <h1>Panel Cajero</h1>
             <p>Registra visitas de tus clientes</p>
           </div>
-          <button id="btn-logout" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px">Salir</button>
+          <div style="display:flex;gap:8px">
+            <button id="btn-ir-dueno" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px">← Mi Panel</button>
+            <button id="btn-logout" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px">Salir</button>
+          </div>
         </div>
       </div>
       <div class="search-box">
@@ -77,6 +80,10 @@ export function paginaCajero() {
 }
 
 export function initCajero() {
+  document.getElementById('btn-ir-dueno').addEventListener('click', () => {
+    navigate('dueno')
+  })
+
   document.getElementById('btn-logout').addEventListener('click', async () => {
     const { logout } = await import('./auth.js')
     logout()
@@ -112,8 +119,16 @@ export function initCajero() {
   })
 }
 
-function mostrarCliente(data) {
-  const pct = Math.min(Math.round(((data.puntos_actuales % META_PUNTOS) / META_PUNTOS) * 100), 100)
+async function mostrarCliente(data) {
+  const { data: negocioData } = await supabase
+    .from('negocios')
+    .select('meta_puntos')
+    .eq('id', data.negocio_id)
+    .single()
+
+  const meta = negocioData?.meta_puntos || META_VISITAS
+  const visitasEnCiclo = data.puntos_actuales % meta
+  const pct = Math.min(Math.round((visitasEnCiclo / meta) * 100), 100)
   const resultado = document.getElementById('resultado')
 
   resultado.innerHTML = `
@@ -121,18 +136,18 @@ function mostrarCliente(data) {
       <h2>${data.nombre || 'Cliente'}</h2>
       <div class="cliente-info">
         <div class="stat">
-          <div class="stat-label">Puntos</div>
-          <div class="stat-value" id="puntos-display">${data.puntos_actuales}</div>
+          <div class="stat-label">Visitas totales</div>
+          <div class="stat-value" id="visitas-display">${data.total_visitas}</div>
         </div>
         <div class="stat">
-          <div class="stat-label">Visitas</div>
-          <div class="stat-value" id="visitas-display">${data.total_visitas}</div>
+          <div class="stat-label">Para el premio</div>
+          <div class="stat-value" id="ciclo-display">${visitasEnCiclo}/${meta}</div>
         </div>
       </div>
       <div class="progress-wrap">
         <div class="progress-label">
           <span>Progreso al premio</span>
-          <span id="progress-label">${data.puntos_actuales % META_PUNTOS}/${META_PUNTOS}</span>
+          <span id="progress-label">${visitasEnCiclo}/${meta}</span>
         </div>
         <div class="progress-track">
           <div class="progress-fill" id="progress-fill" style="width:${pct}%"></div>
@@ -150,33 +165,35 @@ function mostrarCliente(data) {
       puntos_sumados: 1
     })
 
-    const nuevosPuntos = data.puntos_actuales + 1
     const nuevasVisitas = data.total_visitas + 1
+    const nuevosActuales = data.puntos_actuales + 1
 
     await supabase.from('clientes').update({
-      puntos_actuales: nuevosPuntos,
+      puntos_actuales: nuevosActuales,
       total_visitas: nuevasVisitas
     }).eq('id', data.id)
 
-    data.puntos_actuales = nuevosPuntos
+    data.puntos_actuales = nuevosActuales
     data.total_visitas = nuevasVisitas
 
-    const nuevoPct = Math.min(Math.round(((nuevosPuntos % META_PUNTOS) / META_PUNTOS) * 100), 100)
-    document.getElementById('puntos-display').textContent = nuevosPuntos
+    const nuevoCiclo = nuevosActuales % meta
+    const nuevoPct = Math.min(Math.round((nuevoCiclo / meta) * 100), 100)
+
     document.getElementById('visitas-display').textContent = nuevasVisitas
-    document.getElementById('progress-label').textContent = `${nuevosPuntos % META_PUNTOS}/${META_PUNTOS}`
+    document.getElementById('ciclo-display').textContent = `${nuevoCiclo}/${meta}`
+    document.getElementById('progress-label').textContent = `${nuevoCiclo}/${meta}`
     document.getElementById('progress-fill').style.width = nuevoPct + '%'
 
     const msg = document.getElementById('msg')
-    if (nuevosPuntos > 0 && nuevosPuntos % META_PUNTOS === 0) {
-      msg.innerHTML = `<div class="premio-alert">🎉 ¡Premio desbloqueado! Entrega el café gratis.</div>`
+    if (nuevosActuales > 0 && nuevosActuales % meta === 0) {
+      msg.innerHTML = `<div class="premio-alert">🎉 ¡Premio desbloqueado! Entrega el premio al cliente.</div>`
     } else {
-      msg.innerHTML = `<div class="exito">✓ Visita registrada. Faltan ${META_PUNTOS - (nuevosPuntos % META_PUNTOS)} para el premio.</div>`
+      msg.innerHTML = `<div class="exito">✓ Visita registrada. Faltan ${meta - nuevoCiclo} visitas para el premio.</div>`
     }
   })
 }
 
-// ─── PÁGINA REGISTRO ─────────────────────────────────────
+// ─── PÁGINA REGISTRO CAJERO ──────────────────────────────
 export function paginaRegistro(telefono = '') {
   return `
     <div class="container">
@@ -210,10 +227,8 @@ export function initRegistro() {
       return
     }
 
-    const { data: negocio } = await supabase
-      .from('negocios')
-      .select('id')
-      .single()
+    const { getNegocioActual } = await import('./auth.js')
+    const negocio = getNegocioActual()
 
     const { error } = await supabase.from('clientes').insert({
       nombre,
@@ -289,7 +304,7 @@ export async function paginaAdmin() {
 export async function paginaCliente(telefono) {
   const { data } = await supabase
     .from('clientes')
-    .select('*, negocios(nombre)')
+    .select('*, negocios(nombre, meta_puntos)')
     .eq('telefono', telefono)
     .single()
 
@@ -304,16 +319,17 @@ export async function paginaCliente(telefono) {
     `
   }
 
-  const puntos = data.puntos_actuales
-  const pct = puntos === 0 ? 0 : Math.min(Math.round(((puntos % META_PUNTOS) / META_PUNTOS) * 100), 100)
+  const meta = data.negocios?.meta_puntos || META_VISITAS
+  const visitasEnCiclo = data.puntos_actuales % meta
+  const pct = data.puntos_actuales === 0 ? 0 : Math.min(Math.round((visitasEnCiclo / meta) * 100), 100)
 
   let mensajeProgreso
-  if (puntos === 0) {
-    mensajeProgreso = `Empieza a visitar para acumular puntos`
-  } else if (puntos > 0 && puntos % META_PUNTOS === 0) {
+  if (data.puntos_actuales === 0) {
+    mensajeProgreso = `Empieza a visitar para acumular visitas`
+  } else if (data.puntos_actuales > 0 && data.puntos_actuales % meta === 0) {
     mensajeProgreso = `🎉 ¡Tienes un premio disponible!`
   } else {
-    mensajeProgreso = `Te faltan <strong>${META_PUNTOS - (puntos % META_PUNTOS)} visitas</strong> para tu próximo premio`
+    mensajeProgreso = `Te faltan <strong>${meta - visitasEnCiclo} visitas</strong> para tu próximo premio`
   }
 
   return `
@@ -325,18 +341,18 @@ export async function paginaCliente(telefono) {
       <div class="cliente-card">
         <div class="cliente-info">
           <div class="stat">
-            <div class="stat-label">Puntos</div>
-            <div class="stat-value">${puntos}</div>
+            <div class="stat-label">Visitas totales</div>
+            <div class="stat-value">${data.total_visitas}</div>
           </div>
           <div class="stat">
-            <div class="stat-label">Visitas</div>
-            <div class="stat-value">${data.total_visitas}</div>
+            <div class="stat-label">Para el premio</div>
+            <div class="stat-value">${visitasEnCiclo}/${meta}</div>
           </div>
         </div>
         <div class="progress-wrap">
           <div class="progress-label">
             <span>Progreso al premio</span>
-            <span>${puntos % META_PUNTOS}/${META_PUNTOS}</span>
+            <span>${visitasEnCiclo}/${meta}</span>
           </div>
           <div class="progress-track">
             <div class="progress-fill" style="width:${pct}%"></div>
@@ -348,7 +364,7 @@ export async function paginaCliente(telefono) {
         <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px">Tu código QR</h3>
         <div style="text-align:center">
           <div id="qrcode" style="display:inline-block"></div>
-          <p style="font-size:12px;color:#666;margin-top:8px">Muéstralo al cajero para sumar puntos</p>
+          <p style="font-size:12px;color:#666;margin-top:8px">Muéstralo al cajero para sumar visitas</p>
         </div>
       </div>
     </div>
@@ -394,7 +410,7 @@ export async function paginaQRNegocio(negocioId) {
         <p>Programa de lealtad</p>
       </div>
       <div class="cliente-card" style="text-align:center">
-        <p style="font-size:15px;margin-bottom:16px">Escribe tu número para ver tus puntos o registrarte</p>
+        <p style="font-size:15px;margin-bottom:16px">Escribe tu número para ver tus visitas o registrarte</p>
         <div class="search-box" style="margin-bottom:0">
           <input type="tel" id="tel-negocio" placeholder="Tu número de teléfono" />
           <button id="btn-entrar">Entrar</button>
@@ -434,7 +450,7 @@ export function paginaRegistroCliente(negocioId, telefono) {
     <div class="container">
       <div class="header">
         <h1>Bienvenido</h1>
-        <p>Regístrate para acumular puntos</p>
+        <p>Regístrate para acumular visitas</p>
       </div>
       <div class="cliente-card">
         <div class="form-group">
@@ -474,5 +490,228 @@ export function initRegistroCliente(negocioId, telefono) {
     }
 
     navigate('cliente', telefono)
+  })
+}
+
+// ─── PANEL DEL DUEÑO ──────────────────────────────────────
+export async function paginaDueno() {
+  const { getNegocioActual } = await import('./auth.js')
+  const negocio = getNegocioActual()
+  if (!negocio) {
+    window.location.hash = '#/login'
+    window.dispatchEvent(new Event('hashchange'))
+    return '<div></div>'
+  }
+
+  const { data: negocioData } = await supabase
+    .from('negocios')
+    .select('*')
+    .eq('id', negocio.id)
+    .single()
+
+  const metaVisitas = negocioData?.meta_puntos || 10
+
+  const { data: clientes } = await supabase
+    .from('clientes')
+    .select('*')
+    .eq('negocio_id', negocio.id)
+
+  const { data: visitas } = await supabase
+    .from('visitas')
+    .select('*')
+    .eq('negocio_id', negocio.id)
+
+  const { data: premios } = await supabase
+    .from('premios')
+    .select('*')
+    .eq('negocio_id', negocio.id)
+
+  const hoy = new Date().toISOString().split('T')[0]
+  const visitasHoy = (visitas || []).filter(v => v.fecha && v.fecha.startsWith(hoy)).length
+
+  const clientesOrdenados = [...(clientes || [])]
+    .sort((a, b) => b.total_visitas - a.total_visitas)
+    .slice(0, 5)
+
+  const filasClientes = clientesOrdenados.map(c => `
+    <div class="negocio-row">
+      <div>
+        <div class="negocio-nombre">${c.nombre}</div>
+        <div class="negocio-meta">${c.telefono}</div>
+      </div>
+      <div class="negocio-stats">
+        <span>${c.total_visitas} visitas</span>
+      </div>
+    </div>
+  `).join('')
+
+  const filasPremios = (premios || []).map(p => `
+    <div class="negocio-row">
+      <div>
+        <div class="negocio-nombre">${p.nombre}</div>
+        <div class="negocio-meta">Se gana a las ${p.puntos_requeridos} visitas</div>
+      </div>
+      <div class="negocio-stats">
+        <span class="badge ${p.activo ? 'activo' : 'inactivo'}">${p.activo ? 'Activo' : 'Inactivo'}</span>
+        <button class="btn-toggle-premio" data-id="${p.id}" data-activo="${p.activo}"
+          style="background:#f0f4f8;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px">
+          ${p.activo ? 'Desactivar' : 'Activar'}
+        </button>
+      </div>
+    </div>
+  `).join('')
+
+  return `
+    <div class="container">
+      <div class="header">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <h1>${negocioData?.nombre || negocio.nombre}</h1>
+            <p>Panel del dueño</p>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button id="btn-ir-cajero" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px">🧾 Cajero</button>
+            <button id="btn-logout-dueno" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px">Salir</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="cliente-card">
+        <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px">Resumen</h3>
+        <div class="admin-stats">
+          <div class="stat">
+            <div class="stat-label">Clientes</div>
+            <div class="stat-value">${(clientes || []).length}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Visitas hoy</div>
+            <div class="stat-value">${visitasHoy}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Total visitas</div>
+            <div class="stat-value">${(visitas || []).length}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cliente-card" style="margin-top:12px">
+        <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px">Visitas necesarias para ganar un premio</h3>
+        <div style="display:flex;align-items:center;gap:12px">
+          <input type="number" id="meta-visitas-input" value="${metaVisitas}" min="1" max="100"
+            style="width:80px;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:18px;text-align:center" />
+          <span style="color:#666;font-size:14px">visitas para ganar el premio</span>
+        </div>
+        <button id="btn-guardar-meta" class="btn-registrar" style="margin-top:12px;max-width:200px">Guardar</button>
+        <div id="msg-meta"></div>
+      </div>
+
+      <div class="cliente-card" style="margin-top:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em">Premios</h3>
+          <button id="btn-nuevo-premio" style="background:#667eea;color:white;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px">+ Nuevo premio</button>
+        </div>
+
+        <div id="form-premio" style="display:none;background:#f8fafc;padding:16px;border-radius:10px;margin-bottom:12px">
+          <div class="form-group">
+            <label>Nombre del premio</label>
+            <input type="text" id="nombre-premio" placeholder="Ej: Café gratis, Descuento 20%..." />
+          </div>
+          <div class="form-group">
+            <label>¿A cuántas visitas se gana?</label>
+            <input type="number" id="visitas-premio" placeholder="Ej: 10" min="1" />
+          </div>
+          <button id="btn-guardar-premio" class="btn-registrar" style="margin-top:8px">Guardar premio</button>
+          <div id="msg-premio"></div>
+        </div>
+
+        <div id="lista-premios">
+          ${filasPremios || '<p style="color:#666;text-align:center;font-size:14px">No hay premios configurados aún</p>'}
+        </div>
+      </div>
+
+      <div class="cliente-card" style="margin-top:12px;margin-bottom:24px">
+        <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px">Clientes más frecuentes</h3>
+        ${filasClientes || '<p style="color:#666;text-align:center;font-size:14px">Aún no hay clientes registrados</p>'}
+      </div>
+    </div>
+  `
+}
+
+export function initDueno(negocioId) {
+  document.getElementById('btn-ir-cajero')?.addEventListener('click', () => {
+    navigate('cajero')
+  })
+
+  document.getElementById('btn-logout-dueno')?.addEventListener('click', async () => {
+    const { logout } = await import('./auth.js')
+    logout()
+  })
+
+  document.getElementById('btn-guardar-meta')?.addEventListener('click', async () => {
+    const valor = parseInt(document.getElementById('meta-visitas-input').value)
+    const msg = document.getElementById('msg-meta')
+    if (!valor || valor < 1) {
+      msg.innerHTML = `<p class="error">Número inválido</p>`
+      return
+    }
+    const { error } = await supabase
+      .from('negocios')
+      .update({ meta_puntos: valor })
+      .eq('id', negocioId)
+
+    if (error) {
+      msg.innerHTML = `<p class="error">Error al guardar</p>`
+    } else {
+      msg.innerHTML = `<div class="exito">✓ Guardado correctamente</div>`
+      const { getNegocioActual } = await import('./auth.js')
+      const negocio = getNegocioActual()
+      if (negocio) {
+        negocio.meta_puntos = valor
+        localStorage.setItem('negocio', JSON.stringify(negocio))
+      }
+    }
+  })
+
+  document.getElementById('btn-nuevo-premio')?.addEventListener('click', () => {
+    const form = document.getElementById('form-premio')
+    form.style.display = form.style.display === 'none' ? 'block' : 'none'
+  })
+
+  document.getElementById('btn-guardar-premio')?.addEventListener('click', async () => {
+    const nombre = document.getElementById('nombre-premio').value.trim()
+    const visitas = parseInt(document.getElementById('visitas-premio').value)
+    const msg = document.getElementById('msg-premio')
+
+    if (!nombre || !visitas || visitas < 1) {
+      msg.innerHTML = `<p class="error">Llena todos los campos correctamente</p>`
+      return
+    }
+
+    const { error } = await supabase.from('premios').insert({
+      negocio_id: negocioId,
+      nombre,
+      puntos_requeridos: visitas,
+      activo: true
+    })
+
+    if (error) {
+      msg.innerHTML = `<p class="error">Error al guardar el premio</p>`
+      return
+    }
+
+    msg.innerHTML = `<div class="exito">✓ Premio creado</div>`
+    setTimeout(() => navigate('dueno'), 1000)
+  })
+
+  document.querySelectorAll('.btn-toggle-premio').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id
+      const activoActual = btn.dataset.activo === 'true'
+      const { error } = await supabase
+        .from('premios')
+        .update({ activo: !activoActual })
+        .eq('id', id)
+      if (!error) navigate('dueno')
+    })
   })
 }

@@ -7,7 +7,8 @@ export function getPage() {
   if (hash === '#/admin') return 'admin'
   if (hash === '#/cajero') return 'cajero'
   if (hash === '#/login') return 'login'
-  return 'cajero'
+  if (hash === '#/dueno') return 'dueno'
+  return 'login'
 }
 
 export function navigate(page, param = '') {

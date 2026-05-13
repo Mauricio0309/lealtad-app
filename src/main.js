@@ -1,7 +1,7 @@
 import './style.css'
 import { getPage } from './router.js'
-import { isLoggedIn } from './auth.js'
-import { paginaCajero, initCajero, paginaRegistro, initRegistro, paginaAdmin, paginaCliente, initCliente, paginaLogin, initLogin, paginaQRNegocio, initQRNegocio, paginaRegistroCliente, initRegistroCliente } from './pages.js'
+import { isLoggedIn, getNegocioActual } from './auth.js'
+import { paginaCajero, initCajero, paginaRegistro, initRegistro, paginaAdmin, paginaCliente, initCliente, paginaLogin, initLogin, paginaQRNegocio, initQRNegocio, paginaRegistroCliente, initRegistroCliente, paginaDueno, initDueno } from './pages.js'
 
 async function render() {
   const page = getPage()
@@ -49,7 +49,15 @@ async function render() {
     return
   }
 
-  if (page === 'cajero' || page === '') {
+  if (page === 'dueno') {
+    app.innerHTML = '<div class="container"><p style="text-align:center;padding:40px;color:#666">Cargando...</p></div>'
+    const negocio = getNegocioActual()
+    app.innerHTML = await paginaDueno()
+    initDueno(negocio.id)
+    return
+  }
+
+  if (page === 'cajero') {
     app.innerHTML = paginaCajero()
     initCajero()
   } else if (page === 'registro') {
