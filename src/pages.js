@@ -356,3 +356,111 @@ export function initCliente(telefono) {
     )
   }
 }
+// ─── PÁGINA QR DEL NEGOCIO ────────────────────────────────
+export async function paginaQRNegocio(negocioId) {
+  const { data: negocio } = await supabase
+    .from('negocios')
+    .select('*')
+    .eq('id', negocioId)
+    .single()
+
+  if (!negocio) {
+    return `
+      <div class="container">
+        <div class="header">
+          <h1>No encontrado</h1>
+          <p>Este negocio no existe</p>
+        </div>
+      </div>
+    `
+  }
+
+  return `
+    <div class="container">
+      <div class="header" style="text-align:center">
+        <h1>${negocio.nombre}</h1>
+        <p>Programa de lealtad</p>
+      </div>
+      <div class="cliente-card" style="text-align:center">
+        <p style="font-size:15px;margin-bottom:16px">Escribe tu número para ver tus puntos o registrarte</p>
+        <div class="search-box" style="margin-bottom:0">
+          <input type="tel" id="tel-negocio" placeholder="Tu número de teléfono" />
+          <button id="btn-entrar">Entrar</button>
+        </div>
+        <div id="msg-negocio"></div>
+      </div>
+    </div>
+  `
+}
+
+export function initQRNegocio(negocioId) {
+  document.getElementById('btn-entrar').addEventListener('click', async () => {
+    const telefono = document.getElementById('tel-negocio').value.trim()
+    if (!telefono) return
+
+    const msg = document.getElementById('msg-negocio')
+    msg.innerHTML = `<p style="text-align:center;color:#666;margin-top:12px">Buscando...</p>`
+
+    const { data } = await supabase
+      .from('clientes')
+      .select('*')
+      .eq('telefono', telefono)
+      .eq('negocio_id', negocioId)
+      .single()
+
+    if (data) {
+      navigate('cliente', telefono)
+    } else {
+      navigate('registro-cliente', `${negocioId}/${telefono}`)
+    }
+  })
+}
+
+// ─── REGISTRO DESDE QR ────────────────────────────────────
+export function paginaRegistroCliente(negocioId, telefono) {
+  return `
+    <div class="container">
+      <div class="header">
+        <h1>Bienvenido</h1>
+        <p>Regístrate para acumular puntos</p>
+      </div>
+      <div class="cliente-card">
+        <div class="form-group">
+          <label>Tu nombre</label>
+          <input type="text" id="nombre-cliente" placeholder="¿Cómo te llamas?" />
+        </div>
+        <div class="form-group">
+          <label>Teléfono</label>
+          <input type="tel" id="tel-cliente" value="${telefono}" readonly style="background:#f0f4f8" />
+        </div>
+        <button class="btn-registrar" id="btn-registrar-cliente" style="margin-top:8px">Registrarme</button>
+        <div id="msg-registro"></div>
+      </div>
+    </div>
+  `
+}
+
+export function initRegistroCliente(negocioId, telefono) {
+  document.getElementById('btn-registrar-cliente').addEventListener('click', async () => {
+    const nombre = document.getElementById('nombre-cliente').value.trim()
+    if (!nombre) {
+      document.getElementById('msg-registro').innerHTML = `<p class="error">Escribe tu nombre</p>`
+      return
+    }
+
+    const { error } = await supabase.from('clientes').insert({
+      nombre,
+      telefono,
+      negocio_id: negocioId,
+      puntos_actuales: 0,
+      total_visitas: 0
+    })
+
+    if (error) {
+      document.getElementById('msg-registro').innerHTML = `<p class="error">Error al registrar</p>`
+      return
+    }
+
+    navigate('cliente', telefono)
+  })
+}

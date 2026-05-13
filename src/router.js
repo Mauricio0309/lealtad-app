@@ -1,5 +1,7 @@
 export function getPage() {
   const hash = window.location.hash
+  if (hash.startsWith('#/registro-cliente/')) return 'registro-cliente'
+  if (hash.startsWith('#/negocio/')) return 'negocio'
   if (hash.startsWith('#/registro')) return 'registro'
   if (hash.startsWith('#/cliente/')) return 'cliente'
   if (hash === '#/admin') return 'admin'
