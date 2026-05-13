@@ -300,8 +300,18 @@ export async function paginaCliente(telefono) {
     `
   }
 
-  const pct = Math.min(Math.round(((data.puntos_actuales % META_PUNTOS) / META_PUNTOS) * 100), 100)
-  const faltan = META_PUNTOS - (data.puntos_actuales % META_PUNTOS)
+  const puntos = data.puntos_actuales
+  const pct = puntos === 0 ? 0 : Math.min(Math.round(((puntos % META_PUNTOS) / META_PUNTOS) * 100), 100)
+  const faltan = META_PUNTOS - (puntos % META_PUNTOS)
+
+  let mensajeProgreso
+  if (puntos === 0) {
+    mensajeProgreso = `Empieza a visitar para acumular puntos`
+  } else if (puntos > 0 && puntos % META_PUNTOS === 0) {
+    mensajeProgreso = `🎉 ¡Tienes un premio disponible!`
+  } else {
+    mensajeProgreso = `Te faltan <strong>${faltan} visitas</strong> para tu próximo premio`
+  }
 
   return `
     <div class="container">
@@ -313,7 +323,7 @@ export async function paginaCliente(telefono) {
         <div class="cliente-info">
           <div class="stat">
             <div class="stat-label">Puntos</div>
-            <div class="stat-value">${data.puntos_actuales}</div>
+            <div class="stat-value">${puntos}</div>
           </div>
           <div class="stat">
             <div class="stat-label">Visitas</div>
@@ -323,15 +333,13 @@ export async function paginaCliente(telefono) {
         <div class="progress-wrap">
           <div class="progress-label">
             <span>Progreso al premio</span>
-            <span>${data.puntos_actuales % META_PUNTOS}/${META_PUNTOS}</span>
+            <span>${puntos % META_PUNTOS}/${META_PUNTOS}</span>
           </div>
           <div class="progress-track">
             <div class="progress-fill" style="width:${pct}%"></div>
           </div>
         </div>
-        <div class="exito" style="text-align:center">
-          ${faltan === META_PUNTOS ? '🎉 ¡Tienes un premio disponible!' : `Te faltan <strong>${faltan} visitas</strong> para tu próximo premio`}
-        </div>
+        <div class="exito" style="text-align:center">${mensajeProgreso}</div>
       </div>
       <div class="cliente-card" style="margin-top:12px">
         <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px">Tu código QR</h3>
@@ -356,6 +364,7 @@ export function initCliente(telefono) {
     )
   }
 }
+
 // ─── PÁGINA QR DEL NEGOCIO ────────────────────────────────
 export async function paginaQRNegocio(negocioId) {
   const { data: negocio } = await supabase

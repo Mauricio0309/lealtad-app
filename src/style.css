@@ -259,3 +259,28 @@ body {
   background: #fdecea;
   color: #c0392b;
 }
+@media (max-width: 480px) {
+  .container {
+    padding: 12px;
+  }
+
+  .search-box {
+    flex-direction: column;
+  }
+
+  .search-box input {
+    width: 100%;
+  }
+
+  .search-box button {
+    width: 100%;
+  }
+
+  .cliente-info {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-stats {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
