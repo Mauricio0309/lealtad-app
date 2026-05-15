@@ -267,6 +267,10 @@ export async function paginaAdmin() {
           <span>${clientesNegocio} clientes</span>
           <span>${visitasNegocio} visitas</span>
           <span class="badge ${n.activo ? 'activo' : 'inactivo'}">${n.activo ? 'Activo' : 'Inactivo'}</span>
+          <button class="btn-descargar-qr" data-id="${n.id}" data-nombre="${n.nombre}"
+            style="background:#667eea;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px">
+            ⬇ QR
+          </button>
         </div>
       </div>
     `
@@ -278,6 +282,7 @@ export async function paginaAdmin() {
         <h1>Panel Admin</h1>
         <p>Gestiona tus negocios</p>
       </div>
+
       <div class="cliente-card">
         <div class="admin-stats">
           <div class="stat">
@@ -293,11 +298,125 @@ export async function paginaAdmin() {
             <div class="stat-value">${(visitas || []).length}</div>
           </div>
         </div>
-        <h3 style="margin:16px 0 10px;font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em">Negocios registrados</h3>
+      </div>
+
+      <div class="cliente-card" style="margin-top:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em">Negocios registrados</h3>
+          <button id="btn-nuevo-negocio" style="background:#667eea;color:white;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px">+ Nuevo negocio</button>
+        </div>
+
+        <div id="form-negocio" style="display:none;background:#f8fafc;padding:16px;border-radius:10px;margin-bottom:16px">
+          <div class="form-group">
+            <label>Nombre del negocio</label>
+            <input type="text" id="nuevo-nombre" placeholder="Ej: Café El Sol" />
+          </div>
+          <div class="form-group">
+            <label>Correo electrónico</label>
+            <input type="email" id="nuevo-email" placeholder="cafe@correo.com" />
+          </div>
+          <div class="form-group">
+            <label>Contraseña</label>
+            <input type="password" id="nuevo-password" placeholder="Contraseña para el dueño" />
+          </div>
+          <button id="btn-guardar-negocio" class="btn-registrar" style="margin-top:8px">Guardar negocio</button>
+          <div id="msg-negocio"></div>
+        </div>
+
         ${filas || '<p style="color:#666;text-align:center">No hay negocios aún</p>'}
       </div>
+
+      <!-- Canvas oculto para generar el QR -->
+      <canvas id="qr-canvas" style="display:none"></canvas>
     </div>
   `
+}
+
+export function initAdmin() {
+  // Mostrar/ocultar formulario nuevo negocio
+  document.getElementById('btn-nuevo-negocio')?.addEventListener('click', () => {
+    const form = document.getElementById('form-negocio')
+    form.style.display = form.style.display === 'none' ? 'block' : 'none'
+  })
+
+  // Guardar negocio nuevo
+  document.getElementById('btn-guardar-negocio')?.addEventListener('click', async () => {
+    const nombre = document.getElementById('nuevo-nombre').value.trim()
+    const email = document.getElementById('nuevo-email').value.trim()
+    const password = document.getElementById('nuevo-password').value.trim()
+    const msg = document.getElementById('msg-negocio')
+
+    if (!nombre || !email || !password) {
+      msg.innerHTML = `<p class="error">Llena todos los campos</p>`
+      return
+    }
+
+    msg.innerHTML = `<p style="color:#666;text-align:center">Guardando...</p>`
+
+    const { error } = await supabase.from('negocios').insert({
+      nombre,
+      email,
+      password: password,
+      password_hash: password,
+      activo: true,
+      meta_puntos: 10
+    })
+
+    if (error) {
+      msg.innerHTML = `<p class="error">Error: ${error.message}</p>`
+      return
+    }
+
+    msg.innerHTML = `<div class="exito">✓ Negocio creado correctamente</div>`
+    setTimeout(() => navigate('admin'), 1500)
+  })
+
+  // Descargar QR de cada negocio
+  document.querySelectorAll('.btn-descargar-qr').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const negocioId = btn.dataset.id
+      const negocioNombre = btn.dataset.nombre
+      const url = `${window.location.origin}/#/negocio/${negocioId}`
+      const canvas = document.getElementById('qr-canvas')
+
+      await QRCode.toCanvas(canvas, url, {
+        width: 400,
+        margin: 2,
+        color: { dark: '#000000', light: '#ffffff' }
+      })
+
+      // Agregar nombre del negocio debajo del QR
+      const ctx = canvas.getContext('2d')
+      const anchoOriginal = canvas.width
+      const altoOriginal = canvas.height
+      const extraAlto = 50
+
+      // Crear canvas final con espacio para el texto
+      const canvasFinal = document.createElement('canvas')
+      canvasFinal.width = anchoOriginal
+      canvasFinal.height = altoOriginal + extraAlto
+      const ctxFinal = canvasFinal.getContext('2d')
+
+      // Fondo blanco
+      ctxFinal.fillStyle = '#ffffff'
+      ctxFinal.fillRect(0, 0, canvasFinal.width, canvasFinal.height)
+
+      // Pegar el QR
+      ctxFinal.drawImage(canvas, 0, 0)
+
+      // Escribir el nombre del negocio
+      ctxFinal.fillStyle = '#000000'
+      ctxFinal.font = 'bold 22px Arial'
+      ctxFinal.textAlign = 'center'
+      ctxFinal.fillText(negocioNombre, anchoOriginal / 2, altoOriginal + 35)
+
+      // Descargar como PNG
+      const link = document.createElement('a')
+      link.download = `QR-${negocioNombre}.png`
+      link.href = canvasFinal.toDataURL('image/png')
+      link.click()
+    })
+  })
 }
 
 // ─── PÁGINA CLIENTE ───────────────────────────────────────

@@ -1,7 +1,7 @@
 import './style.css'
 import { getPage } from './router.js'
 import { isLoggedIn, getNegocioActual } from './auth.js'
-import { paginaCajero, initCajero, paginaRegistro, initRegistro, paginaAdmin, paginaCliente, initCliente, paginaLogin, initLogin, paginaQRNegocio, initQRNegocio, paginaRegistroCliente, initRegistroCliente, paginaDueno, initDueno } from './pages.js'
+import { paginaCajero, initCajero, paginaRegistro, initRegistro, paginaAdmin, initAdmin, paginaCliente, initCliente, paginaLogin, initLogin, paginaQRNegocio, initQRNegocio, paginaRegistroCliente, initRegistroCliente, paginaDueno, initDueno } from './pages.js'
 
 async function render() {
   const page = getPage()
@@ -10,7 +10,6 @@ async function render() {
 
   app.innerHTML = ''
 
-  // Páginas públicas que no necesitan login
   if (page === 'cliente') {
     app.innerHTML = '<div class="container"><p style="text-align:center;padding:40px;color:#666">Cargando...</p></div>'
     const telefono = hash.split('/')[2] || ''
@@ -42,7 +41,6 @@ async function render() {
     return
   }
 
-  // Páginas que necesitan login
   if (!isLoggedIn()) {
     app.innerHTML = paginaLogin()
     initLogin()
@@ -67,6 +65,7 @@ async function render() {
   } else if (page === 'admin') {
     app.innerHTML = '<div class="container"><p style="text-align:center;padding:40px;color:#666">Cargando...</p></div>'
     app.innerHTML = await paginaAdmin()
+    initAdmin()
   }
 }
 
