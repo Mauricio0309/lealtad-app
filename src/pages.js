@@ -1,9 +1,13 @@
 import QRCode from 'qrcode'
 import { supabase } from './supabase.js'
 import { navigate } from './router.js'
-
+ 
 const META_VISITAS = 10
-
+ 
+// ─── CONTRASEÑA MAESTRA ADMIN ─────────────────────────────
+// Cámbiala aquí si quieres una diferente
+const ADMIN_PASSWORD = 'lealtad2024'
+ 
 // ─── PÁGINA LOGIN ─────────────────────────────────────────
 export function paginaLogin() {
   return `
@@ -27,33 +31,41 @@ export function paginaLogin() {
     </div>
   `
 }
-
+ 
 export function initLogin() {
   document.getElementById('btn-login').addEventListener('click', async () => {
     const email = document.getElementById('email').value.trim()
     const password = document.getElementById('password').value.trim()
     const msg = document.getElementById('msg')
-
+ 
     if (!email || !password) {
       msg.innerHTML = `<p class="error">Llena todos los campos</p>`
       return
     }
-
+ 
     msg.innerHTML = `<p style="text-align:center;color:#666">Verificando...</p>`
-
+ 
     const { login } = await import('./auth.js')
     const negocio = await login(email, password)
-
+ 
     if (!negocio) {
       msg.innerHTML = `<p class="error">Correo o contraseña incorrectos</p>`
       return
     }
-
+ 
+    // ── Verificar que el negocio esté activo ──
+    if (negocio.activo === false) {
+      msg.innerHTML = `<p class="error">Esta cuenta está desactivada. Contacta al administrador.</p>`
+      const { logout } = await import('./auth.js')
+      logout()
+      return
+    }
+ 
     window.location.hash = '#/dueno'
     window.dispatchEvent(new Event('hashchange'))
   })
 }
-
+ 
 // ─── PÁGINA CAJERO ───────────────────────────────────────
 export function paginaCajero() {
   return `
@@ -70,39 +82,164 @@ export function paginaCajero() {
           </div>
         </div>
       </div>
-      <div class="search-box">
-        <input type="tel" id="telefono" placeholder="Buscar por teléfono..." />
-        <button id="buscar">Buscar</button>
+ 
+      <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;gap:8px">
+          <input type="tel" id="telefono" placeholder="Buscar por teléfono..." style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px" />
+          <button id="buscar" style="padding:10px 16px;background:#667eea;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px">Buscar</button>
+        </div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="nombre-buscar" placeholder="O buscar por nombre..." style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px" />
+          <button id="buscar-nombre" style="padding:10px 16px;background:#667eea;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;white-space:nowrap">Buscar</button>
+        </div>
       </div>
+ 
       <div id="resultado"></div>
+ 
+      <div class="cliente-card" style="margin-top:12px">
+        <h3 style="font-size:13px;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">Últimos clientes atendidos</h3>
+        <div id="ultimos-clientes">
+          <p style="color:#aaa;font-size:13px;text-align:center">Cargando...</p>
+        </div>
+      </div>
     </div>
   `
 }
-
+ 
 export function initCajero() {
   document.getElementById('btn-ir-dueno').addEventListener('click', () => {
     navigate('dueno')
   })
-
+ 
   document.getElementById('btn-logout').addEventListener('click', async () => {
     const { logout } = await import('./auth.js')
     logout()
   })
-
+ 
+  // ── Cargar últimos clientes ──
+  cargarUltimosClientes()
+ 
+  // ── Buscar por teléfono ──
   document.getElementById('buscar').addEventListener('click', async () => {
     const telefono = document.getElementById('telefono').value.trim()
     if (!telefono) return
-
-    const resultado = document.getElementById('resultado')
-    resultado.innerHTML = `<p style="text-align:center;color:#666">Buscando...</p>`
-
-    const { data } = await supabase
-      .from('clientes')
-      .select('*')
-      .eq('telefono', telefono)
-      .single()
-
-    if (!data) {
+    await buscarYMostrar({ telefono })
+  })
+ 
+  // ── Buscar por nombre ──
+  document.getElementById('buscar-nombre').addEventListener('click', async () => {
+    const nombre = document.getElementById('nombre-buscar').value.trim()
+    if (!nombre) return
+    await buscarYMostrar({ nombre })
+  })
+ 
+  // ── Enter en los campos ──
+  document.getElementById('telefono').addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter') {
+      const telefono = document.getElementById('telefono').value.trim()
+      if (telefono) await buscarYMostrar({ telefono })
+    }
+  })
+ 
+  document.getElementById('nombre-buscar').addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter') {
+      const nombre = document.getElementById('nombre-buscar').value.trim()
+      if (nombre) await buscarYMostrar({ nombre })
+    }
+  })
+}
+ 
+async function cargarUltimosClientes() {
+  const { getNegocioActual } = await import('./auth.js')
+  const negocio = getNegocioActual()
+  if (!negocio) return
+ 
+  const { data: visitas } = await supabase
+    .from('visitas')
+    .select('cliente_id, fecha')
+    .eq('negocio_id', negocio.id)
+    .order('fecha', { ascending: false })
+    .limit(20)
+ 
+  if (!visitas || visitas.length === 0) {
+    document.getElementById('ultimos-clientes').innerHTML =
+      `<p style="color:#aaa;font-size:13px;text-align:center">Aún no hay visitas registradas</p>`
+    return
+  }
+ 
+  // Deduplicar: quedarse con el más reciente por cliente
+  const vistos = new Set()
+  const clientesIds = []
+  for (const v of visitas) {
+    if (!vistos.has(v.cliente_id)) {
+      vistos.add(v.cliente_id)
+      clientesIds.push(v.cliente_id)
+    }
+    if (clientesIds.length >= 5) break
+  }
+ 
+  const { data: clientes } = await supabase
+    .from('clientes')
+    .select('id, nombre, telefono, total_visitas')
+    .in('id', clientesIds)
+ 
+  if (!clientes || clientes.length === 0) {
+    document.getElementById('ultimos-clientes').innerHTML =
+      `<p style="color:#aaa;font-size:13px;text-align:center">Sin datos</p>`
+    return
+  }
+ 
+  const ordenados = clientesIds
+    .map(id => clientes.find(c => c.id === id))
+    .filter(Boolean)
+ 
+  const filas = ordenados.map(c => `
+    <div class="negocio-row" style="cursor:pointer" data-telefono="${c.telefono}">
+      <div>
+        <div class="negocio-nombre">${c.nombre}</div>
+        <div class="negocio-meta">${c.telefono}</div>
+      </div>
+      <div class="negocio-stats">
+        <span style="font-size:12px;color:#666">${c.total_visitas} visitas</span>
+        <span style="font-size:11px;color:#aaa">→</span>
+      </div>
+    </div>
+  `).join('')
+ 
+  document.getElementById('ultimos-clientes').innerHTML = filas
+ 
+  // Click en cliente reciente → cargarlo directamente
+  document.querySelectorAll('#ultimos-clientes .negocio-row').forEach(row => {
+    row.addEventListener('click', async () => {
+      const tel = row.dataset.telefono
+      document.getElementById('telefono').value = tel
+      await buscarYMostrar({ telefono: tel })
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    })
+  })
+}
+ 
+async function buscarYMostrar({ telefono, nombre }) {
+  const resultado = document.getElementById('resultado')
+  resultado.innerHTML = `<p style="text-align:center;color:#666;padding:16px">Buscando...</p>`
+ 
+  const { getNegocioActual } = await import('./auth.js')
+  const negocio = getNegocioActual()
+ 
+  let query = supabase.from('clientes').select('*').eq('negocio_id', negocio?.id)
+ 
+  if (telefono) {
+    query = query.eq('telefono', telefono)
+  } else if (nombre) {
+    query = query.ilike('nombre', `%${nombre}%`)
+  }
+ 
+  const { data } = await query
+ 
+  // ── Búsqueda por teléfono: resultado único ──
+  if (telefono) {
+    const cliente = data?.[0]
+    if (!cliente) {
       resultado.innerHTML = `
         <div class="cliente-card">
           <p class="error" style="margin-bottom:12px">Cliente no encontrado</p>
@@ -114,23 +251,62 @@ export function initCajero() {
       })
       return
     }
-
-    mostrarCliente(data)
+    mostrarCliente(cliente)
+    return
+  }
+ 
+  // ── Búsqueda por nombre ──
+  if (!data || data.length === 0) {
+    resultado.innerHTML = `<div class="cliente-card"><p class="error">No se encontró ningún cliente con ese nombre</p></div>`
+    return
+  }
+ 
+  if (data.length === 1) {
+    mostrarCliente(data[0])
+    return
+  }
+ 
+  // Varios resultados: lista para elegir
+  const filas = data.map(c => `
+    <div class="negocio-row" style="cursor:pointer" data-id="${c.id}">
+      <div>
+        <div class="negocio-nombre">${c.nombre}</div>
+        <div class="negocio-meta">${c.telefono}</div>
+      </div>
+      <div class="negocio-stats">
+        <span style="font-size:12px">${c.total_visitas} visitas</span>
+        <span style="font-size:11px;color:#aaa">→</span>
+      </div>
+    </div>
+  `).join('')
+ 
+  resultado.innerHTML = `
+    <div class="cliente-card">
+      <p style="font-size:13px;color:#666;margin-bottom:10px">Se encontraron ${data.length} clientes. Selecciona uno:</p>
+      ${filas}
+    </div>
+  `
+ 
+  resultado.querySelectorAll('.negocio-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const cliente = data.find(c => c.id === row.dataset.id)
+      if (cliente) mostrarCliente(cliente)
+    })
   })
 }
-
+ 
 async function mostrarCliente(data) {
   const { data: negocioData } = await supabase
     .from('negocios')
     .select('meta_puntos')
     .eq('id', data.negocio_id)
     .single()
-
+ 
   const meta = negocioData?.meta_puntos || META_VISITAS
   const visitasEnCiclo = data.puntos_actuales % meta
   const pct = Math.min(Math.round((visitasEnCiclo / meta) * 100), 100)
   const resultado = document.getElementById('resultado')
-
+ 
   resultado.innerHTML = `
     <div class="cliente-card">
       <h2>${data.nombre || 'Cliente'}</h2>
@@ -157,33 +333,36 @@ async function mostrarCliente(data) {
       <div id="msg"></div>
     </div>
   `
-
+ 
   document.getElementById('registrar').addEventListener('click', async () => {
     await supabase.from('visitas').insert({
       cliente_id: data.id,
       negocio_id: data.negocio_id,
       puntos_sumados: 1
     })
-
+ 
     const nuevasVisitas = data.total_visitas + 1
     const nuevosActuales = data.puntos_actuales + 1
-
+ 
     await supabase.from('clientes').update({
       puntos_actuales: nuevosActuales,
       total_visitas: nuevasVisitas
     }).eq('id', data.id)
-
+ 
     data.puntos_actuales = nuevosActuales
     data.total_visitas = nuevasVisitas
-
+ 
     const nuevoCiclo = nuevosActuales % meta
     const nuevoPct = Math.min(Math.round((nuevoCiclo / meta) * 100), 100)
-
+ 
     document.getElementById('visitas-display').textContent = nuevasVisitas
     document.getElementById('ciclo-display').textContent = `${nuevoCiclo}/${meta}`
     document.getElementById('progress-label').textContent = `${nuevoCiclo}/${meta}`
     document.getElementById('progress-fill').style.width = nuevoPct + '%'
-
+ 
+    // Refrescar lista de últimos clientes
+    cargarUltimosClientes()
+ 
     const msg = document.getElementById('msg')
     if (nuevosActuales > 0 && nuevosActuales % meta === 0) {
       msg.innerHTML = `<div class="premio-alert">🎉 ¡Premio desbloqueado! Entrega el premio al cliente.</div>`
@@ -192,7 +371,7 @@ async function mostrarCliente(data) {
     }
   })
 }
-
+ 
 // ─── PÁGINA REGISTRO CAJERO ──────────────────────────────
 export function paginaRegistro(telefono = '') {
   return `
@@ -216,20 +395,20 @@ export function paginaRegistro(telefono = '') {
     </div>
   `
 }
-
+ 
 export function initRegistro() {
   document.getElementById('guardar').addEventListener('click', async () => {
     const nombre = document.getElementById('nombre').value.trim()
     const telefono = document.getElementById('tel').value.trim()
-
+ 
     if (!nombre || !telefono) {
       document.getElementById('msg').innerHTML = `<p class="error">Llena todos los campos</p>`
       return
     }
-
+ 
     const { getNegocioActual } = await import('./auth.js')
     const negocio = getNegocioActual()
-
+ 
     const { error } = await supabase.from('clientes').insert({
       nombre,
       telefono,
@@ -237,23 +416,46 @@ export function initRegistro() {
       puntos_actuales: 0,
       total_visitas: 0
     })
-
+ 
     if (error) {
       document.getElementById('msg').innerHTML = `<p class="error">Error al guardar</p>`
       return
     }
-
+ 
     document.getElementById('msg').innerHTML = `<div class="exito">✓ Cliente registrado</div>`
     setTimeout(() => navigate('cajero'), 1500)
   })
 }
-
+ 
 // ─── PÁGINA ADMIN ─────────────────────────────────────────
+function isAdminAutenticado() {
+  return sessionStorage.getItem('admin_auth') === 'ok'
+}
+ 
 export async function paginaAdmin() {
+  if (!isAdminAutenticado()) {
+    return `
+      <div class="container">
+        <div class="header" style="text-align:center;padding:30px 20px">
+          <h1 style="font-size:26px">Panel Admin</h1>
+          <p>Acceso restringido</p>
+        </div>
+        <div class="cliente-card">
+          <div class="form-group">
+            <label>Contraseña de administrador</label>
+            <input type="password" id="admin-password" placeholder="••••••" />
+          </div>
+          <button class="btn-registrar" id="btn-admin-login" style="margin-top:8px">Entrar</button>
+          <div id="msg-admin"></div>
+        </div>
+      </div>
+    `
+  }
+ 
   const { data: negocios } = await supabase.from('negocios').select('*')
   const { data: clientes } = await supabase.from('clientes').select('*')
   const { data: visitas } = await supabase.from('visitas').select('*')
-
+ 
   const filas = (negocios || []).map(n => {
     const clientesNegocio = (clientes || []).filter(c => c.negocio_id === n.id).length
     const visitasNegocio = (visitas || []).filter(v => v.negocio_id === n.id).length
@@ -267,6 +469,10 @@ export async function paginaAdmin() {
           <span>${clientesNegocio} clientes</span>
           <span>${visitasNegocio} visitas</span>
           <span class="badge ${n.activo ? 'activo' : 'inactivo'}">${n.activo ? 'Activo' : 'Inactivo'}</span>
+          <button class="btn-toggle-negocio" data-id="${n.id}" data-activo="${n.activo}"
+            style="background:${n.activo ? '#fee2e2' : '#d1fae5'};color:${n.activo ? '#dc2626' : '#059669'};border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">
+            ${n.activo ? 'Desactivar' : 'Activar'}
+          </button>
           <button class="btn-descargar-qr" data-id="${n.id}" data-nombre="${n.nombre}"
             style="background:#667eea;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px">
             ⬇ QR
@@ -275,14 +481,19 @@ export async function paginaAdmin() {
       </div>
     `
   }).join('')
-
+ 
   return `
     <div class="container">
       <div class="header">
-        <h1>Panel Admin</h1>
-        <p>Gestiona tus negocios</p>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <h1>Panel Admin</h1>
+            <p>Gestiona tus negocios</p>
+          </div>
+          <button id="btn-admin-logout" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px">Salir</button>
+        </div>
       </div>
-
+ 
       <div class="cliente-card">
         <div class="admin-stats">
           <div class="stat">
@@ -299,13 +510,13 @@ export async function paginaAdmin() {
           </div>
         </div>
       </div>
-
+ 
       <div class="cliente-card" style="margin-top:12px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
           <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em">Negocios registrados</h3>
           <button id="btn-nuevo-negocio" style="background:#667eea;color:white;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px">+ Nuevo negocio</button>
         </div>
-
+ 
         <div id="form-negocio" style="display:none;background:#f8fafc;padding:16px;border-radius:10px;margin-bottom:16px">
           <div class="form-group">
             <label>Nombre del negocio</label>
@@ -322,37 +533,59 @@ export async function paginaAdmin() {
           <button id="btn-guardar-negocio" class="btn-registrar" style="margin-top:8px">Guardar negocio</button>
           <div id="msg-negocio"></div>
         </div>
-
+ 
         ${filas || '<p style="color:#666;text-align:center">No hay negocios aún</p>'}
       </div>
-
-      <!-- Canvas oculto para generar el QR -->
+ 
       <canvas id="qr-canvas" style="display:none"></canvas>
     </div>
   `
 }
-
+ 
 export function initAdmin() {
-  // Mostrar/ocultar formulario nuevo negocio
+  // ── Login admin ──
+  if (!isAdminAutenticado()) {
+    document.getElementById('btn-admin-login')?.addEventListener('click', () => {
+      const pw = document.getElementById('admin-password').value
+      const msg = document.getElementById('msg-admin')
+      if (pw === ADMIN_PASSWORD) {
+        sessionStorage.setItem('admin_auth', 'ok')
+        navigate('admin')
+      } else {
+        msg.innerHTML = `<p class="error">Contraseña incorrecta</p>`
+      }
+    })
+    document.getElementById('admin-password')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('btn-admin-login').click()
+    })
+    return
+  }
+ 
+  // ── Salir admin ──
+  document.getElementById('btn-admin-logout')?.addEventListener('click', () => {
+    sessionStorage.removeItem('admin_auth')
+    navigate('admin')
+  })
+ 
+  // ── Formulario nuevo negocio ──
   document.getElementById('btn-nuevo-negocio')?.addEventListener('click', () => {
     const form = document.getElementById('form-negocio')
     form.style.display = form.style.display === 'none' ? 'block' : 'none'
   })
-
-  // Guardar negocio nuevo
+ 
   document.getElementById('btn-guardar-negocio')?.addEventListener('click', async () => {
     const nombre = document.getElementById('nuevo-nombre').value.trim()
     const email = document.getElementById('nuevo-email').value.trim()
     const password = document.getElementById('nuevo-password').value.trim()
     const msg = document.getElementById('msg-negocio')
-
+ 
     if (!nombre || !email || !password) {
       msg.innerHTML = `<p class="error">Llena todos los campos</p>`
       return
     }
-
+ 
     msg.innerHTML = `<p style="color:#666;text-align:center">Guardando...</p>`
-
+ 
     const { error } = await supabase.from('negocios').insert({
       nombre,
       email,
@@ -361,56 +594,63 @@ export function initAdmin() {
       activo: true,
       meta_puntos: 10
     })
-
+ 
     if (error) {
       msg.innerHTML = `<p class="error">Error: ${error.message}</p>`
       return
     }
-
+ 
     msg.innerHTML = `<div class="exito">✓ Negocio creado correctamente</div>`
     setTimeout(() => navigate('admin'), 1500)
   })
-
-  // Descargar QR de cada negocio
+ 
+  // ── Activar / Desactivar negocio (funcional) ──
+  document.querySelectorAll('.btn-toggle-negocio').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id
+      const activoActual = btn.dataset.activo === 'true'
+      btn.textContent = 'Guardando...'
+      btn.disabled = true
+      const { error } = await supabase
+        .from('negocios')
+        .update({ activo: !activoActual })
+        .eq('id', id)
+      if (!error) navigate('admin')
+    })
+  })
+ 
+  // ── Descargar QR ──
   document.querySelectorAll('.btn-descargar-qr').forEach(btn => {
     btn.addEventListener('click', async () => {
       const negocioId = btn.dataset.id
       const negocioNombre = btn.dataset.nombre
       const url = `${window.location.origin}/#/negocio/${negocioId}`
       const canvas = document.getElementById('qr-canvas')
-
+ 
       await QRCode.toCanvas(canvas, url, {
         width: 400,
         margin: 2,
         color: { dark: '#000000', light: '#ffffff' }
       })
-
-      // Agregar nombre del negocio debajo del QR
-      const ctx = canvas.getContext('2d')
+ 
       const anchoOriginal = canvas.width
       const altoOriginal = canvas.height
       const extraAlto = 50
-
-      // Crear canvas final con espacio para el texto
+ 
       const canvasFinal = document.createElement('canvas')
       canvasFinal.width = anchoOriginal
       canvasFinal.height = altoOriginal + extraAlto
       const ctxFinal = canvasFinal.getContext('2d')
-
-      // Fondo blanco
+ 
       ctxFinal.fillStyle = '#ffffff'
       ctxFinal.fillRect(0, 0, canvasFinal.width, canvasFinal.height)
-
-      // Pegar el QR
       ctxFinal.drawImage(canvas, 0, 0)
-
-      // Escribir el nombre del negocio
+ 
       ctxFinal.fillStyle = '#000000'
       ctxFinal.font = 'bold 22px Arial'
       ctxFinal.textAlign = 'center'
       ctxFinal.fillText(negocioNombre, anchoOriginal / 2, altoOriginal + 35)
-
-      // Descargar como PNG
+ 
       const link = document.createElement('a')
       link.download = `QR-${negocioNombre}.png`
       link.href = canvasFinal.toDataURL('image/png')
@@ -418,7 +658,7 @@ export function initAdmin() {
     })
   })
 }
-
+ 
 // ─── PÁGINA CLIENTE ───────────────────────────────────────
 export async function paginaCliente(telefono) {
   const { data } = await supabase
@@ -426,7 +666,7 @@ export async function paginaCliente(telefono) {
     .select('*, negocios(nombre, meta_puntos)')
     .eq('telefono', telefono)
     .single()
-
+ 
   if (!data) {
     return `
       <div class="container">
@@ -437,11 +677,11 @@ export async function paginaCliente(telefono) {
       </div>
     `
   }
-
+ 
   const meta = data.negocios?.meta_puntos || META_VISITAS
   const visitasEnCiclo = data.puntos_actuales % meta
   const pct = data.puntos_actuales === 0 ? 0 : Math.min(Math.round((visitasEnCiclo / meta) * 100), 100)
-
+ 
   let mensajeProgreso
   if (data.puntos_actuales === 0) {
     mensajeProgreso = `Empieza a visitar para acumular visitas`
@@ -450,7 +690,7 @@ export async function paginaCliente(telefono) {
   } else {
     mensajeProgreso = `Te faltan <strong>${meta - visitasEnCiclo} visitas</strong> para tu próximo premio`
   }
-
+ 
   return `
     <div class="container">
       <div class="header">
@@ -489,7 +729,7 @@ export async function paginaCliente(telefono) {
     </div>
   `
 }
-
+ 
 export function initCliente(telefono) {
   const qrDiv = document.getElementById('qrcode')
   if (qrDiv) {
@@ -502,7 +742,7 @@ export function initCliente(telefono) {
     )
   }
 }
-
+ 
 // ─── PÁGINA QR DEL NEGOCIO ────────────────────────────────
 export async function paginaQRNegocio(negocioId) {
   const { data: negocio } = await supabase
@@ -510,7 +750,7 @@ export async function paginaQRNegocio(negocioId) {
     .select('*')
     .eq('id', negocioId)
     .single()
-
+ 
   if (!negocio) {
     return `
       <div class="container">
@@ -521,7 +761,7 @@ export async function paginaQRNegocio(negocioId) {
       </div>
     `
   }
-
+ 
   return `
     <div class="container">
       <div class="header" style="text-align:center">
@@ -539,22 +779,22 @@ export async function paginaQRNegocio(negocioId) {
     </div>
   `
 }
-
+ 
 export function initQRNegocio(negocioId) {
   document.getElementById('btn-entrar').addEventListener('click', async () => {
     const telefono = document.getElementById('tel-negocio').value.trim()
     if (!telefono) return
-
+ 
     const msg = document.getElementById('msg-negocio')
     msg.innerHTML = `<p style="text-align:center;color:#666;margin-top:12px">Buscando...</p>`
-
+ 
     const { data } = await supabase
       .from('clientes')
       .select('*')
       .eq('telefono', telefono)
       .eq('negocio_id', negocioId)
       .single()
-
+ 
     if (data) {
       navigate('cliente', telefono)
     } else {
@@ -562,7 +802,7 @@ export function initQRNegocio(negocioId) {
     }
   })
 }
-
+ 
 // ─── REGISTRO DESDE QR ────────────────────────────────────
 export function paginaRegistroCliente(negocioId, telefono) {
   return `
@@ -586,7 +826,7 @@ export function paginaRegistroCliente(negocioId, telefono) {
     </div>
   `
 }
-
+ 
 export function initRegistroCliente(negocioId, telefono) {
   document.getElementById('btn-registrar-cliente').addEventListener('click', async () => {
     const nombre = document.getElementById('nombre-cliente').value.trim()
@@ -594,7 +834,7 @@ export function initRegistroCliente(negocioId, telefono) {
       document.getElementById('msg-registro').innerHTML = `<p class="error">Escribe tu nombre</p>`
       return
     }
-
+ 
     const { error } = await supabase.from('clientes').insert({
       nombre,
       telefono,
@@ -602,16 +842,16 @@ export function initRegistroCliente(negocioId, telefono) {
       puntos_actuales: 0,
       total_visitas: 0
     })
-
+ 
     if (error) {
       document.getElementById('msg-registro').innerHTML = `<p class="error">Error al registrar</p>`
       return
     }
-
+ 
     navigate('cliente', telefono)
   })
 }
-
+ 
 // ─── PANEL DEL DUEÑO ──────────────────────────────────────
 export async function paginaDueno() {
   const { getNegocioActual } = await import('./auth.js')
@@ -621,37 +861,44 @@ export async function paginaDueno() {
     window.dispatchEvent(new Event('hashchange'))
     return '<div></div>'
   }
-
+ 
   const { data: negocioData } = await supabase
     .from('negocios')
     .select('*')
     .eq('id', negocio.id)
     .single()
-
+ 
+  // Si el negocio fue desactivado mientras tenía sesión activa → cerrar sesión
+  if (negocioData?.activo === false) {
+    const { logout } = await import('./auth.js')
+    logout()
+    return '<div></div>'
+  }
+ 
   const metaVisitas = negocioData?.meta_puntos || 10
-
+ 
   const { data: clientes } = await supabase
     .from('clientes')
     .select('*')
     .eq('negocio_id', negocio.id)
-
+ 
   const { data: visitas } = await supabase
     .from('visitas')
     .select('*')
     .eq('negocio_id', negocio.id)
-
+ 
   const { data: premios } = await supabase
     .from('premios')
     .select('*')
     .eq('negocio_id', negocio.id)
-
+ 
   const hoy = new Date().toISOString().split('T')[0]
   const visitasHoy = (visitas || []).filter(v => v.fecha && v.fecha.startsWith(hoy)).length
-
+ 
   const clientesOrdenados = [...(clientes || [])]
     .sort((a, b) => b.total_visitas - a.total_visitas)
     .slice(0, 5)
-
+ 
   const filasClientes = clientesOrdenados.map(c => `
     <div class="negocio-row">
       <div>
@@ -663,7 +910,7 @@ export async function paginaDueno() {
       </div>
     </div>
   `).join('')
-
+ 
   const filasPremios = (premios || []).map(p => `
     <div class="negocio-row">
       <div>
@@ -679,7 +926,7 @@ export async function paginaDueno() {
       </div>
     </div>
   `).join('')
-
+ 
   return `
     <div class="container">
       <div class="header">
@@ -694,7 +941,7 @@ export async function paginaDueno() {
           </div>
         </div>
       </div>
-
+ 
       <div class="cliente-card">
         <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px">Resumen</h3>
         <div class="admin-stats">
@@ -712,24 +959,13 @@ export async function paginaDueno() {
           </div>
         </div>
       </div>
-
-      <div class="cliente-card" style="margin-top:12px">
-        <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px">Visitas necesarias para ganar un premio</h3>
-        <div style="display:flex;align-items:center;gap:12px">
-          <input type="number" id="meta-visitas-input" value="${metaVisitas}" min="1" max="100"
-            style="width:80px;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:18px;text-align:center" />
-          <span style="color:#666;font-size:14px">visitas para ganar el premio</span>
-        </div>
-        <button id="btn-guardar-meta" class="btn-registrar" style="margin-top:12px;max-width:200px">Guardar</button>
-        <div id="msg-meta"></div>
-      </div>
-
+ 
       <div class="cliente-card" style="margin-top:12px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
           <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em">Premios</h3>
           <button id="btn-nuevo-premio" style="background:#667eea;color:white;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px">+ Nuevo premio</button>
         </div>
-
+ 
         <div id="form-premio" style="display:none;background:#f8fafc;padding:16px;border-radius:10px;margin-bottom:12px">
           <div class="form-group">
             <label>Nombre del premio</label>
@@ -742,12 +978,23 @@ export async function paginaDueno() {
           <button id="btn-guardar-premio" class="btn-registrar" style="margin-top:8px">Guardar premio</button>
           <div id="msg-premio"></div>
         </div>
-
+ 
         <div id="lista-premios">
           ${filasPremios || '<p style="color:#666;text-align:center;font-size:14px">No hay premios configurados aún</p>'}
         </div>
       </div>
-
+ 
+      <div class="cliente-card" style="margin-top:12px">
+        <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px">Visitas para ganar un premio</h3>
+        <div style="display:flex;align-items:center;gap:12px">
+          <input type="number" id="meta-visitas-input" value="${metaVisitas}" min="1" max="100"
+            style="width:80px;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:18px;text-align:center" />
+          <span style="color:#666;font-size:14px">visitas para ganar el premio</span>
+        </div>
+        <button id="btn-guardar-meta" class="btn-registrar" style="margin-top:12px;max-width:200px">Guardar</button>
+        <div id="msg-meta"></div>
+      </div>
+ 
       <div class="cliente-card" style="margin-top:12px;margin-bottom:24px">
         <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px">Clientes más frecuentes</h3>
         ${filasClientes || '<p style="color:#666;text-align:center;font-size:14px">Aún no hay clientes registrados</p>'}
@@ -755,17 +1002,17 @@ export async function paginaDueno() {
     </div>
   `
 }
-
+ 
 export function initDueno(negocioId) {
   document.getElementById('btn-ir-cajero')?.addEventListener('click', () => {
     navigate('cajero')
   })
-
+ 
   document.getElementById('btn-logout-dueno')?.addEventListener('click', async () => {
     const { logout } = await import('./auth.js')
     logout()
   })
-
+ 
   document.getElementById('btn-guardar-meta')?.addEventListener('click', async () => {
     const valor = parseInt(document.getElementById('meta-visitas-input').value)
     const msg = document.getElementById('msg-meta')
@@ -777,7 +1024,7 @@ export function initDueno(negocioId) {
       .from('negocios')
       .update({ meta_puntos: valor })
       .eq('id', negocioId)
-
+ 
     if (error) {
       msg.innerHTML = `<p class="error">Error al guardar</p>`
     } else {
@@ -790,38 +1037,38 @@ export function initDueno(negocioId) {
       }
     }
   })
-
+ 
   document.getElementById('btn-nuevo-premio')?.addEventListener('click', () => {
     const form = document.getElementById('form-premio')
     form.style.display = form.style.display === 'none' ? 'block' : 'none'
   })
-
+ 
   document.getElementById('btn-guardar-premio')?.addEventListener('click', async () => {
     const nombre = document.getElementById('nombre-premio').value.trim()
     const visitas = parseInt(document.getElementById('visitas-premio').value)
     const msg = document.getElementById('msg-premio')
-
+ 
     if (!nombre || !visitas || visitas < 1) {
       msg.innerHTML = `<p class="error">Llena todos los campos correctamente</p>`
       return
     }
-
+ 
     const { error } = await supabase.from('premios').insert({
       negocio_id: negocioId,
       nombre,
       puntos_requeridos: visitas,
       activo: true
     })
-
+ 
     if (error) {
       msg.innerHTML = `<p class="error">Error al guardar el premio</p>`
       return
     }
-
+ 
     msg.innerHTML = `<div class="exito">✓ Premio creado</div>`
     setTimeout(() => navigate('dueno'), 1000)
   })
-
+ 
   document.querySelectorAll('.btn-toggle-premio').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.id
@@ -834,3 +1081,4 @@ export function initDueno(negocioId) {
     })
   })
 }
+ 
