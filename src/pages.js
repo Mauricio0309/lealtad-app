@@ -3,8 +3,6 @@ import { supabase } from './supabase.js'
 import { navigate } from './router.js'
 
 const META_VISITAS = 10
-
-// ─── CONTRASEÑA MAESTRA ADMIN ─────────────────────────────
 const ADMIN_PASSWORD = 'lealtad2024'
 
 // ─── HELPER: campo de contraseña con ojo ──────────────────
@@ -15,12 +13,16 @@ function inputPassword(id, placeholder = '••••••') {
         style="width:100%;padding:10px 40px 10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box" />
       <button type="button" onclick="
         var i=document.getElementById('${id}');
-        var b=this;
-        if(i.type==='password'){i.type='text';b.textContent='🙈';}
-        else{i.type='password';b.textContent='👁';}
+        if(i.type==='password'){i.type='text';this.textContent='🙈';}
+        else{i.type='password';this.textContent='👁';}
       " style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;padding:0;line-height:1">👁</button>
     </div>
   `
+}
+
+// ─── HELPER: manejo de errores de conexión ────────────────
+function errorConexion(donde = '') {
+  return `<p class="error">Sin conexión${donde ? ' al ' + donde : ''}. Verifica tu internet e intenta de nuevo.</p>`
 }
 
 // ─── PÁGINA LOGIN ─────────────────────────────────────────
@@ -58,25 +60,35 @@ export function initLogin() {
       return
     }
 
-    msg.innerHTML = `<p style="text-align:center;color:#666">Verificando...</p>`
+    const btn = document.getElementById('btn-login')
+    btn.disabled = true
+    btn.textContent = 'Verificando...'
+    msg.innerHTML = ''
 
-    const { login } = await import('./auth.js')
-    const negocio = await login(email, password)
+    try {
+      const { login } = await import('./auth.js')
+      const negocio = await login(email, password)
 
-    if (!negocio) {
-      msg.innerHTML = `<p class="error">Correo o contraseña incorrectos</p>`
-      return
+      if (!negocio) {
+        msg.innerHTML = `<p class="error">Correo o contraseña incorrectos</p>`
+        return
+      }
+
+      if (negocio.activo === false) {
+        msg.innerHTML = `<p class="error">Esta cuenta está desactivada. Contacta al administrador.</p>`
+        const { logout } = await import('./auth.js')
+        logout()
+        return
+      }
+
+      window.location.hash = '#/dueno'
+      window.dispatchEvent(new Event('hashchange'))
+    } catch (e) {
+      msg.innerHTML = errorConexion('servidor')
+    } finally {
+      btn.disabled = false
+      btn.textContent = 'Entrar'
     }
-
-    if (negocio.activo === false) {
-      msg.innerHTML = `<p class="error">Esta cuenta está desactivada. Contacta al administrador.</p>`
-      const { logout } = await import('./auth.js')
-      logout()
-      return
-    }
-
-    window.location.hash = '#/dueno'
-    window.dispatchEvent(new Event('hashchange'))
   })
 }
 
@@ -155,216 +167,298 @@ export function initCajero() {
 }
 
 async function cargarUltimosClientes() {
-  const { getNegocioActual } = await import('./auth.js')
-  const negocio = getNegocioActual()
-  if (!negocio) return
+  try {
+    const { getNegocioActual } = await import('./auth.js')
+    const negocio = getNegocioActual()
+    if (!negocio) return
 
-  const { data: visitas } = await supabase
-    .from('visitas')
-    .select('cliente_id, fecha')
-    .eq('negocio_id', negocio.id)
-    .order('fecha', { ascending: false })
-    .limit(20)
+    const { data: visitas, error } = await supabase
+      .from('visitas')
+      .select('cliente_id, fecha')
+      .eq('negocio_id', negocio.id)
+      .order('fecha', { ascending: false })
+      .limit(20)
 
-  if (!visitas || visitas.length === 0) {
-    document.getElementById('ultimos-clientes').innerHTML =
-      `<p style="color:#aaa;font-size:13px;text-align:center">Aún no hay visitas registradas</p>`
-    return
-  }
+    if (error) throw error
 
-  const vistos = new Set()
-  const clientesIds = []
-  for (const v of visitas) {
-    if (!vistos.has(v.cliente_id)) {
-      vistos.add(v.cliente_id)
-      clientesIds.push(v.cliente_id)
+    if (!visitas || visitas.length === 0) {
+      document.getElementById('ultimos-clientes').innerHTML =
+        `<p style="color:#aaa;font-size:13px;text-align:center">Aún no hay visitas registradas</p>`
+      return
     }
-    if (clientesIds.length >= 5) break
-  }
 
-  const { data: clientes } = await supabase
-    .from('clientes')
-    .select('id, nombre, telefono, total_visitas')
-    .in('id', clientesIds)
+    const vistos = new Set()
+    const clientesIds = []
+    for (const v of visitas) {
+      if (!vistos.has(v.cliente_id)) {
+        vistos.add(v.cliente_id)
+        clientesIds.push(v.cliente_id)
+      }
+      if (clientesIds.length >= 5) break
+    }
 
-  if (!clientes || clientes.length === 0) {
-    document.getElementById('ultimos-clientes').innerHTML =
-      `<p style="color:#aaa;font-size:13px;text-align:center">Sin datos</p>`
-    return
-  }
+    const { data: clientes, error: err2 } = await supabase
+      .from('clientes')
+      .select('id, nombre, telefono, total_visitas')
+      .in('id', clientesIds)
 
-  const ordenados = clientesIds.map(id => clientes.find(c => c.id === id)).filter(Boolean)
+    if (err2) throw err2
 
-  const filas = ordenados.map(c => `
-    <div class="negocio-row" style="cursor:pointer" data-telefono="${c.telefono}">
-      <div>
-        <div class="negocio-nombre">${c.nombre}</div>
-        <div class="negocio-meta">${c.telefono}</div>
+    if (!clientes || clientes.length === 0) {
+      document.getElementById('ultimos-clientes').innerHTML =
+        `<p style="color:#aaa;font-size:13px;text-align:center">Sin datos</p>`
+      return
+    }
+
+    const ordenados = clientesIds.map(id => clientes.find(c => c.id === id)).filter(Boolean)
+
+    const filas = ordenados.map(c => `
+      <div class="negocio-row" style="cursor:pointer" data-telefono="${c.telefono}">
+        <div>
+          <div class="negocio-nombre">${c.nombre}</div>
+          <div class="negocio-meta">${c.telefono}</div>
+        </div>
+        <div class="negocio-stats">
+          <span style="font-size:12px;color:#666">${c.total_visitas} visitas</span>
+          <span style="font-size:11px;color:#aaa">→</span>
+        </div>
       </div>
-      <div class="negocio-stats">
-        <span style="font-size:12px;color:#666">${c.total_visitas} visitas</span>
-        <span style="font-size:11px;color:#aaa">→</span>
-      </div>
-    </div>
-  `).join('')
+    `).join('')
 
-  document.getElementById('ultimos-clientes').innerHTML = filas
+    document.getElementById('ultimos-clientes').innerHTML = filas
 
-  document.querySelectorAll('#ultimos-clientes .negocio-row').forEach(row => {
-    row.addEventListener('click', async () => {
-      const tel = row.dataset.telefono
-      document.getElementById('telefono').value = tel
-      await buscarYMostrar({ telefono: tel })
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+    document.querySelectorAll('#ultimos-clientes .negocio-row').forEach(row => {
+      row.addEventListener('click', async () => {
+        const tel = row.dataset.telefono
+        document.getElementById('telefono').value = tel
+        await buscarYMostrar({ telefono: tel })
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      })
     })
-  })
+  } catch (e) {
+    document.getElementById('ultimos-clientes').innerHTML =
+      `<p style="color:#aaa;font-size:13px;text-align:center">Sin conexión</p>`
+  }
 }
 
 async function buscarYMostrar({ telefono, nombre }) {
   const resultado = document.getElementById('resultado')
   resultado.innerHTML = `<p style="text-align:center;color:#666;padding:16px">Buscando...</p>`
 
-  const { getNegocioActual } = await import('./auth.js')
-  const negocio = getNegocioActual()
+  try {
+    const { getNegocioActual } = await import('./auth.js')
+    const negocio = getNegocioActual()
 
-  let query = supabase.from('clientes').select('*').eq('negocio_id', negocio?.id)
+    let query = supabase.from('clientes').select('*').eq('negocio_id', negocio?.id)
 
-  if (telefono) {
-    query = query.eq('telefono', telefono)
-  } else if (nombre) {
-    query = query.ilike('nombre', `%${nombre}%`)
-  }
+    if (telefono) {
+      query = query.eq('telefono', telefono)
+    } else if (nombre) {
+      query = query.ilike('nombre', `%${nombre}%`)
+    }
 
-  const { data } = await query
+    const { data, error } = await query
+    if (error) throw error
 
-  if (telefono) {
-    const cliente = data?.[0]
-    if (!cliente) {
-      resultado.innerHTML = `
-        <div class="cliente-card">
-          <p class="error" style="margin-bottom:12px">Cliente no encontrado</p>
-          <button class="btn-registrar" id="btn-nuevo">+ Registrar cliente nuevo</button>
-        </div>
-      `
-      document.getElementById('btn-nuevo').addEventListener('click', () => navigate('registro', telefono))
+    if (telefono) {
+      const cliente = data?.[0]
+      if (!cliente) {
+        resultado.innerHTML = `
+          <div class="cliente-card">
+            <p class="error" style="margin-bottom:12px">Cliente no encontrado</p>
+            <button class="btn-registrar" id="btn-nuevo">+ Registrar cliente nuevo</button>
+          </div>
+        `
+        document.getElementById('btn-nuevo').addEventListener('click', () => navigate('registro', telefono))
+        return
+      }
+      mostrarCliente(cliente)
       return
     }
-    mostrarCliente(cliente)
-    return
-  }
 
-  if (!data || data.length === 0) {
-    resultado.innerHTML = `<div class="cliente-card"><p class="error">No se encontró ningún cliente con ese nombre</p></div>`
-    return
-  }
+    if (!data || data.length === 0) {
+      resultado.innerHTML = `<div class="cliente-card"><p class="error">No se encontró ningún cliente con ese nombre</p></div>`
+      return
+    }
 
-  if (data.length === 1) {
-    mostrarCliente(data[0])
-    return
-  }
+    if (data.length === 1) {
+      mostrarCliente(data[0])
+      return
+    }
 
-  const filas = data.map(c => `
-    <div class="negocio-row" style="cursor:pointer" data-id="${c.id}">
-      <div>
-        <div class="negocio-nombre">${c.nombre}</div>
-        <div class="negocio-meta">${c.telefono}</div>
+    const filas = data.map(c => `
+      <div class="negocio-row" style="cursor:pointer" data-id="${c.id}">
+        <div>
+          <div class="negocio-nombre">${c.nombre}</div>
+          <div class="negocio-meta">${c.telefono}</div>
+        </div>
+        <div class="negocio-stats">
+          <span style="font-size:12px">${c.total_visitas} visitas</span>
+          <span style="font-size:11px;color:#aaa">→</span>
+        </div>
       </div>
-      <div class="negocio-stats">
-        <span style="font-size:12px">${c.total_visitas} visitas</span>
-        <span style="font-size:11px;color:#aaa">→</span>
+    `).join('')
+
+    resultado.innerHTML = `
+      <div class="cliente-card">
+        <p style="font-size:13px;color:#666;margin-bottom:10px">Se encontraron ${data.length} clientes. Selecciona uno:</p>
+        ${filas}
       </div>
-    </div>
-  `).join('')
+    `
 
-  resultado.innerHTML = `
-    <div class="cliente-card">
-      <p style="font-size:13px;color:#666;margin-bottom:10px">Se encontraron ${data.length} clientes. Selecciona uno:</p>
-      ${filas}
-    </div>
-  `
-
-  resultado.querySelectorAll('.negocio-row').forEach(row => {
-    row.addEventListener('click', () => {
-      const cliente = data.find(c => c.id === row.dataset.id)
-      if (cliente) mostrarCliente(cliente)
+    resultado.querySelectorAll('.negocio-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const cliente = data.find(c => c.id === row.dataset.id)
+        if (cliente) mostrarCliente(cliente)
+      })
     })
-  })
+  } catch (e) {
+    resultado.innerHTML = `<div class="cliente-card">${errorConexion('buscar clientes')}</div>`
+  }
 }
 
 async function mostrarCliente(data) {
-  const { data: negocioData } = await supabase
-    .from('negocios')
-    .select('meta_puntos')
-    .eq('id', data.negocio_id)
-    .single()
+  try {
+    const { data: negocioData, error: e1 } = await supabase
+      .from('negocios')
+      .select('meta_puntos')
+      .eq('id', data.negocio_id)
+      .single()
+    if (e1) throw e1
 
-  const meta = negocioData?.meta_puntos || META_VISITAS
-  const visitasEnCiclo = data.puntos_actuales % meta
-  const pct = Math.min(Math.round((visitasEnCiclo / meta) * 100), 100)
-  const resultado = document.getElementById('resultado')
+    const { data: premiosActivos, error: e2 } = await supabase
+      .from('premios')
+      .select('*')
+      .eq('negocio_id', data.negocio_id)
+      .eq('activo', true)
+    if (e2) throw e2
 
-  resultado.innerHTML = `
-    <div class="cliente-card">
-      <h2>${data.nombre || 'Cliente'}</h2>
-      <div class="cliente-info">
-        <div class="stat">
-          <div class="stat-label">Visitas totales</div>
-          <div class="stat-value" id="visitas-display">${data.total_visitas}</div>
+    const meta = negocioData?.meta_puntos || META_VISITAS
+    const visitasEnCiclo = data.puntos_actuales % meta
+    const pct = Math.min(Math.round((visitasEnCiclo / meta) * 100), 100)
+    const resultado = document.getElementById('resultado')
+
+    resultado.innerHTML = `
+      <div class="cliente-card">
+        <h2>${data.nombre || 'Cliente'}</h2>
+        <div class="cliente-info">
+          <div class="stat">
+            <div class="stat-label">Visitas totales</div>
+            <div class="stat-value" id="visitas-display">${data.total_visitas}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Para el premio</div>
+            <div class="stat-value" id="ciclo-display">${visitasEnCiclo}/${meta}</div>
+          </div>
         </div>
-        <div class="stat">
-          <div class="stat-label">Para el premio</div>
-          <div class="stat-value" id="ciclo-display">${visitasEnCiclo}/${meta}</div>
+        <div class="progress-wrap">
+          <div class="progress-label">
+            <span>Progreso al premio</span>
+            <span id="progress-label">${visitasEnCiclo}/${meta}</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="progress-fill" style="width:${pct}%"></div>
+          </div>
         </div>
+        <button class="btn-registrar" id="registrar">+ Registrar visita</button>
+        <div id="msg"></div>
       </div>
-      <div class="progress-wrap">
-        <div class="progress-label">
-          <span>Progreso al premio</span>
-          <span id="progress-label">${visitasEnCiclo}/${meta}</span>
-        </div>
-        <div class="progress-track">
-          <div class="progress-fill" id="progress-fill" style="width:${pct}%"></div>
-        </div>
-      </div>
-      <button class="btn-registrar" id="registrar">+ Registrar visita</button>
-      <div id="msg"></div>
-    </div>
-  `
+    `
 
-  document.getElementById('registrar').addEventListener('click', async () => {
-    await supabase.from('visitas').insert({
-      cliente_id: data.id,
-      negocio_id: data.negocio_id,
-      puntos_sumados: 1
+    document.getElementById('registrar').addEventListener('click', async () => {
+      const btn = document.getElementById('registrar')
+      btn.disabled = true
+      btn.textContent = 'Registrando...'
+      btn.style.opacity = '0.7'
+
+      try {
+        const { error: ev } = await supabase.from('visitas').insert({
+          cliente_id: data.id,
+          negocio_id: data.negocio_id,
+          puntos_sumados: 1
+        })
+        if (ev) throw ev
+
+        const nuevasVisitas = data.total_visitas + 1
+        const nuevosActuales = data.puntos_actuales + 1
+
+        const { error: ec } = await supabase.from('clientes').update({
+          puntos_actuales: nuevosActuales,
+          total_visitas: nuevasVisitas
+        }).eq('id', data.id)
+        if (ec) throw ec
+
+        data.puntos_actuales = nuevosActuales
+        data.total_visitas = nuevasVisitas
+
+        const nuevoCiclo = nuevosActuales % meta
+        const nuevoPct = Math.min(Math.round((nuevoCiclo / meta) * 100), 100)
+
+        document.getElementById('visitas-display').textContent = nuevasVisitas
+        document.getElementById('ciclo-display').textContent = `${nuevoCiclo}/${meta}`
+        document.getElementById('progress-label').textContent = `${nuevoCiclo}/${meta}`
+        document.getElementById('progress-fill').style.width = nuevoPct + '%'
+
+        cargarUltimosClientes()
+
+        const msg = document.getElementById('msg')
+
+        if (nuevosActuales > 0 && nuevosActuales % meta === 0) {
+          if (premiosActivos && premiosActivos.length > 0) {
+            const premioAplicable = premiosActivos.find(p => p.puntos_requeridos === meta) || premiosActivos[0]
+            msg.innerHTML = `
+              <div class="premio-alert">
+                🎉 ¡Premio desbloqueado!<br>
+                <strong style="font-size:16px">${premioAplicable.nombre}</strong><br>
+                <span style="font-size:13px;display:block;margin:8px 0">Entrega este premio al cliente y confirma:</span>
+                <button id="btn-confirmar-canje"
+                  style="background:#059669;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;width:100%;margin-top:4px">
+                  ✓ Confirmar entrega del premio
+                </button>
+                <div id="msg-canje"></div>
+              </div>
+            `
+            document.getElementById('btn-confirmar-canje').addEventListener('click', async () => {
+              const btnCanje = document.getElementById('btn-confirmar-canje')
+              btnCanje.disabled = true
+              btnCanje.textContent = 'Registrando...'
+              try {
+                const { error: ecanje } = await supabase.from('canjes').insert({
+                  cliente_id: data.id,
+                  premio_id: premioAplicable.id
+                })
+                if (ecanje) throw ecanje
+                btnCanje.style.display = 'none'
+                document.getElementById('msg-canje').innerHTML =
+                  `<p style="color:#059669;text-align:center;font-size:13px;margin-top:8px">✓ Entrega registrada correctamente</p>`
+              } catch (e) {
+                document.getElementById('msg-canje').innerHTML = errorConexion('registrar el canje')
+                btnCanje.disabled = false
+                btnCanje.textContent = '✓ Confirmar entrega del premio'
+              }
+            })
+          } else {
+            msg.innerHTML = `
+              <div class="exito" style="text-align:center">
+                ✓ Visita registrada. El cliente completó el ciclo pero no hay premios activos configurados.
+              </div>
+            `
+          }
+        } else {
+          msg.innerHTML = `<div class="exito">✓ Visita registrada. Faltan ${meta - nuevoCiclo} visitas para el premio.</div>`
+        }
+      } catch (e) {
+        document.getElementById('msg').innerHTML = errorConexion('registrar la visita')
+      } finally {
+        btn.disabled = false
+        btn.textContent = '+ Registrar visita'
+        btn.style.opacity = '1'
+      }
     })
-
-    const nuevasVisitas = data.total_visitas + 1
-    const nuevosActuales = data.puntos_actuales + 1
-
-    await supabase.from('clientes').update({
-      puntos_actuales: nuevosActuales,
-      total_visitas: nuevasVisitas
-    }).eq('id', data.id)
-
-    data.puntos_actuales = nuevosActuales
-    data.total_visitas = nuevasVisitas
-
-    const nuevoCiclo = nuevosActuales % meta
-    const nuevoPct = Math.min(Math.round((nuevoCiclo / meta) * 100), 100)
-
-    document.getElementById('visitas-display').textContent = nuevasVisitas
-    document.getElementById('ciclo-display').textContent = `${nuevoCiclo}/${meta}`
-    document.getElementById('progress-label').textContent = `${nuevoCiclo}/${meta}`
-    document.getElementById('progress-fill').style.width = nuevoPct + '%'
-
-    cargarUltimosClientes()
-
-    const msg = document.getElementById('msg')
-    if (nuevosActuales > 0 && nuevosActuales % meta === 0) {
-      msg.innerHTML = `<div class="premio-alert">🎉 ¡Premio desbloqueado! Entrega el premio al cliente.</div>`
-    } else {
-      msg.innerHTML = `<div class="exito">✓ Visita registrada. Faltan ${meta - nuevoCiclo} visitas para el premio.</div>`
-    }
-  })
+  } catch (e) {
+    document.getElementById('resultado').innerHTML =
+      `<div class="cliente-card">${errorConexion('cargar el cliente')}</div>`
+  }
 }
 
 // ─── PÁGINA REGISTRO CAJERO ──────────────────────────────
@@ -395,30 +489,39 @@ export function initRegistro() {
   document.getElementById('guardar').addEventListener('click', async () => {
     const nombre = document.getElementById('nombre').value.trim()
     const telefono = document.getElementById('tel').value.trim()
+    const msg = document.getElementById('msg')
+    const btn = document.getElementById('guardar')
 
     if (!nombre || !telefono) {
-      document.getElementById('msg').innerHTML = `<p class="error">Llena todos los campos</p>`
+      msg.innerHTML = `<p class="error">Llena todos los campos</p>`
       return
     }
 
-    const { getNegocioActual } = await import('./auth.js')
-    const negocio = getNegocioActual()
+    btn.disabled = true
+    btn.textContent = 'Guardando...'
 
-    const { error } = await supabase.from('clientes').insert({
-      nombre,
-      telefono,
-      negocio_id: negocio?.id,
-      puntos_actuales: 0,
-      total_visitas: 0
-    })
+    try {
+      const { getNegocioActual } = await import('./auth.js')
+      const negocio = getNegocioActual()
 
-    if (error) {
-      document.getElementById('msg').innerHTML = `<p class="error">Error al guardar</p>`
-      return
+      const { error } = await supabase.from('clientes').insert({
+        nombre,
+        telefono,
+        negocio_id: negocio?.id,
+        puntos_actuales: 0,
+        total_visitas: 0
+      })
+
+      if (error) throw error
+
+      msg.innerHTML = `<div class="exito">✓ Cliente registrado</div>`
+      setTimeout(() => navigate('cajero'), 1500)
+    } catch (e) {
+      msg.innerHTML = errorConexion('guardar el cliente')
+    } finally {
+      btn.disabled = false
+      btn.textContent = 'Guardar cliente'
     }
-
-    document.getElementById('msg').innerHTML = `<div class="exito">✓ Cliente registrado</div>`
-    setTimeout(() => navigate('cajero'), 1500)
   })
 }
 
@@ -447,94 +550,97 @@ export async function paginaAdmin() {
     `
   }
 
-  const { data: negocios } = await supabase.from('negocios').select('*')
-  const { data: clientes } = await supabase.from('clientes').select('*')
-  const { data: visitas } = await supabase.from('visitas').select('*')
+  try {
+    const { data: negocios, error: e1 } = await supabase.from('negocios').select('*')
+    if (e1) throw e1
+    const { data: clientes, error: e2 } = await supabase.from('clientes').select('*')
+    if (e2) throw e2
+    const { data: visitas, error: e3 } = await supabase.from('visitas').select('*')
+    if (e3) throw e3
 
-  const filas = (negocios || []).map(n => {
-    const clientesNegocio = (clientes || []).filter(c => c.negocio_id === n.id).length
-    const visitasNegocio = (visitas || []).filter(v => v.negocio_id === n.id).length
+    const filas = (negocios || []).map(n => {
+      const clientesNegocio = (clientes || []).filter(c => c.negocio_id === n.id).length
+      const visitasNegocio = (visitas || []).filter(v => v.negocio_id === n.id).length
+      return `
+        <div class="negocio-row">
+          <div>
+            <div class="negocio-nombre">${n.nombre}</div>
+            <div class="negocio-meta">${n.email}</div>
+          </div>
+          <div class="negocio-stats">
+            <span>${clientesNegocio} clientes</span>
+            <span>${visitasNegocio} visitas</span>
+            <span class="badge ${n.activo ? 'activo' : 'inactivo'}">${n.activo ? 'Activo' : 'Inactivo'}</span>
+            <button class="btn-toggle-negocio" data-id="${n.id}" data-activo="${n.activo}"
+              style="background:${n.activo ? '#fee2e2' : '#d1fae5'};color:${n.activo ? '#dc2626' : '#059669'};border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">
+              ${n.activo ? 'Desactivar' : 'Activar'}
+            </button>
+            <button class="btn-descargar-qr" data-id="${n.id}" data-nombre="${n.nombre}"
+              style="background:#667eea;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px">
+              ⬇ QR
+            </button>
+          </div>
+        </div>
+      `
+    }).join('')
+
     return `
-      <div class="negocio-row">
-        <div>
-          <div class="negocio-nombre">${n.nombre}</div>
-          <div class="negocio-meta">${n.email}</div>
+      <div class="container">
+        <div class="header">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <h1>Panel Admin</h1>
+              <p>Gestiona tus negocios</p>
+            </div>
+            <button id="btn-admin-logout" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px">Salir</button>
+          </div>
         </div>
-        <div class="negocio-stats">
-          <span>${clientesNegocio} clientes</span>
-          <span>${visitasNegocio} visitas</span>
-          <span class="badge ${n.activo ? 'activo' : 'inactivo'}">${n.activo ? 'Activo' : 'Inactivo'}</span>
-          <button class="btn-toggle-negocio" data-id="${n.id}" data-activo="${n.activo}"
-            style="background:${n.activo ? '#fee2e2' : '#d1fae5'};color:${n.activo ? '#dc2626' : '#059669'};border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">
-            ${n.activo ? 'Desactivar' : 'Activar'}
-          </button>
-          <button class="btn-descargar-qr" data-id="${n.id}" data-nombre="${n.nombre}"
-            style="background:#667eea;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px">
-            ⬇ QR
-          </button>
+
+        <div class="cliente-card">
+          <div class="admin-stats">
+            <div class="stat"><div class="stat-label">Negocios</div><div class="stat-value">${(negocios || []).length}</div></div>
+            <div class="stat"><div class="stat-label">Clientes</div><div class="stat-value">${(clientes || []).length}</div></div>
+            <div class="stat"><div class="stat-label">Visitas</div><div class="stat-value">${(visitas || []).length}</div></div>
+          </div>
         </div>
+
+        <div class="cliente-card" style="margin-top:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em">Negocios registrados</h3>
+            <button id="btn-nuevo-negocio" style="background:#667eea;color:white;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px">+ Nuevo negocio</button>
+          </div>
+
+          <div id="form-negocio" style="display:none;background:#f8fafc;padding:16px;border-radius:10px;margin-bottom:16px">
+            <div class="form-group">
+              <label>Nombre del negocio</label>
+              <input type="text" id="nuevo-nombre" placeholder="Ej: Café El Sol" />
+            </div>
+            <div class="form-group">
+              <label>Correo electrónico</label>
+              <input type="email" id="nuevo-email" placeholder="cafe@correo.com" />
+            </div>
+            <div class="form-group">
+              <label>Contraseña</label>
+              ${inputPassword('nuevo-password', 'Contraseña para el dueño')}
+            </div>
+            <button id="btn-guardar-negocio" class="btn-registrar" style="margin-top:8px">Guardar negocio</button>
+            <div id="msg-negocio"></div>
+          </div>
+
+          ${filas || '<p style="color:#666;text-align:center">No hay negocios aún</p>'}
+        </div>
+
+        <canvas id="qr-canvas" style="display:none"></canvas>
       </div>
     `
-  }).join('')
-
-  return `
-    <div class="container">
-      <div class="header">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <h1>Panel Admin</h1>
-            <p>Gestiona tus negocios</p>
-          </div>
-          <button id="btn-admin-logout" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px">Salir</button>
-        </div>
+  } catch (e) {
+    return `
+      <div class="container">
+        <div class="header"><h1>Panel Admin</h1></div>
+        <div class="cliente-card">${errorConexion('cargar los datos')}</div>
       </div>
-
-      <div class="cliente-card">
-        <div class="admin-stats">
-          <div class="stat">
-            <div class="stat-label">Negocios</div>
-            <div class="stat-value">${(negocios || []).length}</div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">Clientes</div>
-            <div class="stat-value">${(clientes || []).length}</div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">Visitas</div>
-            <div class="stat-value">${(visitas || []).length}</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="cliente-card" style="margin-top:12px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em">Negocios registrados</h3>
-          <button id="btn-nuevo-negocio" style="background:#667eea;color:white;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px">+ Nuevo negocio</button>
-        </div>
-
-        <div id="form-negocio" style="display:none;background:#f8fafc;padding:16px;border-radius:10px;margin-bottom:16px">
-          <div class="form-group">
-            <label>Nombre del negocio</label>
-            <input type="text" id="nuevo-nombre" placeholder="Ej: Café El Sol" />
-          </div>
-          <div class="form-group">
-            <label>Correo electrónico</label>
-            <input type="email" id="nuevo-email" placeholder="cafe@correo.com" />
-          </div>
-          <div class="form-group">
-            <label>Contraseña</label>
-            ${inputPassword('nuevo-password', 'Contraseña para el dueño')}
-          </div>
-          <button id="btn-guardar-negocio" class="btn-registrar" style="margin-top:8px">Guardar negocio</button>
-          <div id="msg-negocio"></div>
-        </div>
-
-        ${filas || '<p style="color:#666;text-align:center">No hay negocios aún</p>'}
-      </div>
-
-      <canvas id="qr-canvas" style="display:none"></canvas>
-    </div>
-  `
+    `
+  }
 }
 
 export function initAdmin() {
@@ -578,22 +684,20 @@ export function initAdmin() {
 
     msg.innerHTML = `<p style="color:#666;text-align:center">Guardando...</p>`
 
-    const { error } = await supabase.from('negocios').insert({
-      nombre,
-      email,
-      password: password,
-      password_hash: password,
-      activo: true,
-      meta_puntos: 10
-    })
-
-    if (error) {
-      msg.innerHTML = `<p class="error">Error: ${error.message}</p>`
-      return
+    try {
+      const { error } = await supabase.from('negocios').insert({
+        nombre, email,
+        password: password,
+        password_hash: password,
+        activo: true,
+        meta_puntos: 10
+      })
+      if (error) throw error
+      msg.innerHTML = `<div class="exito">✓ Negocio creado correctamente</div>`
+      setTimeout(() => navigate('admin'), 1500)
+    } catch (e) {
+      msg.innerHTML = errorConexion('guardar el negocio')
     }
-
-    msg.innerHTML = `<div class="exito">✓ Negocio creado correctamente</div>`
-    setTimeout(() => navigate('admin'), 1500)
   })
 
   document.querySelectorAll('.btn-toggle-negocio').forEach(btn => {
@@ -602,11 +706,15 @@ export function initAdmin() {
       const activoActual = btn.dataset.activo === 'true'
       btn.textContent = 'Guardando...'
       btn.disabled = true
-      const { error } = await supabase
-        .from('negocios')
-        .update({ activo: !activoActual })
-        .eq('id', id)
-      if (!error) navigate('admin')
+      try {
+        const { error } = await supabase.from('negocios').update({ activo: !activoActual }).eq('id', id)
+        if (error) throw error
+        navigate('admin')
+      } catch (e) {
+        btn.textContent = activoActual ? 'Desactivar' : 'Activar'
+        btn.disabled = false
+        alert('Sin conexión. Intenta de nuevo.')
+      }
     })
   })
 
@@ -617,10 +725,7 @@ export function initAdmin() {
       const url = `${window.location.origin}/#/negocio/${negocioId}`
       const canvas = document.getElementById('qr-canvas')
 
-      await QRCode.toCanvas(canvas, url, {
-        width: 400, margin: 2,
-        color: { dark: '#000000', light: '#ffffff' }
-      })
+      await QRCode.toCanvas(canvas, url, { width: 400, margin: 2, color: { dark: '#000000', light: '#ffffff' } })
 
       const anchoOriginal = canvas.width
       const altoOriginal = canvas.height
@@ -628,7 +733,6 @@ export function initAdmin() {
       canvasFinal.width = anchoOriginal
       canvasFinal.height = altoOriginal + 50
       const ctxFinal = canvasFinal.getContext('2d')
-
       ctxFinal.fillStyle = '#ffffff'
       ctxFinal.fillRect(0, 0, canvasFinal.width, canvasFinal.height)
       ctxFinal.drawImage(canvas, 0, 0)
@@ -647,73 +751,81 @@ export function initAdmin() {
 
 // ─── PÁGINA CLIENTE ───────────────────────────────────────
 export async function paginaCliente(telefono) {
-  const { data } = await supabase
-    .from('clientes')
-    .select('*, negocios(nombre, meta_puntos)')
-    .eq('telefono', telefono)
-    .single()
+  try {
+    const { data, error } = await supabase
+      .from('clientes')
+      .select('*, negocios(nombre, meta_puntos)')
+      .eq('telefono', telefono)
+      .single()
 
-  if (!data) {
+    if (error) throw error
+
+    if (!data) {
+      return `
+        <div class="container">
+          <div class="header"><h1>No encontrado</h1><p>Este cliente no está registrado</p></div>
+        </div>
+      `
+    }
+
+    const meta = data.negocios?.meta_puntos || META_VISITAS
+    const visitasEnCiclo = data.puntos_actuales % meta
+    const pct = data.puntos_actuales === 0 ? 0 : Math.min(Math.round((visitasEnCiclo / meta) * 100), 100)
+
+    let mensajeProgreso
+    if (data.puntos_actuales === 0) {
+      mensajeProgreso = `Empieza a visitar para acumular visitas`
+    } else if (data.puntos_actuales > 0 && data.puntos_actuales % meta === 0) {
+      mensajeProgreso = `🎉 ¡Tienes un premio disponible!`
+    } else {
+      mensajeProgreso = `Te faltan <strong>${meta - visitasEnCiclo} visitas</strong> para tu próximo premio`
+    }
+
     return `
       <div class="container">
         <div class="header">
-          <h1>No encontrado</h1>
-          <p>Este cliente no está registrado</p>
+          <h1>${data.negocios?.nombre || 'Programa de Lealtad'}</h1>
+          <p>Hola, ${data.nombre || 'Cliente'} 👋</p>
+        </div>
+        <div class="cliente-card">
+          <div class="cliente-info">
+            <div class="stat">
+              <div class="stat-label">Visitas totales</div>
+              <div class="stat-value">${data.total_visitas}</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Para el premio</div>
+              <div class="stat-value">${visitasEnCiclo}/${meta}</div>
+            </div>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress-label">
+              <span>Progreso al premio</span>
+              <span>${visitasEnCiclo}/${meta}</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:${pct}%"></div>
+            </div>
+          </div>
+          <div class="exito" style="text-align:center">${mensajeProgreso}</div>
+        </div>
+        <div class="cliente-card" style="margin-top:12px">
+          <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px">Tu código QR</h3>
+          <div style="text-align:center">
+            <div id="qrcode" style="display:inline-block"></div>
+            <p style="font-size:12px;color:#666;margin-top:8px">Muéstralo al cajero para sumar visitas</p>
+          </div>
         </div>
       </div>
     `
+  } catch (e) {
+    return `
+      <div class="container">
+        <div class="header"><h1>Error de conexión</h1></div>
+        <div class="cliente-card">${errorConexion('cargar tu perfil')}</div>
+      </div>
+    `
   }
-
-  const meta = data.negocios?.meta_puntos || META_VISITAS
-  const visitasEnCiclo = data.puntos_actuales % meta
-  const pct = data.puntos_actuales === 0 ? 0 : Math.min(Math.round((visitasEnCiclo / meta) * 100), 100)
-
-  let mensajeProgreso
-  if (data.puntos_actuales === 0) {
-    mensajeProgreso = `Empieza a visitar para acumular visitas`
-  } else if (data.puntos_actuales > 0 && data.puntos_actuales % meta === 0) {
-    mensajeProgreso = `🎉 ¡Tienes un premio disponible!`
-  } else {
-    mensajeProgreso = `Te faltan <strong>${meta - visitasEnCiclo} visitas</strong> para tu próximo premio`
-  }
-
-  return `
-    <div class="container">
-      <div class="header">
-        <h1>${data.negocios?.nombre || 'Programa de Lealtad'}</h1>
-        <p>Hola, ${data.nombre || 'Cliente'} 👋</p>
-      </div>
-      <div class="cliente-card">
-        <div class="cliente-info">
-          <div class="stat">
-            <div class="stat-label">Visitas totales</div>
-            <div class="stat-value">${data.total_visitas}</div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">Para el premio</div>
-            <div class="stat-value">${visitasEnCiclo}/${meta}</div>
-          </div>
-        </div>
-        <div class="progress-wrap">
-          <div class="progress-label">
-            <span>Progreso al premio</span>
-            <span>${visitasEnCiclo}/${meta}</span>
-          </div>
-          <div class="progress-track">
-            <div class="progress-fill" style="width:${pct}%"></div>
-          </div>
-        </div>
-        <div class="exito" style="text-align:center">${mensajeProgreso}</div>
-      </div>
-      <div class="cliente-card" style="margin-top:12px">
-        <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px">Tu código QR</h3>
-        <div style="text-align:center">
-          <div id="qrcode" style="display:inline-block"></div>
-          <p style="font-size:12px;color:#666;margin-top:8px">Muéstralo al cajero para sumar visitas</p>
-        </div>
-      </div>
-    </div>
-  `
 }
 
 export function initCliente(telefono) {
@@ -729,39 +841,34 @@ export function initCliente(telefono) {
 
 // ─── PÁGINA QR DEL NEGOCIO ────────────────────────────────
 export async function paginaQRNegocio(negocioId) {
-  const { data: negocio } = await supabase
-    .from('negocios')
-    .select('*')
-    .eq('id', negocioId)
-    .single()
+  try {
+    const { data: negocio, error } = await supabase
+      .from('negocios').select('*').eq('id', negocioId).single()
+    if (error) throw error
 
-  if (!negocio) {
+    if (!negocio) {
+      return `<div class="container"><div class="header"><h1>No encontrado</h1><p>Este negocio no existe</p></div></div>`
+    }
+
     return `
       <div class="container">
-        <div class="header">
-          <h1>No encontrado</h1>
-          <p>Este negocio no existe</p>
+        <div class="header" style="text-align:center">
+          <h1>${negocio.nombre}</h1>
+          <p>Programa de lealtad</p>
+        </div>
+        <div class="cliente-card" style="text-align:center">
+          <p style="font-size:15px;margin-bottom:16px">Escribe tu número para ver tus visitas o registrarte</p>
+          <div class="search-box" style="margin-bottom:0">
+            <input type="tel" id="tel-negocio" placeholder="Tu número de teléfono" />
+            <button id="btn-entrar">Entrar</button>
+          </div>
+          <div id="msg-negocio"></div>
         </div>
       </div>
     `
+  } catch (e) {
+    return `<div class="container"><div class="header"><h1>Sin conexión</h1></div><div class="cliente-card">${errorConexion()}</div></div>`
   }
-
-  return `
-    <div class="container">
-      <div class="header" style="text-align:center">
-        <h1>${negocio.nombre}</h1>
-        <p>Programa de lealtad</p>
-      </div>
-      <div class="cliente-card" style="text-align:center">
-        <p style="font-size:15px;margin-bottom:16px">Escribe tu número para ver tus visitas o registrarte</p>
-        <div class="search-box" style="margin-bottom:0">
-          <input type="tel" id="tel-negocio" placeholder="Tu número de teléfono" />
-          <button id="btn-entrar">Entrar</button>
-        </div>
-        <div id="msg-negocio"></div>
-      </div>
-    </div>
-  `
 }
 
 export function initQRNegocio(negocioId) {
@@ -772,17 +879,19 @@ export function initQRNegocio(negocioId) {
     const msg = document.getElementById('msg-negocio')
     msg.innerHTML = `<p style="text-align:center;color:#666;margin-top:12px">Buscando...</p>`
 
-    const { data } = await supabase
-      .from('clientes')
-      .select('*')
-      .eq('telefono', telefono)
-      .eq('negocio_id', negocioId)
-      .single()
+    try {
+      const { data, error } = await supabase
+        .from('clientes').select('*')
+        .eq('telefono', telefono).eq('negocio_id', negocioId).single()
+      if (error && error.code !== 'PGRST116') throw error
 
-    if (data) {
-      navigate('cliente', telefono)
-    } else {
-      navigate('registro-cliente', `${negocioId}/${telefono}`)
+      if (data) {
+        navigate('cliente', telefono)
+      } else {
+        navigate('registro-cliente', `${negocioId}/${telefono}`)
+      }
+    } catch (e) {
+      msg.innerHTML = errorConexion()
     }
   })
 }
@@ -814,160 +923,186 @@ export function paginaRegistroCliente(negocioId, telefono) {
 export function initRegistroCliente(negocioId, telefono) {
   document.getElementById('btn-registrar-cliente').addEventListener('click', async () => {
     const nombre = document.getElementById('nombre-cliente').value.trim()
+    const msg = document.getElementById('msg-registro')
+    const btn = document.getElementById('btn-registrar-cliente')
+
     if (!nombre) {
-      document.getElementById('msg-registro').innerHTML = `<p class="error">Escribe tu nombre</p>`
+      msg.innerHTML = `<p class="error">Escribe tu nombre</p>`
       return
     }
 
-    const { error } = await supabase.from('clientes').insert({
-      nombre,
-      telefono,
-      negocio_id: negocioId,
-      puntos_actuales: 0,
-      total_visitas: 0
-    })
+    btn.disabled = true
+    btn.textContent = 'Registrando...'
 
-    if (error) {
-      document.getElementById('msg-registro').innerHTML = `<p class="error">Error al registrar</p>`
-      return
+    try {
+      const { error } = await supabase.from('clientes').insert({
+        nombre, telefono, negocio_id: negocioId,
+        puntos_actuales: 0, total_visitas: 0
+      })
+      if (error) throw error
+      navigate('cliente', telefono)
+    } catch (e) {
+      msg.innerHTML = errorConexion('registrarte')
+      btn.disabled = false
+      btn.textContent = 'Registrarme'
     }
-
-    navigate('cliente', telefono)
   })
 }
 
 // ─── PANEL DEL DUEÑO ──────────────────────────────────────
 export async function paginaDueno() {
-  const { getNegocioActual } = await import('./auth.js')
-  const negocio = getNegocioActual()
-  if (!negocio) {
-    window.location.hash = '#/login'
-    window.dispatchEvent(new Event('hashchange'))
-    return '<div></div>'
+  try {
+    const { getNegocioActual } = await import('./auth.js')
+    const negocio = getNegocioActual()
+    if (!negocio) {
+      window.location.hash = '#/login'
+      window.dispatchEvent(new Event('hashchange'))
+      return '<div></div>'
+    }
+
+    const { data: negocioData, error: e0 } = await supabase
+      .from('negocios').select('*').eq('id', negocio.id).single()
+    if (e0) throw e0
+
+    if (negocioData?.activo === false) {
+      const { logout } = await import('./auth.js')
+      logout()
+      return '<div></div>'
+    }
+
+    const metaVisitas = negocioData?.meta_puntos || 10
+
+    const { data: clientes } = await supabase.from('clientes').select('*').eq('negocio_id', negocio.id)
+    const { data: visitas } = await supabase.from('visitas').select('*').eq('negocio_id', negocio.id)
+    const { data: premios } = await supabase.from('premios').select('*').eq('negocio_id', negocio.id)
+    const { data: canjes } = await supabase
+      .from('canjes')
+      .select('*, premios(nombre)')
+      .in('premio_id', (premios || []).map(p => p.id))
+      .order('fecha', { ascending: false })
+      .limit(10)
+
+    const hoy = new Date().toISOString().split('T')[0]
+    const visitasHoy = (visitas || []).filter(v => v.fecha && v.fecha.startsWith(hoy)).length
+
+    const clientesOrdenados = [...(clientes || [])]
+      .sort((a, b) => b.total_visitas - a.total_visitas).slice(0, 5)
+
+    const filasClientes = clientesOrdenados.map(c => `
+      <div class="negocio-row">
+        <div>
+          <div class="negocio-nombre">${c.nombre}</div>
+          <div class="negocio-meta">${c.telefono}</div>
+        </div>
+        <div class="negocio-stats"><span>${c.total_visitas} visitas</span></div>
+      </div>
+    `).join('')
+
+    const filasPremios = (premios || []).map(p => `
+      <div class="negocio-row">
+        <div>
+          <div class="negocio-nombre">${p.nombre}</div>
+          <div class="negocio-meta">Se gana a las ${p.puntos_requeridos} visitas</div>
+        </div>
+        <div class="negocio-stats">
+          <span class="badge ${p.activo ? 'activo' : 'inactivo'}">${p.activo ? 'Activo' : 'Inactivo'}</span>
+          <button class="btn-toggle-premio" data-id="${p.id}" data-activo="${p.activo}"
+            style="background:#f0f4f8;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px">
+            ${p.activo ? 'Desactivar' : 'Activar'}
+          </button>
+          <button class="btn-eliminar-premio" data-id="${p.id}" data-nombre="${p.nombre}"
+            style="background:#fee2e2;color:#dc2626;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">
+            🗑
+          </button>
+        </div>
+      </div>
+    `).join('')
+
+    const filasCanjes = (canjes || []).length === 0
+      ? `<p style="color:#aaa;font-size:13px;text-align:center">No hay premios entregados aún</p>`
+      : (canjes || []).map(c => {
+          const fecha = c.fecha ? new Date(c.fecha).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+          return `
+            <div class="negocio-row">
+              <div>
+                <div class="negocio-nombre">${c.premios?.nombre || 'Premio'}</div>
+                <div class="negocio-meta">${fecha}</div>
+              </div>
+              <div class="negocio-stats">
+                <span style="font-size:12px;color:#059669">✓ Entregado</span>
+              </div>
+            </div>
+          `
+        }).join('')
+
+    return `
+      <div class="container">
+        <div class="header">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <h1>${negocioData?.nombre || negocio.nombre}</h1>
+              <p>Panel del dueño</p>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button id="btn-ir-cajero" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px">🧾 Cajero</button>
+              <button id="btn-logout-dueno" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px">Salir</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="cliente-card">
+          <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px">Resumen</h3>
+          <div class="admin-stats">
+            <div class="stat"><div class="stat-label">Clientes</div><div class="stat-value">${(clientes || []).length}</div></div>
+            <div class="stat"><div class="stat-label">Visitas hoy</div><div class="stat-value">${visitasHoy}</div></div>
+            <div class="stat"><div class="stat-label">Total visitas</div><div class="stat-value">${(visitas || []).length}</div></div>
+          </div>
+        </div>
+
+        <div class="cliente-card" style="margin-top:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em">Premios</h3>
+            <button id="btn-nuevo-premio" style="background:#667eea;color:white;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px">+ Nuevo premio</button>
+          </div>
+          <p style="font-size:12px;color:#aaa;margin-bottom:12px">Las visitas necesarias para ganar se configuran por premio</p>
+
+          <div id="form-premio" style="display:none;background:#f8fafc;padding:16px;border-radius:10px;margin-bottom:12px">
+            <div class="form-group">
+              <label>Nombre del premio</label>
+              <input type="text" id="nombre-premio" placeholder="Ej: Café gratis, Descuento 20%..." />
+            </div>
+            <div class="form-group">
+              <label>¿A cuántas visitas se gana?</label>
+              <input type="number" id="visitas-premio" value="${metaVisitas}" min="1" />
+            </div>
+            <button id="btn-guardar-premio" class="btn-registrar" style="margin-top:8px">Guardar premio</button>
+            <div id="msg-premio"></div>
+          </div>
+
+          <div id="lista-premios">
+            ${filasPremios || '<p style="color:#666;text-align:center;font-size:14px">No hay premios configurados aún</p>'}
+          </div>
+        </div>
+
+        <div class="cliente-card" style="margin-top:12px">
+          <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px">Últimos premios entregados</h3>
+          ${filasCanjes}
+        </div>
+
+        <div class="cliente-card" style="margin-top:12px;margin-bottom:24px">
+          <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px">Clientes más frecuentes</h3>
+          ${filasClientes || '<p style="color:#666;text-align:center;font-size:14px">Aún no hay clientes registrados</p>'}
+        </div>
+      </div>
+    `
+  } catch (e) {
+    return `
+      <div class="container">
+        <div class="header"><h1>Error de conexión</h1></div>
+        <div class="cliente-card">${errorConexion('cargar tu panel')}</div>
+      </div>
+    `
   }
-
-  const { data: negocioData } = await supabase
-    .from('negocios')
-    .select('*')
-    .eq('id', negocio.id)
-    .single()
-
-  if (negocioData?.activo === false) {
-    const { logout } = await import('./auth.js')
-    logout()
-    return '<div></div>'
-  }
-
-  const metaVisitas = negocioData?.meta_puntos || 10
-
-  const { data: clientes } = await supabase
-    .from('clientes').select('*').eq('negocio_id', negocio.id)
-
-  const { data: visitas } = await supabase
-    .from('visitas').select('*').eq('negocio_id', negocio.id)
-
-  const { data: premios } = await supabase
-    .from('premios').select('*').eq('negocio_id', negocio.id)
-
-  const hoy = new Date().toISOString().split('T')[0]
-  const visitasHoy = (visitas || []).filter(v => v.fecha && v.fecha.startsWith(hoy)).length
-
-  const clientesOrdenados = [...(clientes || [])]
-    .sort((a, b) => b.total_visitas - a.total_visitas)
-    .slice(0, 5)
-
-  const filasClientes = clientesOrdenados.map(c => `
-    <div class="negocio-row">
-      <div>
-        <div class="negocio-nombre">${c.nombre}</div>
-        <div class="negocio-meta">${c.telefono}</div>
-      </div>
-      <div class="negocio-stats">
-        <span>${c.total_visitas} visitas</span>
-      </div>
-    </div>
-  `).join('')
-
-  const filasPremios = (premios || []).map(p => `
-    <div class="negocio-row">
-      <div>
-        <div class="negocio-nombre">${p.nombre}</div>
-        <div class="negocio-meta">Se gana a las ${p.puntos_requeridos} visitas</div>
-      </div>
-      <div class="negocio-stats">
-        <span class="badge ${p.activo ? 'activo' : 'inactivo'}">${p.activo ? 'Activo' : 'Inactivo'}</span>
-        <button class="btn-toggle-premio" data-id="${p.id}" data-activo="${p.activo}"
-          style="background:#f0f4f8;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px">
-          ${p.activo ? 'Desactivar' : 'Activar'}
-        </button>
-      </div>
-    </div>
-  `).join('')
-
-  return `
-    <div class="container">
-      <div class="header">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <h1>${negocioData?.nombre || negocio.nombre}</h1>
-            <p>Panel del dueño</p>
-          </div>
-          <div style="display:flex;gap:8px">
-            <button id="btn-ir-cajero" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px">🧾 Cajero</button>
-            <button id="btn-logout-dueno" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px">Salir</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="cliente-card">
-        <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px">Resumen</h3>
-        <div class="admin-stats">
-          <div class="stat">
-            <div class="stat-label">Clientes</div>
-            <div class="stat-value">${(clientes || []).length}</div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">Visitas hoy</div>
-            <div class="stat-value">${visitasHoy}</div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">Total visitas</div>
-            <div class="stat-value">${(visitas || []).length}</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="cliente-card" style="margin-top:12px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em">Premios</h3>
-          <button id="btn-nuevo-premio" style="background:#667eea;color:white;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px">+ Nuevo premio</button>
-        </div>
-        <p style="font-size:12px;color:#aaa;margin-bottom:12px">Las visitas necesarias para ganar se configuran por premio</p>
-
-        <div id="form-premio" style="display:none;background:#f8fafc;padding:16px;border-radius:10px;margin-bottom:12px">
-          <div class="form-group">
-            <label>Nombre del premio</label>
-            <input type="text" id="nombre-premio" placeholder="Ej: Café gratis, Descuento 20%..." />
-          </div>
-          <div class="form-group">
-            <label>¿A cuántas visitas se gana?</label>
-            <input type="number" id="visitas-premio" value="${metaVisitas}" min="1" />
-          </div>
-          <button id="btn-guardar-premio" class="btn-registrar" style="margin-top:8px">Guardar premio</button>
-          <div id="msg-premio"></div>
-        </div>
-
-        <div id="lista-premios">
-          ${filasPremios || '<p style="color:#666;text-align:center;font-size:14px">No hay premios configurados aún</p>'}
-        </div>
-      </div>
-
-      <div class="cliente-card" style="margin-top:12px;margin-bottom:24px">
-        <h3 style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px">Clientes más frecuentes</h3>
-        ${filasClientes || '<p style="color:#666;text-align:center;font-size:14px">Aún no hay clientes registrados</p>'}
-      </div>
-    </div>
-  `
 }
 
 export function initDueno(negocioId) {
@@ -993,31 +1128,54 @@ export function initDueno(negocioId) {
       return
     }
 
-    const { error } = await supabase.from('premios').insert({
-      negocio_id: negocioId,
-      nombre,
-      puntos_requeridos: visitas,
-      activo: true
-    })
-
-    if (error) {
-      msg.innerHTML = `<p class="error">Error al guardar el premio</p>`
-      return
+    try {
+      const { error } = await supabase.from('premios').insert({
+        negocio_id: negocioId,
+        nombre,
+        puntos_requeridos: visitas,
+        activo: true
+      })
+      if (error) throw error
+      msg.innerHTML = `<div class="exito">✓ Premio creado</div>`
+      setTimeout(() => navigate('dueno'), 1000)
+    } catch (e) {
+      msg.innerHTML = errorConexion('guardar el premio')
     }
-
-    msg.innerHTML = `<div class="exito">✓ Premio creado</div>`
-    setTimeout(() => navigate('dueno'), 1000)
   })
 
   document.querySelectorAll('.btn-toggle-premio').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.id
       const activoActual = btn.dataset.activo === 'true'
-      const { error } = await supabase
-        .from('premios')
-        .update({ activo: !activoActual })
-        .eq('id', id)
-      if (!error) navigate('dueno')
+      try {
+        const { error } = await supabase.from('premios').update({ activo: !activoActual }).eq('id', id)
+        if (error) throw error
+        navigate('dueno')
+      } catch (e) {
+        alert('Sin conexión. Intenta de nuevo.')
+      }
+    })
+  })
+
+  // ── Eliminar premio ──
+  document.querySelectorAll('.btn-eliminar-premio').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id
+      const nombre = btn.dataset.nombre
+      if (!confirm(`¿Eliminar el premio "${nombre}"? Esta acción no se puede deshacer.`)) return
+
+      btn.disabled = true
+      btn.textContent = '...'
+
+      try {
+        const { error } = await supabase.from('premios').delete().eq('id', id)
+        if (error) throw error
+        navigate('dueno')
+      } catch (e) {
+        alert('Sin conexión. No se pudo eliminar.')
+        btn.disabled = false
+        btn.textContent = '🗑'
+      }
     })
   })
 }
