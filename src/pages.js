@@ -20,9 +20,21 @@ function inputPassword(id, placeholder = '••••••') {
   `
 }
 
-// ─── HELPER: manejo de errores de conexión ────────────────
+// ─── HELPER: errores de conexión ──────────────────────────
 function errorConexion(donde = '') {
   return `<p class="error">Sin conexión${donde ? ' al ' + donde : ''}. Verifica tu internet e intenta de nuevo.</p>`
+}
+
+// ─── HELPER: pantalla de carga ────────────────────────────
+function pantallasCargando(titulo = '') {
+  return `
+    <div class="container">
+      <div class="header"><h1>${titulo}</h1></div>
+      <div class="cliente-card" style="text-align:center;padding:40px">
+        <p style="color:#666;font-size:15px">Cargando...</p>
+      </div>
+    </div>
+  `
 }
 
 // ─── PÁGINA LOGIN ─────────────────────────────────────────
@@ -54,13 +66,13 @@ export function initLogin() {
     const email = document.getElementById('email').value.trim()
     const password = document.getElementById('password').value.trim()
     const msg = document.getElementById('msg')
+    const btn = document.getElementById('btn-login')
 
     if (!email || !password) {
       msg.innerHTML = `<p class="error">Llena todos los campos</p>`
       return
     }
 
-    const btn = document.getElementById('btn-login')
     btn.disabled = true
     btn.textContent = 'Verificando...'
     msg.innerHTML = ''
@@ -89,6 +101,11 @@ export function initLogin() {
       btn.disabled = false
       btn.textContent = 'Entrar'
     }
+  })
+
+  // Enter en password
+  document.getElementById('password')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('btn-login').click()
   })
 }
 
@@ -123,7 +140,7 @@ export function paginaCajero() {
       <div id="resultado"></div>
 
       <div class="cliente-card" style="margin-top:12px">
-        <h3 style="font-size:13px;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">Últimos clientes atendidos</h3>
+        <h3 style="font-size:13px;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">Últimos clientes atendidos hoy</h3>
         <div id="ultimos-clientes">
           <p style="color:#aaa;font-size:13px;text-align:center">Cargando...</p>
         </div>
@@ -141,27 +158,41 @@ export function initCajero() {
 
   cargarUltimosClientes()
 
+  // ── Buscar por teléfono ──
   document.getElementById('buscar').addEventListener('click', async () => {
     const telefono = document.getElementById('telefono').value.trim()
-    if (telefono) await buscarYMostrar({ telefono })
+    if (!telefono) return
+    // Limpiar campo de nombre al buscar por teléfono
+    document.getElementById('nombre-buscar').value = ''
+    await buscarYMostrar({ telefono })
   })
 
+  // ── Buscar por nombre ──
   document.getElementById('buscar-nombre').addEventListener('click', async () => {
     const nombre = document.getElementById('nombre-buscar').value.trim()
-    if (nombre) await buscarYMostrar({ nombre })
+    if (!nombre) return
+    // Limpiar campo de teléfono al buscar por nombre
+    document.getElementById('telefono').value = ''
+    await buscarYMostrar({ nombre })
   })
 
   document.getElementById('telefono').addEventListener('keydown', async (e) => {
     if (e.key === 'Enter') {
       const telefono = document.getElementById('telefono').value.trim()
-      if (telefono) await buscarYMostrar({ telefono })
+      if (telefono) {
+        document.getElementById('nombre-buscar').value = ''
+        await buscarYMostrar({ telefono })
+      }
     }
   })
 
   document.getElementById('nombre-buscar').addEventListener('keydown', async (e) => {
     if (e.key === 'Enter') {
       const nombre = document.getElementById('nombre-buscar').value.trim()
-      if (nombre) await buscarYMostrar({ nombre })
+      if (nombre) {
+        document.getElementById('telefono').value = ''
+        await buscarYMostrar({ nombre })
+      }
     }
   })
 }
@@ -172,10 +203,14 @@ async function cargarUltimosClientes() {
     const negocio = getNegocioActual()
     if (!negocio) return
 
+    // ── FIX: filtrar solo visitas de HOY ──
+    const hoy = new Date().toISOString().split('T')[0]
+
     const { data: visitas, error } = await supabase
       .from('visitas')
       .select('cliente_id, fecha')
       .eq('negocio_id', negocio.id)
+      .gte('fecha', hoy)
       .order('fecha', { ascending: false })
       .limit(20)
 
@@ -183,7 +218,7 @@ async function cargarUltimosClientes() {
 
     if (!visitas || visitas.length === 0) {
       document.getElementById('ultimos-clientes').innerHTML =
-        `<p style="color:#aaa;font-size:13px;text-align:center">Aún no hay visitas registradas</p>`
+        `<p style="color:#aaa;font-size:13px;text-align:center">Ningún cliente atendido hoy</p>`
       return
     }
 
@@ -231,6 +266,7 @@ async function cargarUltimosClientes() {
       row.addEventListener('click', async () => {
         const tel = row.dataset.telefono
         document.getElementById('telefono').value = tel
+        document.getElementById('nombre-buscar').value = ''
         await buscarYMostrar({ telefono: tel })
         window.scrollTo({ top: 0, behavior: 'smooth' })
       })
@@ -319,6 +355,7 @@ async function buscarYMostrar({ telefono, nombre }) {
 
 async function mostrarCliente(data) {
   try {
+    // ── FIX: siempre leer meta fresca de Supabase, nunca de caché ──
     const { data: negocioData, error: e1 } = await supabase
       .from('negocios')
       .select('meta_puntos')
@@ -423,9 +460,11 @@ async function mostrarCliente(data) {
               btnCanje.disabled = true
               btnCanje.textContent = 'Registrando...'
               try {
+                // ── FIX: incluir fecha explícita y cliente_id en el canje ──
                 const { error: ecanje } = await supabase.from('canjes').insert({
                   cliente_id: data.id,
-                  premio_id: premioAplicable.id
+                  premio_id: premioAplicable.id,
+                  fecha: new Date().toISOString()
                 })
                 if (ecanje) throw ecanje
                 btnCanje.style.display = 'none'
@@ -505,13 +544,11 @@ export function initRegistro() {
       const negocio = getNegocioActual()
 
       const { error } = await supabase.from('clientes').insert({
-        nombre,
-        telefono,
+        nombre, telefono,
         negocio_id: negocio?.id,
         puntos_actuales: 0,
         total_visitas: 0
       })
-
       if (error) throw error
 
       msg.innerHTML = `<div class="exito">✓ Cliente registrado</div>`
@@ -588,10 +625,7 @@ export async function paginaAdmin() {
       <div class="container">
         <div class="header">
           <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <h1>Panel Admin</h1>
-              <p>Gestiona tus negocios</p>
-            </div>
+            <div><h1>Panel Admin</h1><p>Gestiona tus negocios</p></div>
             <button id="btn-admin-logout" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px">Salir</button>
           </div>
         </div>
@@ -761,11 +795,7 @@ export async function paginaCliente(telefono) {
     if (error) throw error
 
     if (!data) {
-      return `
-        <div class="container">
-          <div class="header"><h1>No encontrado</h1><p>Este cliente no está registrado</p></div>
-        </div>
-      `
+      return `<div class="container"><div class="header"><h1>No encontrado</h1><p>Este cliente no está registrado</p></div></div>`
     }
 
     const meta = data.negocios?.meta_puntos || META_VISITAS
@@ -894,6 +924,11 @@ export function initQRNegocio(negocioId) {
       msg.innerHTML = errorConexion()
     }
   })
+
+  // Enter en el campo
+  document.getElementById('tel-negocio')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('btn-entrar').click()
+  })
 }
 
 // ─── REGISTRO DESDE QR ────────────────────────────────────
@@ -975,12 +1010,17 @@ export async function paginaDueno() {
     const { data: clientes } = await supabase.from('clientes').select('*').eq('negocio_id', negocio.id)
     const { data: visitas } = await supabase.from('visitas').select('*').eq('negocio_id', negocio.id)
     const { data: premios } = await supabase.from('premios').select('*').eq('negocio_id', negocio.id)
-    const { data: canjes } = await supabase
-      .from('canjes')
-      .select('*, premios(nombre)')
-      .in('premio_id', (premios || []).map(p => p.id))
-      .order('fecha', { ascending: false })
-      .limit(10)
+
+    // Canjes con nombre del cliente y del premio
+    const premioIds = (premios || []).map(p => p.id)
+    const { data: canjes } = premioIds.length > 0
+      ? await supabase
+          .from('canjes')
+          .select('*, premios(nombre), clientes(nombre)')
+          .in('premio_id', premioIds)
+          .order('fecha', { ascending: false })
+          .limit(10)
+      : { data: [] }
 
     const hoy = new Date().toISOString().split('T')[0]
     const visitasHoy = (visitas || []).filter(v => v.fecha && v.fecha.startsWith(hoy)).length
@@ -1018,15 +1058,18 @@ export async function paginaDueno() {
       </div>
     `).join('')
 
+    // ── FIX: historial muestra cliente y premio ──
     const filasCanjes = (canjes || []).length === 0
       ? `<p style="color:#aaa;font-size:13px;text-align:center">No hay premios entregados aún</p>`
       : (canjes || []).map(c => {
-          const fecha = c.fecha ? new Date(c.fecha).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+          const fecha = c.fecha
+            ? new Date(c.fecha).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+            : '—'
           return `
             <div class="negocio-row">
               <div>
                 <div class="negocio-nombre">${c.premios?.nombre || 'Premio'}</div>
-                <div class="negocio-meta">${fecha}</div>
+                <div class="negocio-meta">${c.clientes?.nombre || '—'} · ${fecha}</div>
               </div>
               <div class="negocio-stats">
                 <span style="font-size:12px;color:#059669">✓ Entregado</span>
@@ -1115,18 +1158,27 @@ export function initDueno(negocioId) {
 
   document.getElementById('btn-nuevo-premio')?.addEventListener('click', () => {
     const form = document.getElementById('form-premio')
-    form.style.display = form.style.display === 'none' ? 'block' : 'none'
+    const abierto = form.style.display !== 'none'
+    // ── FIX: limpiar campos al abrir el formulario ──
+    if (!abierto) {
+      document.getElementById('nombre-premio').value = ''
+    }
+    form.style.display = abierto ? 'none' : 'block'
   })
 
   document.getElementById('btn-guardar-premio')?.addEventListener('click', async () => {
     const nombre = document.getElementById('nombre-premio').value.trim()
     const visitas = parseInt(document.getElementById('visitas-premio').value)
     const msg = document.getElementById('msg-premio')
+    const btn = document.getElementById('btn-guardar-premio')
 
     if (!nombre || !visitas || visitas < 1) {
       msg.innerHTML = `<p class="error">Llena todos los campos correctamente</p>`
       return
     }
+
+    btn.disabled = true
+    btn.textContent = 'Guardando...'
 
     try {
       const { error } = await supabase.from('premios').insert({
@@ -1140,6 +1192,8 @@ export function initDueno(negocioId) {
       setTimeout(() => navigate('dueno'), 1000)
     } catch (e) {
       msg.innerHTML = errorConexion('guardar el premio')
+      btn.disabled = false
+      btn.textContent = 'Guardar premio'
     }
   })
 
@@ -1157,7 +1211,6 @@ export function initDueno(negocioId) {
     })
   })
 
-  // ── Eliminar premio ──
   document.querySelectorAll('.btn-eliminar-premio').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.id
