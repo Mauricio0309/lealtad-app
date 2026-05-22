@@ -1,7 +1,17 @@
 import './style.css'
 import { getPage } from './router.js'
 import { isLoggedIn, getNegocioActual } from './auth.js'
-import { paginaCajero, initCajero, paginaRegistro, initRegistro, paginaAdmin, initAdmin, paginaCliente, initCliente, paginaLogin, initLogin, paginaQRNegocio, initQRNegocio, paginaRegistroCliente, initRegistroCliente, paginaDueno, initDueno } from './pages.js'
+import {
+  paginaCajero, initCajero,
+  paginaRegistro, initRegistro,
+  paginaAdmin, initAdmin,
+  paginaCliente, initCliente,
+  paginaLogin, initLogin,
+  paginaQRNegocio, initQRNegocio,
+  paginaRegistroCliente, initRegistroCliente,
+  paginaDueno, initDueno,
+  paginaBienvenida, initBienvenida
+} from './pages.js'
 
 async function render() {
   const page = getPage()
@@ -44,6 +54,13 @@ async function render() {
   if (!isLoggedIn()) {
     app.innerHTML = paginaLogin()
     initLogin()
+    return
+  }
+
+  if (page === 'bienvenida') {
+    app.innerHTML = '<div class="container"><p style="text-align:center;padding:40px;color:#666">Cargando...</p></div>'
+    app.innerHTML = await paginaBienvenida()
+    initBienvenida()
     return
   }
 

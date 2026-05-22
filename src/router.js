@@ -8,6 +8,7 @@ export function getPage() {
   if (hash === '#/cajero') return 'cajero'
   if (hash === '#/login') return 'login'
   if (hash === '#/dueno') return 'dueno'
+  if (hash === '#/bienvenida') return 'bienvenida'
   return 'login'
 }
 
