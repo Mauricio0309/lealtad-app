@@ -1,0 +1,36 @@
+{
+  "name": "Sello — Programa de Lealtad",
+  "short_name": "Sello",
+  "description": "Acumula visitas y gana premios en tus negocios favoritos",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a5c47",
+  "theme_color": "#0a5c47",
+  "lang": "es-MX",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "lifestyle"],
+  "shortcuts": [
+    {
+      "name": "Cajero",
+      "short_name": "Cajero",
+      "description": "Registrar visitas",
+      "url": "/#/cajero",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

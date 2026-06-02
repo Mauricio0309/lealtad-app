@@ -13,6 +13,15 @@ import {
   paginaBienvenida, initBienvenida
 } from './pages.js'
 
+// ── PWA Service Worker ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(() => console.log('Sello SW registrado'))
+      .catch(err => console.log('SW error:', err))
+  })
+}
+
 async function render() {
   const page = getPage()
   const hash = window.location.hash
