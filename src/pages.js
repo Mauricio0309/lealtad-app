@@ -5,9 +5,6 @@ import { navigate } from './router.js'
 const META_VISITAS = 10
 const ADMIN_PASSWORD = 'lealtad2024'
 
-// ═══════════════════════════════════════════════════════════
-// DESIGN SYSTEM — SELLO
-// ═══════════════════════════════════════════════════════════
 const DS = {
   green900: '#052e1c',
   green800: '#0a5c47',
@@ -34,297 +31,90 @@ function inyectarEstilos() {
   s.id = 'sello-styles'
   s.textContent = `
     @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Inter', sans-serif;
-      background: ${DS.gray100};
-      color: ${DS.gray900};
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* ── Logo SVG inline ── */
-    .sello-logo-svg {
-      display: inline-block;
-      width: 40px; height: 40px;
-    }
-
-    /* ── Topbar ── */
-    .sello-topbar {
-      background: ${DS.green800};
-      padding: 16px 20px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .sello-topbar-brand {
-      display: flex; align-items: center; gap: 10px;
-      font-family: 'Sora', sans-serif; font-weight: 800;
-      font-size: 20px; color: ${DS.white};
-      letter-spacing: -0.02em;
-    }
+    body { font-family: 'Inter', sans-serif; background: ${DS.gray100}; color: ${DS.gray900}; -webkit-font-smoothing: antialiased; }
+    .sello-topbar { background: ${DS.green800}; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
+    .sello-topbar-brand { display: flex; align-items: center; gap: 10px; font-family: 'Sora', sans-serif; font-weight: 800; font-size: 20px; color: ${DS.white}; letter-spacing: -0.02em; }
     .sello-topbar-brand span { color: ${DS.gold400}; }
-
-    /* ── Cards ── */
-    .s-card {
-      background: ${DS.white};
-      border-radius: 16px;
-      padding: 20px;
-      margin: 0 16px 14px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
-    }
-    .s-card-dark {
-      background: ${DS.green800};
-      border-radius: 16px;
-      padding: 20px;
-      margin: 0 16px 14px;
-    }
-    .s-section-label {
-      font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
-      text-transform: uppercase; color: ${DS.gray500};
-      margin-bottom: 14px;
-    }
-
-    /* ── Stats grid ── */
+    .s-card { background: ${DS.white}; border-radius: 16px; padding: 20px; margin: 0 16px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04); }
+    .s-section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: ${DS.gray500}; margin-bottom: 14px; }
     .s-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .s-stat {
-      background: ${DS.gray50}; border-radius: 12px;
-      padding: 14px 10px; text-align: center;
-    }
-    .s-stat-num {
-      font-family: 'Sora', sans-serif; font-weight: 800;
-      font-size: 26px; color: ${DS.green800}; line-height: 1;
-    }
+    .s-stat { background: ${DS.gray50}; border-radius: 12px; padding: 14px 10px; text-align: center; }
+    .s-stat-num { font-family: 'Sora', sans-serif; font-weight: 800; font-size: 26px; color: ${DS.green800}; line-height: 1; }
     .s-stat-lbl { font-size: 10px; color: ${DS.gray500}; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
-
-    /* ── Progress bar ── */
     .s-prog-wrap { margin: 4px 0 16px; }
     .s-prog-header { display: flex; justify-content: space-between; font-size: 13px; color: ${DS.gray500}; margin-bottom: 8px; }
     .s-prog-track { height: 8px; background: ${DS.gray100}; border-radius: 999px; overflow: hidden; }
-    .s-prog-fill {
-      height: 100%;
-      background: linear-gradient(90deg, ${DS.green700}, ${DS.green600});
-      border-radius: 999px;
-      transition: width 1.2s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    .s-prog-fill.gold {
-      background: linear-gradient(90deg, ${DS.gold500}, ${DS.gold400});
-      box-shadow: 0 0 8px rgba(245,166,35,0.4);
-    }
-
-    /* ── Botones ── */
-    .s-btn {
-      width: 100%; padding: 15px;
-      border: none; border-radius: 12px;
-      font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700;
-      cursor: pointer; transition: opacity 0.15s, transform 0.1s;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-    }
+    .s-prog-fill { height: 100%; background: linear-gradient(90deg, ${DS.green700}, ${DS.green600}); border-radius: 999px; transition: width 1.2s cubic-bezier(0.34,1.56,0.64,1); }
+    .s-prog-fill.gold { background: linear-gradient(90deg, ${DS.gold500}, ${DS.gold400}); box-shadow: 0 0 8px rgba(245,166,35,0.4); }
+    .s-btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; transition: opacity 0.15s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; }
     .s-btn:active { transform: scale(0.98); }
     .s-btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .s-btn.primary { background: ${DS.green800}; color: ${DS.white}; }
     .s-btn.primary:hover { background: ${DS.green700}; }
     .s-btn.gold { background: ${DS.gold500}; color: ${DS.white}; box-shadow: 0 4px 14px rgba(245,166,35,0.4); }
-    .s-btn.outline { background: transparent; color: ${DS.green800}; border: 2px solid ${DS.green800}; }
     .s-btn.ghost { background: ${DS.gray100}; color: ${DS.gray700}; }
-    .s-btn.danger { background: #fee2e2; color: #dc2626; }
-
-    /* ── Inputs ── */
-    .s-input {
-      width: 100%; padding: 13px 14px;
-      border: 1.5px solid ${DS.gray300}; border-radius: 10px;
-      font-family: 'Inter', sans-serif; font-size: 15px;
-      color: ${DS.gray900}; background: ${DS.white};
-      transition: border-color 0.15s, box-shadow 0.15s;
-      outline: none;
-    }
+    .s-input { width: 100%; padding: 13px 14px; border: 1.5px solid ${DS.gray300}; border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 15px; color: ${DS.gray900}; background: ${DS.white}; transition: border-color 0.15s, box-shadow 0.15s; outline: none; }
     .s-input:focus { border-color: ${DS.green700}; box-shadow: 0 0 0 3px rgba(13,122,95,0.1); }
     .s-input::placeholder { color: ${DS.gray300}; }
     .s-label { font-size: 13px; font-weight: 500; color: ${DS.gray700}; margin-bottom: 6px; display: block; }
     .s-field { margin-bottom: 14px; }
     .s-pw-wrap { position: relative; }
     .s-pw-wrap .s-input { padding-right: 44px; }
-    .s-pw-eye {
-      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-      background: none; border: none; cursor: pointer; font-size: 18px; padding: 0;
-    }
-
-    /* ── Mensajes ── */
+    .s-pw-eye { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 0; }
     .s-error { color: #dc2626; font-size: 13px; margin-top: 8px; }
-    .s-success {
-      background: ${DS.green100}; color: ${DS.green800};
-      border-radius: 10px; padding: 12px 14px;
-      font-size: 14px; font-weight: 500; margin-top: 10px;
-      display: flex; align-items: center; gap: 8px;
-    }
-
-    /* ── Badge ── */
-    .s-badge {
-      display: inline-flex; align-items: center;
-      padding: 4px 10px; border-radius: 999px;
-      font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
-    }
+    .s-success { background: ${DS.green100}; color: ${DS.green800}; border-radius: 10px; padding: 12px 14px; font-size: 14px; font-weight: 500; margin-top: 10px; display: flex; align-items: center; gap: 8px; }
+    .s-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; }
     .s-badge.active { background: ${DS.green100}; color: ${DS.green800}; }
     .s-badge.inactive { background: ${DS.gray100}; color: ${DS.gray500}; }
-
-    /* ── Nav inferior ── */
-    .s-nav {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: ${DS.white};
-      border-top: 1px solid ${DS.gray100};
-      display: flex;
-      box-shadow: 0 -2px 20px rgba(0,0,0,0.06);
-      z-index: 100;
-      padding-bottom: env(safe-area-inset-bottom);
-    }
-    .s-nav-btn {
-      flex: 1; border: none; background: none;
-      padding: 10px 8px 8px;
-      cursor: pointer; font-family: 'Inter', sans-serif;
-      display: flex; flex-direction: column; align-items: center; gap: 3px;
-      color: ${DS.gray300}; font-size: 11px; font-weight: 500;
-      transition: color 0.15s;
-    }
+    .s-nav { position: fixed; bottom: 0; left: 0; right: 0; background: ${DS.white}; border-top: 1px solid ${DS.gray100}; display: flex; box-shadow: 0 -2px 20px rgba(0,0,0,0.06); z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+    .s-nav-btn { flex: 1; border: none; background: none; padding: 10px 8px 8px; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; align-items: center; gap: 3px; color: ${DS.gray300}; font-size: 11px; font-weight: 500; transition: color 0.15s; }
     .s-nav-btn .s-nav-icon { font-size: 22px; line-height: 1; }
     .s-nav-btn.active { color: ${DS.green800}; }
-    .s-nav-btn.active .s-nav-icon { filter: none; }
-
-    /* ── Vista cliente ── */
-    .sc-root {
-      min-height: 100vh;
-      background: ${DS.gray50};
-      padding-bottom: 40px;
-      font-family: 'Inter', sans-serif;
-    }
-    .sc-hero {
-      background: linear-gradient(145deg, ${DS.green900} 0%, ${DS.green800} 100%);
-      padding: 48px 24px 80px;
-      position: relative; overflow: hidden;
-    }
-    .sc-hero::after {
-      content: '';
-      position: absolute; bottom: -2px; left: 0; right: 0;
-      height: 32px;
-      background: ${DS.gray50};
-      border-radius: 32px 32px 0 0;
-    }
+    .sc-root { min-height: 100vh; background: ${DS.gray50}; padding-bottom: 40px; font-family: 'Inter', sans-serif; }
+    .sc-hero { background: linear-gradient(145deg, ${DS.green900} 0%, ${DS.green800} 100%); padding: 48px 24px 80px; position: relative; overflow: hidden; }
+    .sc-hero::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 32px; background: ${DS.gray50}; border-radius: 32px 32px 0 0; }
     .sc-hero-negocio { font-size: 12px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
     .sc-hero-name { font-family: 'Sora', sans-serif; font-size: 28px; font-weight: 800; color: ${DS.white}; line-height: 1.1; }
     .sc-hero-sub { font-size: 14px; color: rgba(255,255,255,0.6); margin-top: 4px; }
-
-    .sc-puntos-card {
-      background: ${DS.white};
-      border-radius: 20px;
-      margin: -40px 16px 16px;
-      padding: 20px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-      position: relative; z-index: 1;
-    }
+    .sc-puntos-card { background: ${DS.white}; border-radius: 20px; margin: -40px 16px 16px; padding: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); position: relative; z-index: 1; }
     .sc-puntos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-    .sc-punto-box {
-      background: ${DS.gray50}; border-radius: 12px; padding: 16px;
-      text-align: center;
-    }
-    .sc-punto-num {
-      font-family: 'Sora', sans-serif; font-weight: 800; font-size: 36px;
-      color: ${DS.green800}; line-height: 1;
-    }
+    .sc-punto-box { background: ${DS.gray50}; border-radius: 12px; padding: 16px; text-align: center; }
+    .sc-punto-num { font-family: 'Sora', sans-serif; font-weight: 800; font-size: 36px; color: ${DS.green800}; line-height: 1; }
     .sc-punto-num.gold { color: ${DS.gold500}; }
     .sc-punto-lbl { font-size: 11px; color: ${DS.gray500}; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
-
-    .sc-mensaje {
-      padding: 14px 16px; border-radius: 12px;
-      font-size: 14px; line-height: 1.5; text-align: center;
-      margin-top: 16px;
-    }
+    .sc-mensaje { padding: 14px 16px; border-radius: 12px; font-size: 14px; line-height: 1.5; text-align: center; margin-top: 16px; }
     .sc-mensaje.normal { background: ${DS.green50}; color: ${DS.green800}; border: 1px solid ${DS.green100}; }
     .sc-mensaje.premio { background: ${DS.gold100}; color: #92400e; border: 1px solid #fde68a; font-weight: 600; }
     .sc-mensaje.inicio { background: ${DS.gray100}; color: ${DS.gray500}; }
-
-    /* ── QR landing ── */
-    .sq-root {
-      min-height: 100vh;
-      background: linear-gradient(160deg, ${DS.green900} 0%, ${DS.green800} 60%, #0d3d2e 100%);
-      display: flex; flex-direction: column; align-items: center;
-      justify-content: center; padding: 32px 20px;
-      font-family: 'Sora', sans-serif; color: ${DS.white};
-      text-align: center;
-    }
+    .sq-root { min-height: 100vh; background: linear-gradient(160deg, ${DS.green900} 0%, ${DS.green800} 60%, #0d3d2e 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 20px; font-family: 'Sora', sans-serif; color: ${DS.white}; text-align: center; }
     .sq-logo { margin-bottom: 32px; }
     .sq-negocio { font-size: 12px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px; }
     .sq-nombre { font-size: 30px; font-weight: 800; line-height: 1.1; margin-bottom: 8px; }
     .sq-sub { font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 36px; }
-    .sq-form {
-      width: 100%; max-width: 340px;
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 20px; padding: 28px 24px;
-      backdrop-filter: blur(8px);
-    }
-    .sq-input {
-      width: 100%; padding: 16px;
-      background: rgba(255,255,255,0.08);
-      border: 1.5px solid rgba(255,255,255,0.15);
-      border-radius: 12px; color: ${DS.white};
-      font-family: 'Sora', sans-serif; font-size: 20px;
-      font-weight: 700; text-align: center; letter-spacing: 0.05em;
-      outline: none; margin-bottom: 14px;
-      transition: border-color 0.15s;
-    }
+    .sq-form { width: 100%; max-width: 340px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 20px; padding: 28px 24px; backdrop-filter: blur(8px); }
+    .sq-input { width: 100%; padding: 16px; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.15); border-radius: 12px; color: ${DS.white}; font-family: 'Sora', sans-serif; font-size: 20px; font-weight: 700; text-align: center; letter-spacing: 0.05em; outline: none; margin-bottom: 14px; transition: border-color 0.15s; }
     .sq-input:focus { border-color: ${DS.green400}; }
     .sq-input::placeholder { color: rgba(255,255,255,0.2); font-size: 15px; font-weight: 400; letter-spacing: 0; }
-    .sq-btn {
-      width: 100%; padding: 16px;
-      background: linear-gradient(135deg, ${DS.green600}, ${DS.green700});
-      border: none; border-radius: 12px;
-      color: ${DS.white}; font-size: 16px; font-weight: 700;
-      font-family: 'Sora', sans-serif; cursor: pointer;
-      box-shadow: 0 4px 20px rgba(16,163,122,0.4);
-      transition: opacity 0.15s, transform 0.1s;
-    }
+    .sq-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, ${DS.green600}, ${DS.green700}); border: none; border-radius: 12px; color: ${DS.white}; font-size: 16px; font-weight: 700; font-family: 'Sora', sans-serif; cursor: pointer; box-shadow: 0 4px 20px rgba(16,163,122,0.4); transition: opacity 0.15s, transform 0.1s; }
     .sq-btn:hover { opacity: 0.92; }
     .sq-btn:active { transform: scale(0.98); }
     .sq-btn:disabled { opacity: 0.6; }
-
-    /* ── Bienvenida ── */
-    .sbv-root {
-      min-height: 100vh;
-      background: linear-gradient(145deg, ${DS.green800} 0%, ${DS.green900} 100%);
-      display: flex; flex-direction: column; align-items: center;
-      justify-content: center; padding: 32px 24px;
-      font-family: 'Sora', sans-serif; color: ${DS.white};
-      text-align: center;
-    }
+    .sbv-root { min-height: 100vh; background: linear-gradient(145deg, ${DS.green800} 0%, ${DS.green900} 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; font-family: 'Sora', sans-serif; color: ${DS.white}; text-align: center; }
     .sbv-logo { margin-bottom: 8px; }
     .sbv-app { font-size: 13px; color: ${DS.green400}; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 24px; }
     .sbv-bienvenido { font-size: 15px; color: rgba(255,255,255,0.5); margin-bottom: 6px; }
     .sbv-nombre { font-size: 32px; font-weight: 800; margin-bottom: 48px; line-height: 1.1; }
     .sbv-btns { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 320px; }
-    .sbv-btn {
-      padding: 18px 20px; border-radius: 14px; border: none;
-      font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700;
-      cursor: pointer; display: flex; align-items: center; gap: 14px;
-      transition: transform 0.1s, opacity 0.15s; text-align: left;
-    }
+    .sbv-btn { padding: 18px 20px; border-radius: 14px; border: none; font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 14px; transition: transform 0.1s, opacity 0.15s; text-align: left; }
     .sbv-btn:active { transform: scale(0.98); }
     .sbv-btn.primary { background: ${DS.white}; color: ${DS.green800}; box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
     .sbv-btn.secondary { background: rgba(255,255,255,0.1); color: ${DS.white}; border: 1px solid rgba(255,255,255,0.2); }
     .sbv-btn-icon { font-size: 26px; flex-shrink: 0; }
     .sbv-btn-sub { font-size: 12px; font-weight: 400; opacity: 0.6; display: block; margin-top: 2px; }
     .sbv-salir { margin-top: 28px; background: none; border: none; color: rgba(255,255,255,0.3); font-size: 13px; cursor: pointer; font-family: 'Inter', sans-serif; }
-
-    /* ── Toast ── */
-    .s-toast-overlay {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.55);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 9999; animation: sFadeIn 0.2s ease;
-    }
-    .s-toast-box {
-      background: ${DS.white}; border-radius: 24px;
-      padding: 36px 28px; text-align: center;
-      max-width: 300px; width: 90%;
-      animation: sPopIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
-    }
+    .s-toast-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 9999; animation: sFadeIn 0.2s ease; }
+    .s-toast-box { background: ${DS.white}; border-radius: 24px; padding: 36px 28px; text-align: center; max-width: 300px; width: 90%; animation: sPopIn 0.35s cubic-bezier(0.34,1.56,0.64,1); }
     .s-toast-icon { font-size: 60px; display: block; margin-bottom: 14px; }
     .s-toast-title { font-family: 'Sora', sans-serif; font-size: 20px; font-weight: 800; color: ${DS.gray900}; margin-bottom: 8px; }
     .s-toast-sub { font-size: 14px; color: ${DS.gray500}; line-height: 1.5; }
@@ -332,49 +122,30 @@ function inyectarEstilos() {
     .s-toast-box.gold .s-toast-title { color: #78350f; }
     .s-toast-box.gold .s-toast-sub { color: #92400e; }
     .s-toast-hint { font-size: 12px; color: ${DS.gray300}; margin-top: 16px; }
-
-    /* ── Row negocio/premio ── */
-    .s-row {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 0; border-bottom: 1px solid ${DS.gray100};
-    }
+    .s-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid ${DS.gray100}; }
     .s-row:last-child { border-bottom: none; padding-bottom: 0; }
     .s-row:first-child { padding-top: 0; }
     .s-row-title { font-size: 14px; font-weight: 600; color: ${DS.gray900}; }
     .s-row-sub { font-size: 12px; color: ${DS.gray500}; margin-top: 2px; }
     .s-row-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-
-    /* ── Login / Admin ── */
-    .s-login-root {
-      min-height: 100vh;
-      background: linear-gradient(145deg, ${DS.green800} 0%, ${DS.green900} 100%);
-      display: flex; align-items: center; justify-content: center;
-      padding: 24px;
-    }
-    .s-login-card {
-      background: ${DS.white}; border-radius: 24px;
-      padding: 32px 28px; width: 100%; max-width: 380px;
-      box-shadow: 0 24px 60px rgba(0,0,0,0.3);
-    }
+    .s-login-root { min-height: 100vh; background: linear-gradient(145deg, ${DS.green800} 0%, ${DS.green900} 100%); display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .s-login-card { background: ${DS.white}; border-radius: 24px; padding: 32px 28px; width: 100%; max-width: 380px; box-shadow: 0 24px 60px rgba(0,0,0,0.3); }
     .s-login-logo { text-align: center; margin-bottom: 28px; }
-    .s-login-app {
-      font-family: 'Sora', sans-serif; font-size: 28px; font-weight: 800;
-      color: ${DS.green800}; letter-spacing: -0.02em;
-    }
+    .s-login-app { font-family: 'Sora', sans-serif; font-size: 28px; font-weight: 800; color: ${DS.green800}; letter-spacing: -0.02em; }
     .s-login-app span { color: ${DS.gold500}; }
     .s-login-sub { font-size: 14px; color: ${DS.gray500}; margin-top: 4px; }
-
-    /* ── Cajero ── */
     .sc-search-area { padding: 16px 16px 8px; display: flex; flex-direction: column; gap: 8px; }
     .sc-search-row { display: flex; gap: 8px; }
     .sc-search-input { flex: 1; }
-    .sc-search-btn {
-      padding: 13px 16px; background: ${DS.green800}; color: ${DS.white};
-      border: none; border-radius: 10px; cursor: pointer;
-      font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 600;
-      white-space: nowrap; transition: background 0.15s;
-    }
+    .sc-search-btn { padding: 13px 16px; background: ${DS.green800}; color: ${DS.white}; border: none; border-radius: 10px; cursor: pointer; font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 600; white-space: nowrap; transition: background 0.15s; }
     .sc-search-btn:hover { background: ${DS.green700}; }
+
+    /* ── Dashboard charts ── */
+    .s-chart-wrap { position: relative; height: 180px; margin-top: 8px; }
+    .s-chart-wrap.donut { height: 200px; }
+    .s-chart-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+    .s-chart-tab { padding: 6px 14px; border-radius: 999px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; font-family: 'Inter', sans-serif; background: ${DS.gray100}; color: ${DS.gray500}; transition: all 0.15s; }
+    .s-chart-tab.active { background: ${DS.green800}; color: white; }
 
     @keyframes sFadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes sPopIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
@@ -383,7 +154,6 @@ function inyectarEstilos() {
   document.head.appendChild(s)
 }
 
-// ── Logo SVG de Sello ──────────────────────────────────────
 function logoSVG(size = 36, color = '#ffffff') {
   return `<svg width="${size}" height="${size}" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="20" cy="20" r="18" stroke="${color}" stroke-width="2.5"/>
@@ -392,7 +162,6 @@ function logoSVG(size = 36, color = '#ffffff') {
   </svg>`
 }
 
-// ── Helper password field ──────────────────────────────────
 function pwField(id, placeholder = '••••••') {
   return `
     <div class="s-pw-wrap">
@@ -410,7 +179,6 @@ function errMsg(donde = '') {
   return `<p class="s-error">Sin conexión${donde ? ' al ' + donde : ''}. Verifica tu internet e intenta de nuevo.</p>`
 }
 
-// ── Toast visual ───────────────────────────────────────────
 function toast({ icon, title, sub, gold = false, autoClose = 2400, onTap = null }) {
   const el = document.createElement('div')
   el.className = 's-toast-overlay'
@@ -432,7 +200,6 @@ function toast({ icon, title, sub, gold = false, autoClose = 2400, onTap = null 
   return el
 }
 
-// ── Nav inferior ───────────────────────────────────────────
 function navBar(active = 'cajero') {
   return `
     <nav class="s-nav">
@@ -458,11 +225,164 @@ function initNav() {
   })
 }
 
+// ── Cargar Chart.js desde CDN si no está ──────────────────
+function cargarChartJS() {
+  return new Promise((resolve) => {
+    if (window.Chart) { resolve(); return }
+    const script = document.createElement('script')
+    script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'
+    script.onload = resolve
+    document.head.appendChild(script)
+  })
+}
+
+// ── Preparar datos para gráficas ──────────────────────────
+function prepararDatosGraficas(visitas, clientes) {
+  // Últimos 7 días
+  const hoy = new Date()
+  const dias7 = []
+  const labels7 = []
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(hoy)
+    d.setDate(d.getDate() - i)
+    const key = d.toISOString().split('T')[0]
+    dias7.push(key)
+    labels7.push(d.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric' }))
+  }
+  const visitasPorDia = dias7.map(dia =>
+    (visitas || []).filter(v => v.fecha && v.fecha.startsWith(dia)).length
+  )
+
+  // Últimos 30 días para comparar este mes vs anterior
+  const inicioEsteMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0]
+  const inicioMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1).toISOString().split('T')[0]
+  const finMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth(), 0).toISOString().split('T')[0]
+
+  const visitasEsteMes = (visitas || []).filter(v => v.fecha && v.fecha >= inicioEsteMes).length
+  const visitasMesAnterior = (visitas || []).filter(v => v.fecha && v.fecha >= inicioMesAnterior && v.fecha <= finMesAnterior).length
+
+  // Clientes nuevos vs recurrentes
+  // Recurrente = más de 1 visita total
+  const nuevos = (clientes || []).filter(c => c.total_visitas <= 1).length
+  const recurrentes = (clientes || []).filter(c => c.total_visitas > 1).length
+
+  return { labels7, visitasPorDia, visitasEsteMes, visitasMesAnterior, nuevos, recurrentes }
+}
+
+// ── Renderizar las 3 gráficas ─────────────────────────────
+async function renderizarGraficas(visitas, clientes) {
+  await cargarChartJS()
+  const { labels7, visitasPorDia, visitasEsteMes, visitasMesAnterior, nuevos, recurrentes } = prepararDatosGraficas(visitas, clientes)
+
+  // Destruir charts anteriores si existen
+  ;['chart-barras', 'chart-dona', 'chart-meses'].forEach(id => {
+    const canvas = document.getElementById(id)
+    if (canvas && canvas._chartInstance) {
+      canvas._chartInstance.destroy()
+    }
+  })
+
+  // ── Gráfica 1: Barras — visitas últimos 7 días ──
+  const ctxBarras = document.getElementById('chart-barras')
+  if (ctxBarras) {
+    ctxBarras._chartInstance = new window.Chart(ctxBarras, {
+      type: 'bar',
+      data: {
+        labels: labels7,
+        datasets: [{
+          data: visitasPorDia,
+          backgroundColor: visitasPorDia.map((v, i) =>
+            i === 6 ? DS.green700 : DS.green100
+          ),
+          borderRadius: 6,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: {
+          callbacks: { label: ctx => `${ctx.raw} visita${ctx.raw === 1 ? '' : 's'}` }
+        }},
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 11 }, color: DS.gray500 } },
+          y: { grid: { color: DS.gray100 }, ticks: { font: { size: 11 }, color: DS.gray500, stepSize: 1 }, beginAtZero: true }
+        }
+      }
+    })
+  }
+
+  // ── Gráfica 2: Dona — nuevos vs recurrentes ──
+  const ctxDona = document.getElementById('chart-dona')
+  if (ctxDona) {
+    const total = nuevos + recurrentes
+    ctxDona._chartInstance = new window.Chart(ctxDona, {
+      type: 'doughnut',
+      data: {
+        labels: ['Recurrentes', 'Nuevos'],
+        datasets: [{
+          data: total === 0 ? [1, 0] : [recurrentes, nuevos],
+          backgroundColor: [DS.green700, DS.green100],
+          borderWidth: 0,
+          hoverOffset: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '70%',
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 12 }, color: DS.gray700, padding: 16 } },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const val = ctx.raw
+                const pct = total > 0 ? Math.round((val / total) * 100) : 0
+                return ` ${val} clientes (${pct}%)`
+              }
+            }
+          }
+        }
+      }
+    })
+  }
+
+  // ── Gráfica 3: Barras horizontales — este mes vs anterior ──
+  const ctxMeses = document.getElementById('chart-meses')
+  if (ctxMeses) {
+    const mesActual = new Date().toLocaleDateString('es-MX', { month: 'long' })
+    const mesAnterior = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toLocaleDateString('es-MX', { month: 'long' })
+    ctxMeses._chartInstance = new window.Chart(ctxMeses, {
+      type: 'bar',
+      data: {
+        labels: [mesAnterior, mesActual],
+        datasets: [{
+          data: [visitasMesAnterior, visitasEsteMes],
+          backgroundColor: [DS.gray100, DS.green700],
+          borderRadius: 8,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: {
+          callbacks: { label: ctx => `${ctx.raw} visita${ctx.raw === 1 ? '' : 's'}` }
+        }},
+        scales: {
+          x: { grid: { color: DS.gray100 }, ticks: { font: { size: 11 }, color: DS.gray500, stepSize: 1 }, beginAtZero: true },
+          y: { grid: { display: false }, ticks: { font: { size: 12, weight: '600' }, color: DS.gray700 } }
+        }
+      }
+    })
+  }
+}
+
 // ═══════════════════════════════════════════════════════════
 // PÁGINAS
 // ═══════════════════════════════════════════════════════════
 
-// ── LOGIN ──────────────────────────────────────────────────
 export function paginaLogin() {
   inyectarEstilos()
   return `
@@ -515,7 +435,6 @@ export function initLogin() {
   document.getElementById('password')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin() })
 }
 
-// ── BIENVENIDA ─────────────────────────────────────────────
 export async function paginaBienvenida() {
   inyectarEstilos()
   try {
@@ -551,7 +470,6 @@ export function initBienvenida() {
   document.getElementById('sbv-salir')?.addEventListener('click', async () => { const { logout } = await import('./auth.js'); logout() })
 }
 
-// ── CAJERO ─────────────────────────────────────────────────
 export function paginaCajero() {
   inyectarEstilos()
   return `
@@ -560,7 +478,6 @@ export function paginaCajero() {
         <div class="sello-topbar-brand">${logoSVG(28, '#fff')} Sell<span>o</span></div>
         <span style="font-size:13px;color:rgba(255,255,255,0.6)">Cajero</span>
       </div>
-
       <div class="sc-search-area">
         <div class="sc-search-row">
           <input type="tel" id="telefono" placeholder="Buscar por teléfono..." class="s-input sc-search-input" />
@@ -571,9 +488,7 @@ export function paginaCajero() {
           <button id="buscar-nombre" class="sc-search-btn">Buscar</button>
         </div>
       </div>
-
       <div id="resultado"></div>
-
       <div class="s-card" style="margin-top:4px">
         <div class="s-section-label">Atendidos hoy</div>
         <div id="ultimos-clientes"><p style="color:#aaa;font-size:13px;text-align:center;padding:8px 0">Cargando...</p></div>
@@ -587,7 +502,6 @@ export function initCajero() {
   inyectarEstilos()
   initNav()
   cargarUltimosClientes()
-
   document.getElementById('buscar').addEventListener('click', async () => {
     const t = document.getElementById('telefono').value.trim()
     if (!t) return
@@ -655,7 +569,6 @@ async function buscarYMostrar({ telefono, nombre }) {
     if (telefono) q = q.eq('telefono', telefono)
     else if (nombre) q = q.ilike('nombre', `%${nombre}%`)
     const { data, error } = await q; if (error) throw error
-
     if (telefono) {
       if (!data?.[0]) {
         res.innerHTML = `<div class="s-card"><p class="s-error" style="margin-bottom:12px">Cliente no encontrado</p><button class="s-btn primary" id="btn-nuevo">+ Registrar nuevo cliente</button></div>`
@@ -734,7 +647,6 @@ async function mostrarCliente(data) {
   } catch (e) { document.getElementById('resultado').innerHTML = `<div class="s-card">${errMsg('cargar el cliente')}</div>` }
 }
 
-// ── REGISTRO CAJERO ────────────────────────────────────────
 export function paginaRegistro(telefono = '') {
   inyectarEstilos()
   return `
@@ -774,7 +686,6 @@ export function initRegistro() {
   })
 }
 
-// ── ADMIN ──────────────────────────────────────────────────
 function isAdminAuth() { return sessionStorage.getItem('admin_auth') === 'ok' }
 
 export async function paginaAdmin() {
@@ -899,7 +810,6 @@ export function initAdmin() {
   })
 }
 
-// ── VISTA CLIENTE ──────────────────────────────────────────
 export async function paginaCliente(telefono) {
   inyectarEstilos()
   try {
@@ -925,27 +835,17 @@ export async function paginaCliente(telefono) {
           <div class="sc-hero-name">Hola, ${data.nombre?.split(' ')[0] || 'Cliente'} 👋</div>
           <div class="sc-hero-sub">Aquí está tu progreso</div>
         </div>
-
         <div class="sc-puntos-card">
           <div class="sc-puntos-grid">
-            <div class="sc-punto-box">
-              <div class="sc-punto-num">${data.total_visitas}</div>
-              <div class="sc-punto-lbl">Visitas totales</div>
-            </div>
-            <div class="sc-punto-box">
-              <div class="sc-punto-num ${tienePremio?'gold':''}">${ciclo}/${meta}</div>
-              <div class="sc-punto-lbl">Para el premio</div>
-            </div>
+            <div class="sc-punto-box"><div class="sc-punto-num">${data.total_visitas}</div><div class="sc-punto-lbl">Visitas totales</div></div>
+            <div class="sc-punto-box"><div class="sc-punto-num ${tienePremio?'gold':''}">${ciclo}/${meta}</div><div class="sc-punto-lbl">Para el premio</div></div>
           </div>
-
           <div class="s-prog-header"><span style="font-size:13px;color:${DS.gray500}">Progreso al premio</span><span style="font-size:13px;font-weight:600;color:${DS.green800}">${pct}%</span></div>
           <div class="s-prog-track" style="height:12px">
             <div class="${'s-prog-fill' + (tienePremio?' gold':'')}" id="lc-fill" style="width:0%"></div>
           </div>
-
           <div class="sc-mensaje ${tienePremio?'premio':data.puntos_actuales===0?'inicio':'normal'}" style="margin-top:16px">${msg}</div>
         </div>
-
         <div class="s-card">
           <div class="s-section-label">Tu código QR</div>
           <div style="text-align:center">
@@ -978,7 +878,6 @@ export function initCliente(telefono) {
   }
 }
 
-// ── QR NEGOCIO ─────────────────────────────────────────────
 export async function paginaQRNegocio(negocioId) {
   inyectarEstilos()
   try {
@@ -1020,7 +919,6 @@ export function initQRNegocio(negocioId) {
   document.getElementById('tel-negocio')?.addEventListener('keydown', e => { if (e.key==='Enter') doEntrar() })
 }
 
-// ── REGISTRO DESDE QR ──────────────────────────────────────
 export function paginaRegistroCliente(negocioId, telefono) {
   inyectarEstilos()
   return `
@@ -1055,7 +953,7 @@ export function initRegistroCliente(negocioId, telefono) {
   })
 }
 
-// ── PANEL DUEÑO ────────────────────────────────────────────
+// ── PANEL DUEÑO con Dashboard ──────────────────────────────
 export async function paginaDueno() {
   inyectarEstilos()
   try {
@@ -1109,6 +1007,7 @@ export async function paginaDueno() {
           <span style="font-size:13px;color:rgba(255,255,255,0.6)">${nd?.nombre||negocio.nombre}</span>
         </div>
 
+        <!-- Resumen rápido -->
         <div class="s-card" style="margin-top:16px">
           <div class="s-section-label">Resumen</div>
           <div class="s-stats">
@@ -1118,6 +1017,29 @@ export async function paginaDueno() {
           </div>
         </div>
 
+        <!-- Dashboard gráficas -->
+        <div class="s-card">
+          <div class="s-section-label">Visitas — últimos 7 días</div>
+          <div class="s-chart-wrap">
+            <canvas id="chart-barras"></canvas>
+          </div>
+        </div>
+
+        <div class="s-card">
+          <div class="s-section-label">Este mes vs mes anterior</div>
+          <div class="s-chart-wrap">
+            <canvas id="chart-meses"></canvas>
+          </div>
+        </div>
+
+        <div class="s-card">
+          <div class="s-section-label">Clientes nuevos vs recurrentes</div>
+          <div class="s-chart-wrap donut">
+            <canvas id="chart-dona"></canvas>
+          </div>
+        </div>
+
+        <!-- Premios -->
         <div class="s-card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
             <div class="s-section-label" style="margin-bottom:0">Premios</div>
@@ -1133,11 +1055,13 @@ export async function paginaDueno() {
           <div id="lista-premios">${filasPremios||`<p style="color:#aaa;font-size:13px;text-align:center;padding:8px 0">No hay premios configurados aún</p>`}</div>
         </div>
 
+        <!-- Canjes -->
         <div class="s-card">
           <div class="s-section-label">Últimos premios entregados</div>
           ${filasCanjes}
         </div>
 
+        <!-- Top clientes -->
         <div class="s-card">
           <div class="s-section-label">Clientes más frecuentes</div>
           ${filasClientes||`<p style="color:#aaa;font-size:13px;text-align:center;padding:8px 0">Aún no hay clientes</p>`}
@@ -1150,8 +1074,18 @@ export async function paginaDueno() {
   }
 }
 
-export function initDueno(negocioId) {
+export async function initDueno(negocioId) {
   inyectarEstilos(); initNav()
+
+  // ── Renderizar gráficas con datos reales ──
+  try {
+    const { getNegocioActual } = await import('./auth.js')
+    const negocio = getNegocioActual()
+    const { data: visitas } = await supabase.from('visitas').select('fecha').eq('negocio_id', negocio.id)
+    const { data: clientes } = await supabase.from('clientes').select('total_visitas').eq('negocio_id', negocio.id)
+    await renderizarGraficas(visitas, clientes)
+  } catch (e) { /* gráficas opcionales, no romper si fallan */ }
+
   document.getElementById('btn-nuevo-premio')?.addEventListener('click', () => {
     const f = document.getElementById('form-premio'); const open = f.style.display!=='none'
     if (!open) document.getElementById('nombre-premio').value = ''
