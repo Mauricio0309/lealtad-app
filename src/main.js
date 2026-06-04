@@ -10,10 +10,13 @@ import {
   paginaQRNegocio, initQRNegocio,
   paginaRegistroCliente, initRegistroCliente,
   paginaDueno, initDueno,
-  paginaBienvenida, initBienvenida
+  paginaBienvenida, initBienvenida,
+  paginaOnboarding, initOnboarding,
+  paginaKiosko, initKiosko,
+  paginaLanding, initLanding,
 } from './pages.js'
 
-// ── PWA Service Worker ──
+// PWA Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
@@ -26,11 +29,11 @@ async function render() {
   const page = getPage()
   const hash = window.location.hash
   const app = document.querySelector('#app')
-
   app.innerHTML = ''
 
+  // ── Páginas públicas (sin login) ──
   if (page === 'cliente') {
-    app.innerHTML = '<div class="container"><p style="text-align:center;padding:40px;color:#666">Cargando...</p></div>'
+    app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
     const telefono = hash.split('/')[2] || ''
     app.innerHTML = await paginaCliente(telefono)
     initCliente(telefono)
@@ -38,10 +41,18 @@ async function render() {
   }
 
   if (page === 'negocio') {
-    app.innerHTML = '<div class="container"><p style="text-align:center;padding:40px;color:#666">Cargando...</p></div>'
+    app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
     const negocioId = hash.split('/')[2] || ''
     app.innerHTML = await paginaQRNegocio(negocioId)
     initQRNegocio(negocioId)
+    return
+  }
+
+  if (page === 'landing') {
+    app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
+    const negocioId = hash.split('/')[2] || ''
+    app.innerHTML = await paginaLanding(negocioId)
+    initLanding(negocioId)
     return
   }
 
@@ -60,21 +71,36 @@ async function render() {
     return
   }
 
+  // ── Requieren login ──
   if (!isLoggedIn()) {
     app.innerHTML = paginaLogin()
     initLogin()
     return
   }
 
+  if (page === 'onboarding') {
+    const paso = parseInt(hash.split('/')[2] || '0')
+    app.innerHTML = paginaOnboarding(paso)
+    initOnboarding(paso)
+    return
+  }
+
   if (page === 'bienvenida') {
-    app.innerHTML = '<div class="container"><p style="text-align:center;padding:40px;color:#666">Cargando...</p></div>'
+    app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
     app.innerHTML = await paginaBienvenida()
     initBienvenida()
     return
   }
 
+  if (page === 'kiosko') {
+    app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
+    app.innerHTML = await paginaKiosko()
+    initKiosko()
+    return
+  }
+
   if (page === 'dueno') {
-    app.innerHTML = '<div class="container"><p style="text-align:center;padding:40px;color:#666">Cargando...</p></div>'
+    app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
     const negocio = getNegocioActual()
     app.innerHTML = await paginaDueno()
     initDueno(negocio.id)
@@ -84,15 +110,26 @@ async function render() {
   if (page === 'cajero') {
     app.innerHTML = paginaCajero()
     initCajero()
-  } else if (page === 'registro') {
+    return
+  }
+
+  if (page === 'registro') {
     const telefono = hash.split('/')[2] || ''
     app.innerHTML = paginaRegistro(telefono)
     initRegistro()
-  } else if (page === 'admin') {
-    app.innerHTML = '<div class="container"><p style="text-align:center;padding:40px;color:#666">Cargando...</p></div>'
+    return
+  }
+
+  if (page === 'admin') {
+    app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
     app.innerHTML = await paginaAdmin()
     initAdmin()
+    return
   }
+
+  // Fallback
+  app.innerHTML = paginaLogin()
+  initLogin()
 }
 
 render()
