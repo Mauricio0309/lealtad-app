@@ -36,7 +36,7 @@ async function render() {
     app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
     const telefono = hash.split('/')[2] || ''
     app.innerHTML = await paginaCliente(telefono)
-    initCliente(telefono)
+    await initCliente(telefono)
     return
   }
 
@@ -68,6 +68,14 @@ async function render() {
   if (page === 'login') {
     app.innerHTML = paginaLogin()
     initLogin()
+    return
+  }
+
+  // FIX: admin va antes del check de isLoggedIn, tiene su propia contraseña
+  if (page === 'admin') {
+    app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
+    app.innerHTML = await paginaAdmin()
+    initAdmin()
     return
   }
 
@@ -117,13 +125,6 @@ async function render() {
     const telefono = hash.split('/')[2] || ''
     app.innerHTML = paginaRegistro(telefono)
     initRegistro()
-    return
-  }
-
-  if (page === 'admin') {
-    app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
-    app.innerHTML = await paginaAdmin()
-    initAdmin()
     return
   }
 
