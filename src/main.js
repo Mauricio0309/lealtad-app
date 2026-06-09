@@ -16,7 +16,6 @@ import {
   paginaLanding, initLanding,
 } from './pages.js'
 
-// PWA Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
@@ -31,7 +30,7 @@ async function render() {
   const app = document.querySelector('#app')
   app.innerHTML = ''
 
-  // ── Páginas públicas (sin login) ──
+  // ── Públicas ──
   if (page === 'cliente') {
     app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
     const telefono = hash.split('/')[2] || ''
@@ -71,7 +70,7 @@ async function render() {
     return
   }
 
-  // FIX: admin va antes del check de isLoggedIn, tiene su propia contraseña
+  // FIX: admin va antes del check de isLoggedIn — tiene su propia contraseña
   if (page === 'admin') {
     app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
     app.innerHTML = await paginaAdmin()
@@ -109,9 +108,10 @@ async function render() {
 
   if (page === 'dueno') {
     app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
-    const negocio = getNegocioActual()
     app.innerHTML = await paginaDueno()
-    initDueno(negocio.id)
+    // FIX: obtener negocio después de renderizar la página para que ya esté en sesión
+    const negocio = getNegocioActual()
+    if (negocio) initDueno(negocio.id)
     return
   }
 
@@ -128,7 +128,6 @@ async function render() {
     return
   }
 
-  // Fallback
   app.innerHTML = paginaLogin()
   initLogin()
 }
