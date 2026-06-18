@@ -2,7 +2,6 @@ import QRCode from 'qrcode'
 import { supabase } from './supabase.js'
 import { navigate } from './router.js'
 
-const META_VISITAS = 10
 const ADMIN_PASSWORD = 'lealtad2024'
 
 // ═══════════════════════════════════════════════════════════
@@ -16,37 +15,35 @@ const DS = {
   gray300: '#cbd5e1', gray100: '#f1f5f9', gray50: '#f8fafc', white: '#ffffff',
 }
 
-// Niveles por defecto (se usan si el negocio no tiene configurados)
 const NIVELES_DEFAULT = [
-  { nombre: 'Bronce',  emoji: '🥉', visitas_minimas: 0,  premio_bienvenida: '',                 color: '#cd7f32' },
-  { nombre: 'Plata',   emoji: '🥈', visitas_minimas: 10, premio_bienvenida: 'Premio de bienvenida', color: '#9ca3af' },
-  { nombre: 'Oro',     emoji: '🥇', visitas_minimas: 25, premio_bienvenida: 'Premio especial',   color: '#f5a623' },
-  { nombre: 'Platino', emoji: '💎', visitas_minimas: 50, premio_bienvenida: 'Premio VIP',        color: '#667eea' },
+  { nombre: 'Bronce',  emoji: '🥉', visitas_minimas: 0,  premio_bienvenida: '' },
+  { nombre: 'Plata',   emoji: '🥈', visitas_minimas: 10, premio_bienvenida: 'Café mediano gratis' },
+  { nombre: 'Oro',     emoji: '🥇', visitas_minimas: 25, premio_bienvenida: 'Café grande + pan' },
+  { nombre: 'Platino', emoji: '💎', visitas_minimas: 50, premio_bienvenida: 'Desayuno completo' },
 ]
 
-// Obtener nivel actual según visitas
 function getNivelActual(totalVisitas, niveles) {
-  const lista = (niveles && niveles.length > 0 ? niveles : NIVELES_DEFAULT)
+  const lista = [...(niveles && niveles.length > 0 ? niveles : NIVELES_DEFAULT)]
     .sort((a, b) => a.visitas_minimas - b.visitas_minimas)
   let actual = lista[0]
-  for (const n of lista) {
-    if (totalVisitas >= n.visitas_minimas) actual = n
-  }
+  for (const n of lista) { if (totalVisitas >= n.visitas_minimas) actual = n }
   return actual
 }
 
-// Obtener siguiente nivel
 function getSiguienteNivel(totalVisitas, niveles) {
-  const lista = (niveles && niveles.length > 0 ? niveles : NIVELES_DEFAULT)
+  const lista = [...(niveles && niveles.length > 0 ? niveles : NIVELES_DEFAULT)]
     .sort((a, b) => a.visitas_minimas - b.visitas_minimas)
   return lista.find(n => n.visitas_minimas > totalVisitas) || null
 }
 
-// Color del nivel (con fallback)
 function colorNivel(nivel) {
   if (!nivel) return DS.gray500
   const colores = { 'Bronce': '#cd7f32', 'Plata': '#9ca3af', 'Oro': '#f5a623', 'Platino': '#667eea' }
   return colores[nivel.nombre] || DS.green800
+}
+
+function aplicarColorNegocio(color) {
+  document.documentElement.style.setProperty('--negocio-color', color || DS.green800)
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -63,7 +60,8 @@ function inyectarEstilos() {
 
     .sello-topbar { background: var(--negocio-color, ${DS.green800}); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
     .sello-topbar-brand { display: flex; align-items: center; gap: 10px; font-family: 'Sora', sans-serif; font-weight: 800; font-size: 20px; color: ${DS.white}; letter-spacing: -0.02em; }
-    .sello-topbar-brand span { color: ${DS.gold400}; }
+    .sello-topbar-brand .brand-name { color: ${DS.white}; }
+    .sello-topbar-brand .brand-name span { color: ${DS.gold400}; }
 
     .s-card { background: ${DS.white}; border-radius: 16px; padding: 20px; margin: 0 16px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04); }
     .s-section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: ${DS.gray500}; margin-bottom: 14px; }
@@ -81,11 +79,11 @@ function inyectarEstilos() {
     .s-btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; transition: opacity 0.15s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; }
     .s-btn:active { transform: scale(0.98); }
     .s-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .s-btn.primary { background: ${DS.green800}; color: ${DS.white}; }
-    .s-btn.primary:hover { background: ${DS.green700}; }
+    .s-btn.primary { background: var(--negocio-color, ${DS.green800}); color: ${DS.white}; }
     .s-btn.gold { background: ${DS.gold500}; color: ${DS.white}; }
     .s-btn.ghost { background: ${DS.gray100}; color: ${DS.gray700}; }
     .s-btn.share { background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045); color: white; }
+    .s-btn.danger { background: #fee2e2; color: #dc2626; }
 
     .s-input { width: 100%; padding: 13px 14px; border: 1.5px solid ${DS.gray300}; border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 15px; color: ${DS.gray900}; background: ${DS.white}; transition: border-color 0.15s, box-shadow 0.15s; outline: none; }
     .s-input:focus { border-color: ${DS.green700}; box-shadow: 0 0 0 3px rgba(13,122,95,0.1); }
@@ -110,7 +108,6 @@ function inyectarEstilos() {
 
     .nivel-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; font-family: 'Sora', sans-serif; }
 
-    /* Vista cliente */
     .sc-root { min-height: 100vh; background: ${DS.gray50}; padding-bottom: 40px; }
     .sc-hero { background: linear-gradient(145deg, ${DS.green900} 0%, var(--negocio-color, ${DS.green800}) 100%); padding: 48px 24px 80px; position: relative; overflow: hidden; }
     .sc-hero::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 32px; background: ${DS.gray50}; border-radius: 32px 32px 0 0; }
@@ -127,12 +124,9 @@ function inyectarEstilos() {
     .sc-mensaje.normal { background: ${DS.green50}; color: ${DS.green800}; border: 1px solid ${DS.green100}; }
     .sc-mensaje.premio { background: ${DS.gold100}; color: #92400e; border: 1px solid #fde68a; font-weight: 600; }
     .sc-mensaje.inicio { background: ${DS.gray100}; color: ${DS.gray500}; }
-
-    /* Barra de progreso de nivel */
     .nivel-prog-track { height: 6px; background: ${DS.gray100}; border-radius: 999px; overflow: hidden; margin-top: 8px; }
     .nivel-prog-fill { height: 100%; border-radius: 999px; transition: width 1s ease; }
 
-    /* QR landing */
     .sq-root { min-height: 100vh; background: linear-gradient(160deg, ${DS.green900} 0%, var(--negocio-color, ${DS.green800}) 60%, #0d3d2e 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 20px; font-family: 'Sora', sans-serif; color: ${DS.white}; text-align: center; }
     .sq-logo { margin-bottom: 32px; }
     .sq-negocio { font-size: 12px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px; }
@@ -147,7 +141,6 @@ function inyectarEstilos() {
     .sq-btn:active { transform: scale(0.98); }
     .sq-btn:disabled { opacity: 0.6; }
 
-    /* Bienvenida */
     .sbv-root { min-height: 100vh; background: linear-gradient(145deg, ${DS.green800} 0%, ${DS.green900} 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; font-family: 'Sora', sans-serif; color: ${DS.white}; text-align: center; }
     .sbv-logo { margin-bottom: 8px; }
     .sbv-app { font-size: 13px; color: ${DS.green400}; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 24px; }
@@ -162,7 +155,6 @@ function inyectarEstilos() {
     .sbv-btn-sub { font-size: 12px; font-weight: 400; opacity: 0.6; display: block; margin-top: 2px; }
     .sbv-salir { margin-top: 28px; background: none; border: none; color: rgba(255,255,255,0.3); font-size: 13px; cursor: pointer; font-family: 'Inter', sans-serif; }
 
-    /* Toast */
     .s-toast-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 9999; animation: sFadeIn 0.2s ease; }
     .s-toast-box { background: ${DS.white}; border-radius: 24px; padding: 36px 28px; text-align: center; max-width: 300px; width: 90%; animation: sPopIn 0.35s cubic-bezier(0.34,1.56,0.64,1); }
     .s-toast-icon { font-size: 60px; display: block; margin-bottom: 14px; }
@@ -176,7 +168,6 @@ function inyectarEstilos() {
     .s-toast-box.nivel .s-toast-title { color: #4c1d95; }
     .s-toast-box.nivel .s-toast-sub { color: #5b21b6; }
 
-    /* Rows */
     .s-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid ${DS.gray100}; }
     .s-row:last-child { border-bottom: none; padding-bottom: 0; }
     .s-row:first-child { padding-top: 0; }
@@ -184,7 +175,6 @@ function inyectarEstilos() {
     .s-row-sub { font-size: 12px; color: ${DS.gray500}; margin-top: 2px; }
     .s-row-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
-    /* Login */
     .s-login-root { min-height: 100vh; background: linear-gradient(145deg, ${DS.green800} 0%, ${DS.green900} 100%); display: flex; align-items: center; justify-content: center; padding: 24px; }
     .s-login-card { background: ${DS.white}; border-radius: 24px; padding: 32px 28px; width: 100%; max-width: 380px; box-shadow: 0 24px 60px rgba(0,0,0,0.3); }
     .s-login-logo { text-align: center; margin-bottom: 28px; }
@@ -192,17 +182,14 @@ function inyectarEstilos() {
     .s-login-app span { color: ${DS.gold500}; }
     .s-login-sub { font-size: 14px; color: ${DS.gray500}; margin-top: 4px; }
 
-    /* Cajero */
     .sc-search-area { padding: 16px 16px 8px; display: flex; flex-direction: column; gap: 8px; }
     .sc-search-row { display: flex; gap: 8px; }
     .sc-search-input { flex: 1; }
-    .sc-search-btn { padding: 13px 16px; background: ${DS.green800}; color: ${DS.white}; border: none; border-radius: 10px; cursor: pointer; font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 600; white-space: nowrap; }
+    .sc-search-btn { padding: 13px 16px; background: var(--negocio-color, ${DS.green800}); color: ${DS.white}; border: none; border-radius: 10px; cursor: pointer; font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 600; white-space: nowrap; }
 
-    /* Charts */
     .s-chart-wrap { position: relative; height: 180px; margin-top: 8px; }
     .s-chart-wrap.donut { height: 200px; }
 
-    /* Onboarding */
     .onb-root { min-height: 100vh; background: linear-gradient(145deg, ${DS.green800} 0%, ${DS.green900} 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; font-family: 'Sora', sans-serif; color: ${DS.white}; text-align: center; }
     .onb-step-dots { display: flex; gap: 8px; margin-bottom: 40px; }
     .onb-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.3); transition: all 0.3s; }
@@ -214,8 +201,7 @@ function inyectarEstilos() {
     .onb-btn-primary { padding: 16px; border-radius: 12px; border: none; background: ${DS.white}; color: ${DS.green800}; font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; }
     .onb-btn-skip { background: none; border: none; color: rgba(255,255,255,0.4); font-size: 13px; cursor: pointer; font-family: 'Inter', sans-serif; padding: 8px; }
 
-    /* Kiosko */
-    .kiosko-root { min-height: 100vh; background: linear-gradient(145deg, ${DS.green900}, ${DS.green800}); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; font-family: 'Sora', sans-serif; color: ${DS.white}; text-align: center; }
+    .kiosko-root { min-height: 100vh; background: linear-gradient(145deg, ${DS.green900}, var(--negocio-color, ${DS.green800})); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; font-family: 'Sora', sans-serif; color: ${DS.white}; text-align: center; }
     .kiosko-titulo { font-size: 18px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
     .kiosko-nombre { font-size: 36px; font-weight: 800; margin-bottom: 48px; }
     .kiosko-input { width: 100%; max-width: 320px; padding: 20px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2); border-radius: 16px; color: ${DS.white}; font-family: 'Sora', sans-serif; font-size: 28px; font-weight: 700; text-align: center; outline: none; margin-bottom: 16px; transition: border-color 0.15s; }
@@ -224,7 +210,6 @@ function inyectarEstilos() {
     .kiosko-btn { width: 100%; max-width: 320px; padding: 20px; background: linear-gradient(135deg, ${DS.green600}, ${DS.green700}); border: none; border-radius: 16px; color: ${DS.white}; font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 700; cursor: pointer; }
     .kiosko-salir { position: fixed; top: 16px; right: 16px; background: rgba(255,255,255,0.1); border: none; color: rgba(255,255,255,0.4); padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; }
 
-    /* Landing */
     .landing-root { min-height: 100vh; background: ${DS.gray50}; }
     .landing-hero { background: linear-gradient(145deg, ${DS.green900}, var(--negocio-color, ${DS.green800})); padding: 60px 24px 80px; text-align: center; position: relative; }
     .landing-hero::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 40px; background: ${DS.gray50}; border-radius: 40px 40px 0 0; }
@@ -248,6 +233,14 @@ function logoSVG(size = 36, color = '#ffffff') {
     <circle cx="20" cy="20" r="12" stroke="${color}" stroke-width="2"/>
     <path d="M14 20l4 4 8-8" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`
+}
+
+// FIX: logo "Sello" junto sin separación
+function topbarBrand() {
+  return `<div class="sello-topbar-brand">
+    ${logoSVG(28, '#fff')}
+    <span class="brand-name">Sell<span>o</span></span>
+  </div>`
 }
 
 function pwField(id, placeholder = '••••••') {
@@ -280,27 +273,35 @@ function toast({ icon, title, sub, gold = false, nivel = false, autoClose = 2400
   return el
 }
 
-function navBar(active = 'cajero') {
+// FIX: cajero solo ve Cajero y Salir, sin Mi Panel
+function navBarCajero() {
   return `
     <nav class="s-nav">
-      <button class="s-nav-btn ${active === 'cajero' ? 'active' : ''}" id="snav-cajero"><span class="s-nav-icon">🧾</span>Cajero</button>
-      <button class="s-nav-btn ${active === 'panel' ? 'active' : ''}" id="snav-panel"><span class="s-nav-icon">📊</span>Mi Panel</button>
-      <button class="s-nav-btn ${active === 'salir' ? 'active' : ''}" id="snav-salir"><span class="s-nav-icon">🚪</span>Salir</button>
+      <button class="s-nav-btn active" id="snav-cajero"><span class="s-nav-icon">🧾</span>Cajero</button>
+      <button class="s-nav-btn" id="snav-salir"><span class="s-nav-icon">🚪</span>Salir</button>
     </nav>
   `
 }
 
-function initNav() {
+function navBarDueno(active = 'panel') {
+  return `
+    <nav class="s-nav">
+      <button class="s-nav-btn ${active === 'panel' ? 'active' : ''}" id="snav-panel"><span class="s-nav-icon">📊</span>Mi Panel</button>
+      <button class="s-nav-btn" id="snav-salir"><span class="s-nav-icon">🚪</span>Salir</button>
+    </nav>
+  `
+}
+
+function initNavCajero() {
   document.getElementById('snav-cajero')?.addEventListener('click', () => navigate('cajero'))
+  document.getElementById('snav-salir')?.addEventListener('click', async () => { const { logout } = await import('./auth.js'); logout() })
+}
+
+function initNavDueno() {
   document.getElementById('snav-panel')?.addEventListener('click', () => navigate('dueno'))
   document.getElementById('snav-salir')?.addEventListener('click', async () => { const { logout } = await import('./auth.js'); logout() })
 }
 
-function aplicarColorNegocio(color) {
-  document.documentElement.style.setProperty('--negocio-color', color || DS.green800)
-}
-
-// ── Chart.js ───────────────────────────────────────────────
 function cargarChartJS() {
   return new Promise((resolve) => {
     if (window.Chart) { resolve(); return }
@@ -329,29 +330,48 @@ async function renderizarGraficas(visitas, clientes) {
   const recurrentes = (clientes||[]).filter(c => c.total_visitas > 1).length
   const total = nuevos + recurrentes
 
-  ;['chart-barras','chart-dona','chart-meses'].forEach(id => { const c=document.getElementById(id); if(c?._chartInstance) c._chartInstance.destroy() })
+  ;['chart-barras','chart-dona','chart-meses'].forEach(id => { const c = document.getElementById(id); if (c?._chartInstance) c._chartInstance.destroy() })
 
   const ctxB = document.getElementById('chart-barras')
-  if (ctxB) ctxB._chartInstance = new window.Chart(ctxB, { type:'bar', data:{ labels:labels7, datasets:[{ data:vpd, backgroundColor:vpd.map((_,i)=>i===6?DS.green700:DS.green100), borderRadius:6, borderSkipped:false }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>`${ctx.raw} visitas`}} }, scales:{ x:{grid:{display:false},ticks:{font:{size:11},color:DS.gray500}}, y:{grid:{color:DS.gray100},ticks:{font:{size:11},color:DS.gray500,stepSize:1},beginAtZero:true} } } })
+  if (ctxB) ctxB._chartInstance = new window.Chart(ctxB, {
+    type: 'bar',
+    data: { labels: labels7, datasets: [{ data: vpd, backgroundColor: vpd.map((_, i) => i === 6 ? DS.green700 : DS.green100), borderRadius: 6, borderSkipped: false }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 11 }, color: DS.gray500 } }, y: { grid: { color: DS.gray100 }, ticks: { font: { size: 11 }, color: DS.gray500, stepSize: 1 }, beginAtZero: true } } }
+  })
 
   const ctxD = document.getElementById('chart-dona')
-  if (ctxD) ctxD._chartInstance = new window.Chart(ctxD, { type:'doughnut', data:{ labels:['Recurrentes','Nuevos'], datasets:[{ data:total===0?[1,0]:[recurrentes,nuevos], backgroundColor:[DS.green700,DS.green100], borderWidth:0 }] }, options:{ responsive:true, maintainAspectRatio:false, cutout:'70%', plugins:{ legend:{position:'bottom',labels:{font:{size:12},color:DS.gray700,padding:16}}, tooltip:{callbacks:{label:ctx=>` ${ctx.raw} (${total>0?Math.round((ctx.raw/total)*100):0}%)`}} } } })
+  if (ctxD) {
+    if (total === 0) {
+      ctxD.parentElement.innerHTML = `<p style="text-align:center;color:${DS.gray500};font-size:13px;padding:40px 0">Aún no hay clientes para mostrar</p>`
+    } else {
+      ctxD._chartInstance = new window.Chart(ctxD, {
+        type: 'doughnut',
+        data: { labels: ['Recurrentes', 'Nuevos'], datasets: [{ data: [recurrentes, nuevos], backgroundColor: [DS.green700, DS.green100], borderWidth: 0 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, color: DS.gray700, padding: 16 } }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw} (${Math.round((ctx.raw/total)*100)}%)` } } } }
+      })
+    }
+  }
 
   const ctxM = document.getElementById('chart-meses')
   if (ctxM) {
-    const ma = new Date().toLocaleDateString('es-MX',{month:'long'})
-    const mp = new Date(new Date().getFullYear(),new Date().getMonth()-1,1).toLocaleDateString('es-MX',{month:'long'})
-    ctxM._chartInstance = new window.Chart(ctxM, { type:'bar', data:{ labels:[mp,ma], datasets:[{ data:[vma,vem], backgroundColor:[DS.gray100,DS.green700], borderRadius:8, borderSkipped:false }] }, options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ x:{grid:{color:DS.gray100},ticks:{font:{size:11},color:DS.gray500,stepSize:1},beginAtZero:true}, y:{grid:{display:false},ticks:{font:{size:12,weight:'600'},color:DS.gray700}} } } })
+    const ma = new Date().toLocaleDateString('es-MX', { month: 'long' })
+    const mp = new Date(new Date().getFullYear(), new Date().getMonth()-1, 1).toLocaleDateString('es-MX', { month: 'long' })
+    ctxM._chartInstance = new window.Chart(ctxM, {
+      type: 'bar',
+      data: { labels: [mp, ma], datasets: [{ data: [vma, vem], backgroundColor: [DS.gray100, DS.green700], borderRadius: 8, borderSkipped: false }] },
+      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: DS.gray100 }, ticks: { font: { size: 11 }, color: DS.gray500, stepSize: 1 }, beginAtZero: true }, y: { grid: { display: false }, ticks: { font: { size: 12, weight: '600' }, color: DS.gray700 } } } }
+    })
   }
 }
 
-// ── Exportar CSV ───────────────────────────────────────────
+// FIX: CSV con created_at como fallback
 function exportarCSV(clientes, niveles, negocioNombre) {
-  const headers = ['Nombre','Teléfono','Visitas totales','Puntos actuales','Nivel','Fecha registro']
+  const headers = ['Nombre', 'Teléfono', 'Visitas totales', 'Nivel', 'Fecha registro']
   const filas = (clientes||[]).map(c => {
     const nivel = getNivelActual(c.total_visitas, niveles)
-    const fecha = c.fecha_registro ? new Date(c.fecha_registro).toLocaleDateString('es-MX') : '—'
-    return [c.nombre, c.telefono, c.total_visitas, c.puntos_actuales, `${nivel.emoji} ${nivel.nombre}`, fecha]
+    const fechaRaw = c.fecha_registro || c.created_at
+    const fecha = fechaRaw ? new Date(fechaRaw).toLocaleDateString('es-MX') : '—'
+    return [c.nombre, c.telefono, c.total_visitas, `${nivel.emoji} ${nivel.nombre}`, fecha]
   })
   const csv = [headers, ...filas].map(row => row.join(',')).join('\n')
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
@@ -361,113 +381,49 @@ function exportarCSV(clientes, niveles, negocioNombre) {
   URL.revokeObjectURL(url)
 }
 
-// ── Onboarding ─────────────────────────────────────────────
 function onboardingVisto() { return localStorage.getItem('sello_onboarding') === 'done' }
 function marcarOnboardingVisto() { localStorage.setItem('sello_onboarding', 'done') }
 
 const PASOS_ONBOARDING = [
   { icon: '🧾', titulo: 'Registra visitas en segundos', desc: 'El cajero busca al cliente por teléfono o nombre y toca "Registrar visita". Así de simple.' },
-  { icon: '🏆', titulo: 'Configura tus premios y niveles', desc: 'Define cuántas visitas necesita un cliente para ganar un premio o subir de nivel.' },
+  { icon: '🏆', titulo: 'Configura tus niveles de lealtad', desc: 'Define cuántas visitas necesita un cliente para subir de nivel y qué premio recibe al llegar.' },
   { icon: '📊', titulo: 'Ve tus estadísticas en tiempo real', desc: 'Consulta cuántos clientes tienes, qué días son más concurridos y quiénes son tus clientes más fieles.' },
 ]
 
-// ── Compartir en historias ─────────────────────────────────
 async function compartirHistoria({ tipo, negocioNombre, negocioEmoji, nivelNombre, nivelEmoji, premioNombre, totalVisitas, colorNegocio }) {
   return new Promise((resolve) => {
     const canvas = document.createElement('canvas')
     canvas.width = 1080; canvas.height = 1920
     const ctx = canvas.getContext('2d')
-
-    // Fondo degradado
     const grad = ctx.createLinearGradient(0, 0, 0, 1920)
-    grad.addColorStop(0, '#052e1c')
-    grad.addColorStop(0.6, colorNegocio || DS.green800)
-    grad.addColorStop(1, '#0d3d2e')
-    ctx.fillStyle = grad
-    ctx.fillRect(0, 0, 1080, 1920)
-
-    // Círculos decorativos
-    ctx.globalAlpha = 0.08
-    ctx.fillStyle = '#ffffff'
-    ctx.beginPath(); ctx.arc(1080, 300, 400, 0, Math.PI * 2); ctx.fill()
-    ctx.beginPath(); ctx.arc(0, 1700, 350, 0, Math.PI * 2); ctx.fill()
+    grad.addColorStop(0, '#052e1c'); grad.addColorStop(0.6, colorNegocio || DS.green800); grad.addColorStop(1, '#0d3d2e')
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, 1080, 1920)
+    ctx.globalAlpha = 0.08; ctx.fillStyle = '#ffffff'
+    ctx.beginPath(); ctx.arc(1080, 300, 400, 0, Math.PI*2); ctx.fill()
+    ctx.beginPath(); ctx.arc(0, 1700, 350, 0, Math.PI*2); ctx.fill()
     ctx.globalAlpha = 1
-
-    // Logo Sello arriba
-    ctx.fillStyle = 'rgba(255,255,255,0.3)'
-    ctx.font = 'bold 32px Arial'
-    ctx.textAlign = 'center'
+    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = 'bold 32px Arial'; ctx.textAlign = 'center'
     ctx.fillText('● SELLO', 540, 140)
-
-    // Emoji principal
-    ctx.font = '220px Arial'
-    ctx.textAlign = 'center'
-    if (tipo === 'premio') {
-      ctx.fillText('🏆', 540, 700)
-    } else {
-      ctx.fillText(nivelEmoji || '⭐', 540, 700)
-    }
-
-    // Título
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 80px Arial'
-    ctx.textAlign = 'center'
-    if (tipo === 'premio') {
-      ctx.fillText('¡Gané un premio!', 540, 850)
-    } else {
-      ctx.fillText(`¡Llegué a ${nivelNombre}!`, 540, 850)
-    }
-
-    // Subtítulo
-    ctx.fillStyle = 'rgba(255,255,255,0.8)'
-    ctx.font = '52px Arial'
-    if (tipo === 'premio') {
-      ctx.fillText(premioNombre || 'Premio especial', 540, 960)
-    } else {
-      ctx.fillText(`${totalVisitas} visitas acumuladas`, 540, 960)
-    }
-
-    // Nombre del negocio
-    ctx.fillStyle = 'rgba(255,255,255,0.5)'
-    ctx.font = '44px Arial'
-    ctx.fillText(`en ${negocioEmoji || '☕'} ${negocioNombre}`, 540, 1060)
-
-    // Línea separadora
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)'
-    ctx.lineWidth = 2
+    ctx.font = '220px Arial'; ctx.fillText(tipo === 'premio' ? '🏆' : (nivelEmoji || '⭐'), 540, 700)
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 80px Arial'
+    ctx.fillText(tipo === 'premio' ? '¡Gané un premio!' : `¡Llegué a ${nivelNombre}!`, 540, 850)
+    ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = '52px Arial'
+    ctx.fillText(tipo === 'premio' ? (premioNombre||'Premio especial') : `${totalVisitas} visitas acumuladas`, 540, 960)
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '44px Arial'
+    ctx.fillText(`en ${negocioEmoji||'☕'} ${negocioNombre}`, 540, 1060)
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 2
     ctx.beginPath(); ctx.moveTo(200, 1140); ctx.lineTo(880, 1140); ctx.stroke()
-
-    // Footer
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'
-    ctx.font = '38px Arial'
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '38px Arial'
     ctx.fillText('Programa de lealtad digital', 540, 1210)
-    ctx.fillStyle = 'rgba(255,255,255,0.6)'
-    ctx.font = 'bold 42px Arial'
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = 'bold 42px Arial'
     ctx.fillText('sello.app', 540, 1270)
-
     canvas.toBlob(async (blob) => {
       const file = new File([blob], 'sello-historia.png', { type: 'image/png' })
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({
-            files: [file],
-            title: tipo === 'premio' ? '¡Gané un premio en Sello!' : `¡Llegué a nivel ${nivelNombre} en Sello!`,
-            text: `Acumulando visitas en ${negocioNombre} con Sello 🎉`
-          })
-          resolve('shared')
-        } catch (e) {
-          // Usuario canceló o error — descargar como fallback
-          const url = URL.createObjectURL(blob)
-          const link = document.createElement('a'); link.href = url; link.download = 'sello-historia.png'; link.click()
-          URL.revokeObjectURL(url)
-          resolve('downloaded')
-        }
+        try { await navigator.share({ files: [file], title: tipo === 'premio' ? '¡Gané un premio!' : `¡Llegué a ${nivelNombre}!`, text: `Con Sello en ${negocioNombre} 🎉` }); resolve('shared') }
+        catch (e) { const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'sello-historia.png'; link.click(); URL.revokeObjectURL(url); resolve('downloaded') }
       } else {
-        // Navegador no soporta Web Share — descargar directamente
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a'); link.href = url; link.download = 'sello-historia.png'; link.click()
-        URL.revokeObjectURL(url)
-        resolve('downloaded')
+        const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'sello-historia.png'; link.click(); URL.revokeObjectURL(url); resolve('downloaded')
       }
     }, 'image/png')
   })
@@ -477,7 +433,6 @@ async function compartirHistoria({ tipo, negocioNombre, negocioEmoji, nivelNombr
 // PÁGINAS
 // ═══════════════════════════════════════════════════════════
 
-// ── LOGIN ──────────────────────────────────────────────────
 export function paginaLogin() {
   inyectarEstilos()
   return `
@@ -515,14 +470,12 @@ export function initLogin() {
   document.getElementById('password')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin() })
 }
 
-// ── ONBOARDING ─────────────────────────────────────────────
 export function paginaOnboarding(paso = 0) {
   inyectarEstilos()
-  const p = PASOS_ONBOARDING[paso]
-  const esUltimo = paso === PASOS_ONBOARDING.length - 1
+  const p = PASOS_ONBOARDING[paso]; const esUltimo = paso === PASOS_ONBOARDING.length - 1
   return `
     <div class="onb-root">
-      <div class="onb-step-dots">${PASOS_ONBOARDING.map((_,i) => `<div class="onb-dot ${i===paso?'active':''}"></div>`).join('')}</div>
+      <div class="onb-step-dots">${PASOS_ONBOARDING.map((_, i) => `<div class="onb-dot ${i===paso?'active':''}"></div>`).join('')}</div>
       <div class="onb-icon">${p.icon}</div>
       <div class="onb-titulo">${p.titulo}</div>
       <div class="onb-desc">${p.desc}</div>
@@ -537,19 +490,14 @@ export function paginaOnboarding(paso = 0) {
 export function initOnboarding(paso = 0) {
   inyectarEstilos()
   const esUltimo = paso === PASOS_ONBOARDING.length - 1
-  document.getElementById('onb-siguiente')?.addEventListener('click', () => {
-    if (esUltimo) { marcarOnboardingVisto(); navigate('bienvenida') }
-    else navigate('onboarding', paso + 1)
-  })
+  document.getElementById('onb-siguiente')?.addEventListener('click', () => { if (esUltimo) { marcarOnboardingVisto(); navigate('bienvenida') } else navigate('onboarding', paso + 1) })
   document.getElementById('onb-skip')?.addEventListener('click', () => { marcarOnboardingVisto(); navigate('bienvenida') })
 }
 
-// ── BIENVENIDA ─────────────────────────────────────────────
 export async function paginaBienvenida() {
   inyectarEstilos()
   try {
-    const { getNegocioActual } = await import('./auth.js')
-    const negocio = getNegocioActual()
+    const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
     if (!negocio) { window.location.hash = '#/login'; window.dispatchEvent(new Event('hashchange')); return '<div></div>' }
     return `
       <div class="sbv-root">
@@ -559,7 +507,7 @@ export async function paginaBienvenida() {
         <h1 class="sbv-nombre">${negocio.nombre}</h1>
         <div class="sbv-btns">
           <button class="sbv-btn primary" id="sbv-cajero"><span class="sbv-btn-icon">🧾</span><div><div>Panel Cajero</div><span class="sbv-btn-sub">Registrar visitas de clientes</span></div></button>
-          <button class="sbv-btn secondary" id="sbv-panel"><span class="sbv-btn-icon">📊</span><div><div>Mi Panel</div><span class="sbv-btn-sub">Estadísticas, premios y más</span></div></button>
+          <button class="sbv-btn secondary" id="sbv-panel"><span class="sbv-btn-icon">📊</span><div><div>Mi Panel</div><span class="sbv-btn-sub">Estadísticas, niveles y más</span></div></button>
           <button class="sbv-btn secondary" id="sbv-kiosko"><span class="sbv-btn-icon">🖥️</span><div><div>Modo Kiosko</div><span class="sbv-btn-sub">Pantalla completa para el mostrador</span></div></button>
         </div>
         <button class="sbv-salir" id="sbv-salir">Cerrar sesión</button>
@@ -576,13 +524,13 @@ export function initBienvenida() {
   document.getElementById('sbv-salir')?.addEventListener('click', async () => { const { logout } = await import('./auth.js'); logout() })
 }
 
-// ── CAJERO ─────────────────────────────────────────────────
+// ── CAJERO — sin acceso a Mi Panel ────────────────────────
 export function paginaCajero() {
   inyectarEstilos()
   return `
     <div style="padding-bottom:72px">
       <div class="sello-topbar">
-        <div class="sello-topbar-brand">${logoSVG(28,'#fff')} Sell<span>o</span></div>
+        ${topbarBrand()}
         <span style="font-size:13px;color:rgba(255,255,255,0.6)">Cajero</span>
       </div>
       <div class="sc-search-area">
@@ -595,64 +543,80 @@ export function paginaCajero() {
         <div id="ultimos-clientes"><p style="color:#aaa;font-size:13px;text-align:center;padding:8px 0">Cargando...</p></div>
       </div>
     </div>
-    ${navBar('cajero')}
+    ${navBarCajero()}
   `
 }
 
-export function initCajero() {
-  inyectarEstilos(); initNav(); cargarUltimosClientes()
-  document.getElementById('buscar').addEventListener('click', async () => { const t=document.getElementById('telefono').value.trim(); if(!t)return; document.getElementById('nombre-buscar').value=''; await buscarYMostrar({telefono:t}) })
-  document.getElementById('buscar-nombre').addEventListener('click', async () => { const n=document.getElementById('nombre-buscar').value.trim(); if(!n)return; document.getElementById('telefono').value=''; await buscarYMostrar({nombre:n}) })
-  document.getElementById('telefono').addEventListener('keydown', async e => { if(e.key==='Enter'){const t=document.getElementById('telefono').value.trim();if(t){document.getElementById('nombre-buscar').value='';await buscarYMostrar({telefono:t})}} })
-  document.getElementById('nombre-buscar').addEventListener('keydown', async e => { if(e.key==='Enter'){const n=document.getElementById('nombre-buscar').value.trim();if(n){document.getElementById('telefono').value='';await buscarYMostrar({nombre:n})}} })
+export async function initCajero() {
+  inyectarEstilos(); initNavCajero()
+  try {
+    const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
+    if (negocio) { const { data: nd } = await supabase.from('negocios').select('color_principal').eq('id', negocio.id).single(); if (nd?.color_principal) aplicarColorNegocio(nd.color_principal) }
+  } catch (e) {}
+  cargarUltimosClientes()
+  document.getElementById('buscar').addEventListener('click', async () => { const t = document.getElementById('telefono').value.trim(); if (!t) return; document.getElementById('nombre-buscar').value = ''; await buscarYMostrar({ telefono: t }) })
+  document.getElementById('buscar-nombre').addEventListener('click', async () => { const n = document.getElementById('nombre-buscar').value.trim(); if (!n) return; document.getElementById('telefono').value = ''; await buscarYMostrar({ nombre: n }) })
+  document.getElementById('telefono').addEventListener('keydown', async e => { if (e.key === 'Enter') { const t = document.getElementById('telefono').value.trim(); if (t) { document.getElementById('nombre-buscar').value = ''; await buscarYMostrar({ telefono: t }) } } })
+  document.getElementById('nombre-buscar').addEventListener('keydown', async e => { if (e.key === 'Enter') { const n = document.getElementById('nombre-buscar').value.trim(); if (n) { document.getElementById('telefono').value = ''; await buscarYMostrar({ nombre: n }) } } })
 }
 
 async function cargarUltimosClientes() {
   try {
-    const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual(); if(!negocio)return
+    const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual(); if (!negocio) return
     const hoy = new Date().toISOString().split('T')[0]
-    const { data: visitas, error } = await supabase.from('visitas').select('cliente_id,fecha').eq('negocio_id',negocio.id).gte('fecha',hoy).order('fecha',{ascending:false}).limit(20)
-    if(error)throw error
-    if(!visitas||visitas.length===0){document.getElementById('ultimos-clientes').innerHTML=`<p style="color:#aaa;font-size:13px;text-align:center">Ningún cliente atendido hoy</p>`;return}
-    const vistos=new Set();const ids=[]
-    for(const v of visitas){if(!vistos.has(v.cliente_id)){vistos.add(v.cliente_id);ids.push(v.cliente_id)}if(ids.length>=5)break}
-    const{data:clientes,error:e2}=await supabase.from('clientes').select('id,nombre,telefono,total_visitas').in('id',ids);if(e2)throw e2
-    const ordenados=ids.map(id=>clientes.find(c=>c.id===id)).filter(Boolean)
-    document.getElementById('ultimos-clientes').innerHTML=ordenados.map(c=>`<div class="s-row" style="cursor:pointer" data-tel="${c.telefono}"><div><div class="s-row-title">${c.nombre}</div><div class="s-row-sub">${c.telefono}</div></div><div class="s-row-actions" style="color:${DS.gray300};font-size:13px">${c.total_visitas} visitas →</div></div>`).join('')
-    document.querySelectorAll('#ultimos-clientes .s-row').forEach(row=>{row.addEventListener('click',async()=>{document.getElementById('telefono').value=row.dataset.tel;document.getElementById('nombre-buscar').value='';await buscarYMostrar({telefono:row.dataset.tel});window.scrollTo({top:0,behavior:'smooth'})})})
-  } catch(e){document.getElementById('ultimos-clientes').innerHTML=`<p style="color:#aaa;font-size:13px;text-align:center">Sin conexión</p>`}
+    const { data: visitas, error } = await supabase.from('visitas').select('cliente_id,fecha').eq('negocio_id', negocio.id).gte('fecha', hoy).order('fecha', { ascending: false }).limit(20)
+    if (error) throw error
+    if (!visitas || visitas.length === 0) { document.getElementById('ultimos-clientes').innerHTML = `<p style="color:#aaa;font-size:13px;text-align:center">Ningún cliente atendido hoy</p>`; return }
+    const vistos = new Set(); const ids = []
+    for (const v of visitas) { if (!vistos.has(v.cliente_id)) { vistos.add(v.cliente_id); ids.push(v.cliente_id) } if (ids.length >= 5) break }
+    const { data: clientes } = await supabase.from('clientes').select('id,nombre,telefono,total_visitas').in('id', ids)
+    const ordenados = ids.map(id => clientes.find(c => c.id === id)).filter(Boolean)
+    document.getElementById('ultimos-clientes').innerHTML = ordenados.map(c => `
+      <div class="s-row" style="cursor:pointer" data-tel="${c.telefono}">
+        <div><div class="s-row-title">${c.nombre}</div><div class="s-row-sub">${c.telefono}</div></div>
+        <div class="s-row-actions" style="color:${DS.gray300};font-size:13px">${c.total_visitas} visitas →</div>
+      </div>
+    `).join('')
+    document.querySelectorAll('#ultimos-clientes .s-row').forEach(row => {
+      row.addEventListener('click', async () => { document.getElementById('telefono').value = row.dataset.tel; document.getElementById('nombre-buscar').value = ''; await buscarYMostrar({ telefono: row.dataset.tel }); window.scrollTo({ top: 0, behavior: 'smooth' }) })
+    })
+  } catch (e) { document.getElementById('ultimos-clientes').innerHTML = `<p style="color:#aaa;font-size:13px;text-align:center">Sin conexión</p>` }
 }
 
-async function buscarYMostrar({telefono,nombre}) {
-  const res=document.getElementById('resultado')
-  res.innerHTML=`<div class="s-card"><p style="text-align:center;color:#aaa;padding:8px">Buscando...</p></div>`
+async function buscarYMostrar({ telefono, nombre }) {
+  const res = document.getElementById('resultado')
+  res.innerHTML = `<div class="s-card"><p style="text-align:center;color:#aaa;padding:8px">Buscando...</p></div>`
   try {
-    const{getNegocioActual}=await import('./auth.js');const negocio=getNegocioActual()
-    let q=supabase.from('clientes').select('*').eq('negocio_id',negocio?.id)
-    if(telefono)q=q.eq('telefono',telefono);else if(nombre)q=q.ilike('nombre',`%${nombre}%`)
-    const{data,error}=await q;if(error)throw error
-    if(telefono){if(!data?.[0]){res.innerHTML=`<div class="s-card"><p class="s-error" style="margin-bottom:12px">Cliente no encontrado</p><button class="s-btn primary" id="btn-nuevo">+ Registrar nuevo cliente</button></div>`;document.getElementById('btn-nuevo').addEventListener('click',()=>navigate('registro',telefono));return}mostrarCliente(data[0]);return}
-    if(!data||data.length===0){res.innerHTML=`<div class="s-card"><p class="s-error">No se encontró ningún cliente con ese nombre</p></div>`;return}
-    if(data.length===1){mostrarCliente(data[0]);return}
-    res.innerHTML=`<div class="s-card"><div class="s-section-label">Se encontraron ${data.length} clientes</div>${data.map(c=>`<div class="s-row" style="cursor:pointer" data-id="${c.id}"><div><div class="s-row-title">${c.nombre}</div><div class="s-row-sub">${c.telefono}</div></div><div style="color:${DS.gray300};font-size:13px">${c.total_visitas} visitas →</div></div>`).join('')}</div>`
-    res.querySelectorAll('.s-row').forEach(row=>{row.addEventListener('click',()=>{const c=data.find(x=>x.id===row.dataset.id);if(c)mostrarCliente(c)})})
-  } catch(e){res.innerHTML=`<div class="s-card">${errMsg('buscar clientes')}</div>`}
+    const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
+    let q = supabase.from('clientes').select('*').eq('negocio_id', negocio?.id)
+    if (telefono) q = q.eq('telefono', telefono); else if (nombre) q = q.ilike('nombre', `%${nombre}%`)
+    const { data, error } = await q; if (error) throw error
+    if (telefono) {
+      if (!data?.[0]) { res.innerHTML = `<div class="s-card"><p class="s-error" style="margin-bottom:12px">Cliente no encontrado</p><button class="s-btn primary" id="btn-nuevo">+ Registrar nuevo cliente</button></div>`; document.getElementById('btn-nuevo').addEventListener('click', () => navigate('registro', telefono)); return }
+      mostrarCliente(data[0]); return
+    }
+    if (!data || data.length === 0) { res.innerHTML = `<div class="s-card"><p class="s-error">No se encontró ningún cliente con ese nombre</p></div>`; return }
+    if (data.length === 1) { mostrarCliente(data[0]); return }
+    res.innerHTML = `<div class="s-card"><div class="s-section-label">Se encontraron ${data.length} clientes</div>${data.map(c => `<div class="s-row" style="cursor:pointer" data-id="${c.id}"><div><div class="s-row-title">${c.nombre}</div><div class="s-row-sub">${c.telefono}</div></div><div style="color:${DS.gray300};font-size:13px">${c.total_visitas} visitas →</div></div>`).join('')}</div>`
+    res.querySelectorAll('.s-row').forEach(row => { row.addEventListener('click', () => { const c = data.find(x => x.id === row.dataset.id); if (c) mostrarCliente(c) }) })
+  } catch (e) { res.innerHTML = `<div class="s-card">${errMsg('buscar clientes')}</div>` }
 }
 
 async function mostrarCliente(data) {
   try {
-    const{data:nd,error:e1}=await supabase.from('negocios').select('meta_puntos,color_principal,emoji_negocio,nombre').eq('id',data.negocio_id).single();if(e1)throw e1
-    const{data:premios,error:e2}=await supabase.from('premios').select('*').eq('negocio_id',data.negocio_id).eq('activo',true);if(e2)throw e2
-    const{data:niveles}=await supabase.from('niveles').select('*').eq('negocio_id',data.negocio_id).order('visitas_minimas',{ascending:true})
+    const { data: nd } = await supabase.from('negocios').select('meta_puntos,color_principal').eq('id', data.negocio_id).single()
+    const { data: niveles } = await supabase.from('niveles').select('*').eq('negocio_id', data.negocio_id).order('visitas_minimas', { ascending: true })
+    const nivelActual = getNivelActual(data.total_visitas, niveles)
+    const sigNivel = getSiguienteNivel(data.total_visitas, niveles)
+    const nivelColor = colorNivel(nivelActual)
 
-    const meta=nd?.meta_puntos||META_VISITAS
-    const ciclo=data.puntos_actuales%meta
-    const pct=Math.min(Math.round((ciclo/meta)*100),100)
-    const nivelActual=getNivelActual(data.total_visitas,niveles)
-    const nivelColor=colorNivel(nivelActual)
-    const res=document.getElementById('resultado')
+    // Para el cajero, el "premio" es el premio_bienvenida del siguiente nivel
+    const meta = sigNivel ? sigNivel.visitas_minimas : (nd?.meta_puntos || 10)
+    const visitasParaSiguiente = sigNivel ? sigNivel.visitas_minimas - data.total_visitas : 0
+    const enMaximo = !sigNivel
 
-    res.innerHTML=`
+    const res = document.getElementById('resultado')
+    res.innerHTML = `
       <div class="s-card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
           <div style="font-family:'Sora',sans-serif;font-size:18px;font-weight:800;color:${DS.gray900}">${data.nombre}</div>
@@ -660,142 +624,111 @@ async function mostrarCliente(data) {
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
           <div class="s-stat"><div class="s-stat-num">${data.total_visitas}</div><div class="s-stat-lbl">Visitas totales</div></div>
-          <div class="s-stat"><div class="s-stat-num" id="ciclo-display">${ciclo}/${meta}</div><div class="s-stat-lbl">Para el premio</div></div>
+          <div class="s-stat"><div class="s-stat-num">${enMaximo ? '💎' : visitasParaSiguiente}</div><div class="s-stat-lbl">${enMaximo ? 'Nivel máximo' : 'Para '+sigNivel.emoji+' '+sigNivel.nombre}</div></div>
         </div>
+        ${!enMaximo ? `
         <div class="s-prog-wrap">
-          <div class="s-prog-header"><span>Progreso al premio</span><span id="prog-label">${ciclo}/${meta}</span></div>
-          <div class="s-prog-track"><div class="s-prog-fill" id="prog-fill" style="width:${pct}%"></div></div>
+          <div class="s-prog-header"><span>Progreso a ${sigNivel.emoji} ${sigNivel.nombre}</span><span>${data.total_visitas}/${sigNivel.visitas_minimas}</span></div>
+          <div class="s-prog-track"><div class="s-prog-fill" style="width:${Math.min(Math.round((data.total_visitas/sigNivel.visitas_minimas)*100),100)}%"></div></div>
         </div>
+        ` : ''}
         <button class="s-btn primary" id="registrar" style="margin-top:4px">+ Registrar visita</button>
         <div id="msg-cajero" style="margin-top:10px"></div>
       </div>
     `
 
     document.getElementById('registrar').addEventListener('click', async () => {
-      const btn=document.getElementById('registrar')
-      btn.disabled=true;btn.textContent='Registrando...'
+      const btn = document.getElementById('registrar'); btn.disabled = true; btn.textContent = 'Registrando...'
       try {
-        const{error:ev}=await supabase.from('visitas').insert({cliente_id:data.id,negocio_id:data.negocio_id,puntos_sumados:1});if(ev)throw ev
-        const nv=data.total_visitas+1;const na=data.puntos_actuales+1
-        const{error:ec}=await supabase.from('clientes').update({puntos_actuales:na,total_visitas:nv}).eq('id',data.id);if(ec)throw ec
-
-        // Verificar si subió de nivel
-        const nivelAnterior=getNivelActual(data.total_visitas,niveles)
-        const nivelNuevo=getNivelActual(nv,niveles)
-        const subioDeNivel=nivelNuevo.nombre!==nivelAnterior.nombre
-
-        data.puntos_actuales=na;data.total_visitas=nv
-        const nc=na%meta;const np=Math.min(Math.round((nc/meta)*100),100)
-        document.getElementById('ciclo-display').textContent=`${nc}/${meta}`
-        document.getElementById('prog-label').textContent=`${nc}/${meta}`
-        document.getElementById('prog-fill').style.width=np+'%'
+        const { error: ev } = await supabase.from('visitas').insert({ cliente_id: data.id, negocio_id: data.negocio_id, puntos_sumados: 1 }); if (ev) throw ev
+        const nv = data.total_visitas + 1
+        const { error: ec } = await supabase.from('clientes').update({ puntos_actuales: nv, total_visitas: nv }).eq('id', data.id); if (ec) throw ec
+        const nivelAnterior = getNivelActual(data.total_visitas, niveles)
+        data.total_visitas = nv; data.puntos_actuales = nv
+        const nivelNuevo = getNivelActual(nv, niveles)
+        const subioDeNivel = nivelNuevo.nombre !== nivelAnterior.nombre
         cargarUltimosClientes()
 
-        // Toast de nivel nuevo
-        if(subioDeNivel) {
+        if (subioDeNivel) {
           toast({
             icon: nivelNuevo.emoji,
             title: `¡${data.nombre.split(' ')[0]} subió a ${nivelNuevo.nombre}!`,
-            sub: nivelNuevo.premio_bienvenida ? `Premio de bienvenida: ${nivelNuevo.premio_bienvenida}` : `¡Nuevo nivel desbloqueado!`,
-            nivel: true,
-            autoClose: 0,
-            onTap: async () => {
-              if(nivelNuevo.premio_bienvenida) {
-                try { await supabase.from('canjes').insert({cliente_id:data.id,premio_id:null,fecha:new Date().toISOString()}) } catch(_){}
-              }
-              document.getElementById('msg-cajero').innerHTML=`<div class="s-success">${nivelNuevo.emoji} ¡${data.nombre.split(' ')[0]} llegó a ${nivelNuevo.nombre}! ${nivelNuevo.premio_bienvenida?'Premio entregado.':''}</div>`
+            sub: nivelNuevo.premio_bienvenida ? `Premio: ${nivelNuevo.premio_bienvenida}` : '¡Nuevo nivel desbloqueado!',
+            nivel: true, autoClose: 0,
+            onTap: () => {
+              document.getElementById('msg-cajero').innerHTML = `<div class="s-success">${nivelNuevo.emoji} ¡${data.nombre.split(' ')[0]} llegó a ${nivelNuevo.nombre}!${nivelNuevo.premio_bienvenida ? ` Premio entregado: ${nivelNuevo.premio_bienvenida}` : ''}</div>`
             }
           })
-          return
-        }
-
-        // Toast premio normal
-        if(na>0&&na%meta===0) {
-          if(premios&&premios.length>0) {
-            const p=premios.find(x=>x.puntos_requeridos===meta)||premios[0]
-            toast({icon:'🏆',title:'¡Premio desbloqueado!',sub:`Entrega: ${p.nombre}`,gold:true,
-              onTap:async()=>{
-                try{await supabase.from('canjes').insert({cliente_id:data.id,premio_id:p.id,fecha:new Date().toISOString()})}catch(_){}
-                document.getElementById('msg-cajero').innerHTML=`<div class="s-success">✓ Premio "${p.nombre}" entregado y registrado</div>`
-              }
-            })
-          } else {
-            toast({icon:'✅',title:'Ciclo completado',sub:'No hay premios activos configurados.'})
-          }
         } else {
-          toast({icon:'✅',title:'Visita registrada',sub:`Faltan ${meta-nc} visita${meta-nc===1?'':'s'} para el premio`})
+          const sigNivelNuevo = getSiguienteNivel(nv, niveles)
+          const faltan = sigNivelNuevo ? sigNivelNuevo.visitas_minimas - nv : 0
+          toast({ icon: '✅', title: 'Visita registrada', sub: sigNivelNuevo ? `Faltan ${faltan} visita${faltan===1?'':'s'} para ${sigNivelNuevo.emoji} ${sigNivelNuevo.nombre}` : '¡Nivel máximo alcanzado! 💎' })
         }
-      } catch(e){document.getElementById('msg-cajero').innerHTML=errMsg('registrar la visita')}
-      finally{btn.disabled=false;btn.textContent='+ Registrar visita'}
+      } catch (e) { document.getElementById('msg-cajero').innerHTML = errMsg('registrar la visita') }
+      finally { btn.disabled = false; btn.textContent = '+ Registrar visita' }
     })
-  } catch(e){document.getElementById('resultado').innerHTML=`<div class="s-card">${errMsg('cargar el cliente')}</div>`}
+  } catch (e) { document.getElementById('resultado').innerHTML = `<div class="s-card">${errMsg('cargar el cliente')}</div>` }
 }
 
-// ── KIOSKO ─────────────────────────────────────────────────
 export async function paginaKiosko() {
   inyectarEstilos()
   try {
-    const{getNegocioActual}=await import('./auth.js');const negocio=getNegocioActual()
-    if(!negocio){navigate('login');return'<div></div>'}
+    const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
+    if (!negocio) { navigate('login'); return '<div></div>' }
+    const { data: nd } = await supabase.from('negocios').select('nombre,color_principal').eq('id', negocio.id).single()
+    if (nd?.color_principal) aplicarColorNegocio(nd.color_principal)
     return `
       <div class="kiosko-root">
         <button class="kiosko-salir" id="kiosko-salir">✕ Salir</button>
-        ${logoSVG(48,'rgba(255,255,255,0.4)')}
+        ${logoSVG(48, 'rgba(255,255,255,0.4)')}
         <div class="kiosko-titulo" style="margin-top:16px">Bienvenido a</div>
-        <div class="kiosko-nombre">${negocio.nombre}</div>
+        <div class="kiosko-nombre">${nd?.nombre || negocio.nombre}</div>
         <input type="tel" id="kiosko-tel" class="kiosko-input" placeholder="Tu teléfono" />
         <button class="kiosko-btn" id="kiosko-entrar">Registrar mi visita →</button>
         <div id="kiosko-msg" style="margin-top:20px;font-size:14px;color:rgba(255,255,255,0.5)"></div>
       </div>
     `
-  } catch(e){return`<div class="kiosko-root">${errMsg()}</div>`}
+  } catch (e) { return `<div class="kiosko-root">${errMsg()}</div>` }
 }
 
 export function initKiosko() {
   inyectarEstilos()
-  document.getElementById('kiosko-salir')?.addEventListener('click',()=>navigate('bienvenida'))
-  const doRegistrar=async()=>{
-    const telefono=document.getElementById('kiosko-tel').value.trim();if(!telefono)return
-    const msg=document.getElementById('kiosko-msg');const btn=document.getElementById('kiosko-entrar')
-    btn.disabled=true;btn.textContent='Procesando...';msg.textContent=''
+  document.getElementById('kiosko-salir')?.addEventListener('click', () => navigate('bienvenida'))
+  const doRegistrar = async () => {
+    const telefono = document.getElementById('kiosko-tel').value.trim(); if (!telefono) return
+    const msg = document.getElementById('kiosko-msg'); const btn = document.getElementById('kiosko-entrar')
+    btn.disabled = true; btn.textContent = 'Procesando...'; msg.textContent = ''
     try {
-      const{getNegocioActual}=await import('./auth.js');const negocio=getNegocioActual()
-      const{data:nd}=await supabase.from('negocios').select('meta_puntos,nombre,emoji_negocio,color_principal').eq('id',negocio.id).single()
-      const meta=nd?.meta_puntos||META_VISITAS
-      const{data:niveles}=await supabase.from('niveles').select('*').eq('negocio_id',negocio.id).order('visitas_minimas',{ascending:true})
-      const{data:cliente}=await supabase.from('clientes').select('*').eq('telefono',telefono).eq('negocio_id',negocio.id).single()
-      if(!cliente){navigate('registro-cliente',`${negocio.id}/${telefono}`);return}
-
-      const nivelAnterior=getNivelActual(cliente.total_visitas,niveles)
-      await supabase.from('visitas').insert({cliente_id:cliente.id,negocio_id:negocio.id,puntos_sumados:1})
-      const na=cliente.puntos_actuales+1;const nv=cliente.total_visitas+1
-      await supabase.from('clientes').update({puntos_actuales:na,total_visitas:nv}).eq('id',cliente.id)
-
-      const nivelNuevo=getNivelActual(nv,niveles)
-      const subioDeNivel=nivelNuevo.nombre!==nivelAnterior.nombre
-      const nc=na%meta
-
-      if(subioDeNivel){
-        toast({icon:nivelNuevo.emoji,title:`¡${cliente.nombre.split(' ')[0]} subió a ${nivelNuevo.nombre}!`,sub:nivelNuevo.premio_bienvenida?`Premio: ${nivelNuevo.premio_bienvenida}`:'¡Nuevo nivel!',nivel:true,autoClose:4000})
-      } else if(na>0&&na%meta===0){
-        toast({icon:'🎉',title:`¡${cliente.nombre.split(' ')[0]} ganó un premio!`,sub:'Díselo al cajero 🏆',gold:true,autoClose:4000})
+      const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
+      const { data: niveles } = await supabase.from('niveles').select('*').eq('negocio_id', negocio.id).order('visitas_minimas', { ascending: true })
+      const { data: cliente } = await supabase.from('clientes').select('*').eq('telefono', telefono).eq('negocio_id', negocio.id).single()
+      if (!cliente) { navigate('registro-cliente', `${negocio.id}/${telefono}`); return }
+      const nivelAnterior = getNivelActual(cliente.total_visitas, niveles)
+      await supabase.from('visitas').insert({ cliente_id: cliente.id, negocio_id: negocio.id, puntos_sumados: 1 })
+      const nv = cliente.total_visitas + 1
+      await supabase.from('clientes').update({ puntos_actuales: nv, total_visitas: nv }).eq('id', cliente.id)
+      const nivelNuevo = getNivelActual(nv, niveles)
+      const subioDeNivel = nivelNuevo.nombre !== nivelAnterior.nombre
+      const sigNivel = getSiguienteNivel(nv, niveles)
+      if (subioDeNivel) {
+        toast({ icon: nivelNuevo.emoji, title: `¡${cliente.nombre.split(' ')[0]} subió a ${nivelNuevo.nombre}!`, sub: nivelNuevo.premio_bienvenida ? `Premio: ${nivelNuevo.premio_bienvenida}` : '¡Nuevo nivel!', nivel: true, autoClose: 4000 })
       } else {
-        toast({icon:nivelNuevo.emoji,title:`¡Hola ${cliente.nombre.split(' ')[0]}!`,sub:`Visita registrada. Faltan ${meta-nc} para el premio.`,autoClose:3000})
+        const faltan = sigNivel ? sigNivel.visitas_minimas - nv : 0
+        toast({ icon: nivelNuevo.emoji, title: `¡Hola ${cliente.nombre.split(' ')[0]}!`, sub: sigNivel ? `Visita registrada. Faltan ${faltan} para ${sigNivel.emoji} ${sigNivel.nombre}.` : '¡Nivel máximo alcanzado! 💎', autoClose: 3000 })
       }
-      document.getElementById('kiosko-tel').value=''
-    } catch(e){msg.textContent='Sin conexión. Intenta de nuevo.'}
-    finally{btn.disabled=false;btn.textContent='Registrar mi visita →'}
+      document.getElementById('kiosko-tel').value = ''
+    } catch (e) { msg.textContent = 'Sin conexión. Intenta de nuevo.' }
+    finally { btn.disabled = false; btn.textContent = 'Registrar mi visita →' }
   }
-  document.getElementById('kiosko-entrar')?.addEventListener('click',doRegistrar)
-  document.getElementById('kiosko-tel')?.addEventListener('keydown',e=>{if(e.key==='Enter')doRegistrar()})
+  document.getElementById('kiosko-entrar')?.addEventListener('click', doRegistrar)
+  document.getElementById('kiosko-tel')?.addEventListener('keydown', e => { if (e.key === 'Enter') doRegistrar() })
 }
 
-// ── REGISTRO CAJERO ────────────────────────────────────────
-export function paginaRegistro(telefono='') {
+export function paginaRegistro(telefono = '') {
   inyectarEstilos()
   return `
     <div style="padding-bottom:72px">
-      <div class="sello-topbar"><div class="sello-topbar-brand">${logoSVG(28,'#fff')} Sell<span>o</span></div><span style="font-size:13px;color:rgba(255,255,255,0.6)">Nuevo cliente</span></div>
+      <div class="sello-topbar">${topbarBrand()}<span style="font-size:13px;color:rgba(255,255,255,0.6)">Nuevo cliente</span></div>
       <div class="s-card" style="margin-top:16px">
         <div class="s-section-label">Registrar cliente</div>
         <div class="s-field"><label class="s-label">Nombre</label><input type="text" id="nombre" class="s-input" placeholder="Nombre del cliente" /></div>
@@ -804,162 +737,218 @@ export function paginaRegistro(telefono='') {
         <div id="msg" style="margin-top:10px"></div>
       </div>
     </div>
-    ${navBar('cajero')}
+    ${navBarCajero()}
   `
 }
 
 export function initRegistro() {
-  inyectarEstilos();initNav()
-  document.getElementById('guardar').addEventListener('click',async()=>{
-    const nombre=document.getElementById('nombre').value.trim();const telefono=document.getElementById('tel').value.trim()
-    const msg=document.getElementById('msg');const btn=document.getElementById('guardar')
-    if(!nombre||!telefono){msg.innerHTML=`<p class="s-error">Llena todos los campos</p>`;return}
-    btn.disabled=true;btn.textContent='Guardando...'
-    try{const{getNegocioActual}=await import('./auth.js');const negocio=getNegocioActual();const{error}=await supabase.from('clientes').insert({nombre,telefono,negocio_id:negocio?.id,puntos_actuales:0,total_visitas:0});if(error)throw error;msg.innerHTML=`<div class="s-success">✓ Cliente registrado correctamente</div>`;setTimeout(()=>navigate('cajero'),1500)}
-    catch(e){msg.innerHTML=errMsg('guardar el cliente')}
-    finally{btn.disabled=false;btn.textContent='Guardar cliente'}
+  inyectarEstilos(); initNavCajero()
+  document.getElementById('guardar').addEventListener('click', async () => {
+    const nombre = document.getElementById('nombre').value.trim(); const telefono = document.getElementById('tel').value.trim()
+    const msg = document.getElementById('msg'); const btn = document.getElementById('guardar')
+    if (!nombre || !telefono) { msg.innerHTML = `<p class="s-error">Llena todos los campos</p>`; return }
+    btn.disabled = true; btn.textContent = 'Guardando...'
+    try {
+      const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
+      const { error } = await supabase.from('clientes').insert({ nombre, telefono, negocio_id: negocio?.id, puntos_actuales: 0, total_visitas: 0 })
+      if (error) throw error
+      msg.innerHTML = `<div class="s-success">✓ Cliente registrado correctamente</div>`
+      setTimeout(() => navigate('cajero'), 1500)
+    } catch (e) { msg.innerHTML = errMsg('guardar el cliente') }
+    finally { btn.disabled = false; btn.textContent = 'Guardar cliente' }
   })
 }
 
-// ── ADMIN ──────────────────────────────────────────────────
-function isAdminAuth(){return sessionStorage.getItem('admin_auth')==='ok'}
+function isAdminAuth() { return sessionStorage.getItem('admin_auth') === 'ok' }
 
 export async function paginaAdmin() {
   inyectarEstilos()
-  if(!isAdminAuth()){return`<div class="s-login-root"><div class="s-login-card"><div class="s-login-logo">${logoSVG(48,DS.green800)}<div class="s-login-app">Sell<span>o</span></div><div class="s-login-sub">Panel de administrador</div></div><div class="s-field"><label class="s-label">Contraseña de administrador</label>${pwField('admin-password')}</div><button class="s-btn primary" id="btn-admin-login" style="margin-top:8px">Entrar</button><div id="msg-admin" style="margin-top:10px"></div></div></div>`}
+  if (!isAdminAuth()) {
+    return `
+      <div class="s-login-root">
+        <div class="s-login-card">
+          <div class="s-login-logo">${logoSVG(48, DS.green800)}<div class="s-login-app">Sell<span>o</span></div><div class="s-login-sub">Panel de administrador</div></div>
+          <div class="s-field"><label class="s-label">Contraseña de administrador</label>${pwField('admin-password')}</div>
+          <button class="s-btn primary" id="btn-admin-login" style="margin-top:8px">Entrar</button>
+          <div id="msg-admin" style="margin-top:10px"></div>
+        </div>
+      </div>
+    `
+  }
   try {
-    const{data:negocios}=await supabase.from('negocios').select('*')
-    const{data:clientes}=await supabase.from('clientes').select('*')
-    const{data:visitas}=await supabase.from('visitas').select('*')
-    const filas=(negocios||[]).map(n=>{
-      const cn=(clientes||[]).filter(c=>c.negocio_id===n.id).length
-      const vn=(visitas||[]).filter(v=>v.negocio_id===n.id).length
-      return `<div class="s-row"><div><div class="s-row-title">${n.nombre}</div><div class="s-row-sub">${n.email} · ${cn} clientes · ${vn} visitas</div></div><div class="s-row-actions"><span class="s-badge ${n.activo?'active':'inactive'}">${n.activo?'Activo':'Inactivo'}</span><button class="btn-toggle-negocio" data-id="${n.id}" data-activo="${n.activo}" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:${n.activo?'#fee2e2':'#d1fae5'};color:${n.activo?'#dc2626':'#059669'}">${n.activo?'Desactivar':'Activar'}</button><button class="btn-descargar-qr" data-id="${n.id}" data-nombre="${n.nombre}" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;font-size:12px;background:${DS.green800};color:white;font-weight:600">⬇ QR</button></div></div>`
+    const { data: negocios } = await supabase.from('negocios').select('*')
+    const { data: clientes } = await supabase.from('clientes').select('*')
+    const { data: visitas } = await supabase.from('visitas').select('*')
+    const filas = (negocios || []).map(n => {
+      const cn = (clientes||[]).filter(c => c.negocio_id === n.id).length
+      const vn = (visitas||[]).filter(v => v.negocio_id === n.id).length
+      return `
+        <div class="s-row">
+          <div>
+            <div class="s-row-title">${n.emoji_negocio || '🏪'} ${n.nombre}</div>
+            <div class="s-row-sub">${n.email} · ${cn} clientes · ${vn} visitas</div>
+          </div>
+          <div class="s-row-actions">
+            <span class="s-badge ${n.activo ? 'active' : 'inactive'}">${n.activo ? 'Activo' : 'Inactivo'}</span>
+            <button class="btn-toggle-negocio" data-id="${n.id}" data-activo="${n.activo}"
+              style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:${n.activo?'#fee2e2':'#d1fae5'};color:${n.activo?'#dc2626':'#059669'}">
+              ${n.activo ? 'Desactivar' : 'Activar'}
+            </button>
+            <button class="btn-descargar-qr" data-id="${n.id}" data-nombre="${n.nombre}"
+              style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;font-size:12px;background:${DS.green800};color:white;font-weight:600">⬇ QR</button>
+            <button class="btn-limpiar-negocio" data-id="${n.id}" data-nombre="${n.nombre}"
+              style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;font-size:12px;background:#fee2e2;color:#dc2626;font-weight:600">🗑 Datos</button>
+          </div>
+        </div>
+      `
     }).join('')
     return `
       <div>
-        <div class="sello-topbar"><div class="sello-topbar-brand">${logoSVG(28,'#fff')} Sell<span>o</span></div><button id="btn-admin-logout" style="background:rgba(255,255,255,0.15);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px">Salir</button></div>
-        <div class="s-card" style="margin-top:16px"><div class="s-stats"><div class="s-stat"><div class="s-stat-num">${(negocios||[]).length}</div><div class="s-stat-lbl">Negocios</div></div><div class="s-stat"><div class="s-stat-num">${(clientes||[]).length}</div><div class="s-stat-lbl">Clientes</div></div><div class="s-stat"><div class="s-stat-num">${(visitas||[]).length}</div><div class="s-stat-lbl">Visitas</div></div></div></div>
+        <div class="sello-topbar">
+          ${topbarBrand()}
+          <button id="btn-admin-logout" style="background:rgba(255,255,255,0.15);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px">Salir</button>
+        </div>
+        <div class="s-card" style="margin-top:16px">
+          <div class="s-stats">
+            <div class="s-stat"><div class="s-stat-num">${(negocios||[]).length}</div><div class="s-stat-lbl">Negocios</div></div>
+            <div class="s-stat"><div class="s-stat-num">${(clientes||[]).length}</div><div class="s-stat-lbl">Clientes</div></div>
+            <div class="s-stat"><div class="s-stat-num">${(visitas||[]).length}</div><div class="s-stat-lbl">Visitas</div></div>
+          </div>
+        </div>
         <div class="s-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div class="s-section-label" style="margin-bottom:0">Negocios</div><button id="btn-nuevo-negocio" style="background:${DS.green800};color:white;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">+ Nuevo</button></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div class="s-section-label" style="margin-bottom:0">Negocios</div>
+            <button id="btn-nuevo-negocio" style="background:${DS.green800};color:white;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">+ Nuevo</button>
+          </div>
           <div id="form-negocio" style="display:none;background:${DS.gray50};padding:16px;border-radius:12px;margin-bottom:16px">
             <div class="s-field"><label class="s-label">Nombre del negocio</label><input type="text" id="nuevo-nombre" class="s-input" placeholder="Ej: Café El Sol" /></div>
             <div class="s-field"><label class="s-label">Correo electrónico</label><input type="email" id="nuevo-email" class="s-input" placeholder="cafe@correo.com" /></div>
-            <div class="s-field"><label class="s-label">Contraseña</label>${pwField('nuevo-password','Contraseña para el dueño')}</div>
+            <div class="s-field"><label class="s-label">Contraseña</label>${pwField('nuevo-password', 'Contraseña para el dueño')}</div>
             <button id="btn-guardar-negocio" class="s-btn primary" style="margin-top:8px">Guardar negocio</button>
             <div id="msg-negocio" style="margin-top:10px"></div>
           </div>
-          ${filas||'<p style="color:#aaa;text-align:center;font-size:14px">No hay negocios aún</p>'}
+          ${filas || '<p style="color:#aaa;text-align:center;font-size:14px">No hay negocios aún</p>'}
         </div>
         <canvas id="qr-canvas" style="display:none"></canvas>
       </div>
     `
-  } catch(e){return`<div class="sello-topbar"><div class="sello-topbar-brand">Sello</div></div><div class="s-card">${errMsg('cargar datos')}</div>`}
+  } catch (e) { return `<div class="sello-topbar">${topbarBrand()}</div><div class="s-card">${errMsg('cargar datos')}</div>` }
 }
 
 export function initAdmin() {
   inyectarEstilos()
-  if(!isAdminAuth()){
-    document.getElementById('btn-admin-login')?.addEventListener('click',()=>{const pw=document.getElementById('admin-password').value;const msg=document.getElementById('msg-admin');if(pw===ADMIN_PASSWORD){sessionStorage.setItem('admin_auth','ok');navigate('admin')}else msg.innerHTML=`<p class="s-error">Contraseña incorrecta</p>`})
-    document.getElementById('admin-password')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('btn-admin-login').click()})
+  if (!isAdminAuth()) {
+    document.getElementById('btn-admin-login')?.addEventListener('click', () => {
+      const pw = document.getElementById('admin-password').value; const msg = document.getElementById('msg-admin')
+      if (pw === ADMIN_PASSWORD) { sessionStorage.setItem('admin_auth', 'ok'); navigate('admin') }
+      else msg.innerHTML = `<p class="s-error">Contraseña incorrecta</p>`
+    })
+    document.getElementById('admin-password')?.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-admin-login').click() })
     return
   }
-  document.getElementById('btn-admin-logout')?.addEventListener('click',()=>{sessionStorage.removeItem('admin_auth');navigate('admin')})
-  document.getElementById('btn-nuevo-negocio')?.addEventListener('click',()=>{const f=document.getElementById('form-negocio');f.style.display=f.style.display==='none'?'block':'none'})
-  document.getElementById('btn-guardar-negocio')?.addEventListener('click',async()=>{
-    const nombre=document.getElementById('nuevo-nombre').value.trim();const email=document.getElementById('nuevo-email').value.trim();const password=document.getElementById('nuevo-password').value.trim();const msg=document.getElementById('msg-negocio')
-    if(!nombre||!email||!password){msg.innerHTML=`<p class="s-error">Llena todos los campos</p>`;return}
-    msg.innerHTML=`<p style="color:#aaa;text-align:center">Guardando...</p>`
-    try{const{error}=await supabase.from('negocios').insert({nombre,email,password,password_hash:password,activo:true,meta_puntos:10});if(error)throw error;msg.innerHTML=`<div class="s-success">✓ Negocio creado correctamente</div>`;setTimeout(()=>navigate('admin'),1500)}
-    catch(e){msg.innerHTML=errMsg('guardar el negocio')}
+  document.getElementById('btn-admin-logout')?.addEventListener('click', () => { sessionStorage.removeItem('admin_auth'); navigate('admin') })
+  document.getElementById('btn-nuevo-negocio')?.addEventListener('click', () => { const f = document.getElementById('form-negocio'); f.style.display = f.style.display === 'none' ? 'block' : 'none' })
+  document.getElementById('btn-guardar-negocio')?.addEventListener('click', async () => {
+    const nombre = document.getElementById('nuevo-nombre').value.trim()
+    const email = document.getElementById('nuevo-email').value.trim()
+    const password = document.getElementById('nuevo-password').value.trim()
+    const msg = document.getElementById('msg-negocio')
+    if (!nombre || !email || !password) { msg.innerHTML = `<p class="s-error">Llena todos los campos</p>`; return }
+    msg.innerHTML = `<p style="color:#aaa;text-align:center">Guardando...</p>`
+    try {
+      const { error } = await supabase.from('negocios').insert({ nombre, email, password, password_hash: password, activo: true, meta_puntos: 10 })
+      if (error) throw error
+      msg.innerHTML = `<div class="s-success">✓ Negocio creado. El dueño puede entrar ahora.</div>`
+      setTimeout(() => navigate('admin'), 1500)
+    } catch (e) { msg.innerHTML = errMsg('guardar el negocio') }
   })
-  document.querySelectorAll('.btn-toggle-negocio').forEach(btn=>{btn.addEventListener('click',async()=>{const act=btn.dataset.activo==='true';btn.textContent='...';btn.disabled=true;try{const{error}=await supabase.from('negocios').update({activo:!act}).eq('id',btn.dataset.id);if(error)throw error;navigate('admin')}catch(e){btn.textContent=act?'Desactivar':'Activar';btn.disabled=false;alert('Sin conexión.')}})})
-  document.querySelectorAll('.btn-descargar-qr').forEach(btn=>{btn.addEventListener('click',async()=>{const url=`${window.location.origin}/#/negocio/${btn.dataset.id}`;const canvas=document.getElementById('qr-canvas');await QRCode.toCanvas(canvas,url,{width:400,margin:2,color:{dark:'#000000',light:'#ffffff'}});const cf=document.createElement('canvas');cf.width=canvas.width;cf.height=canvas.height+50;const ctx=cf.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,cf.width,cf.height);ctx.drawImage(canvas,0,0);ctx.fillStyle='#000';ctx.font='bold 22px Arial';ctx.textAlign='center';ctx.fillText(btn.dataset.nombre,canvas.width/2,canvas.height+35);const link=document.createElement('a');link.download=`QR-${btn.dataset.nombre}.png`;link.href=cf.toDataURL('image/png');link.click()})})
+  document.querySelectorAll('.btn-toggle-negocio').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const act = btn.dataset.activo === 'true'; btn.textContent = '...'; btn.disabled = true
+      try { const { error } = await supabase.from('negocios').update({ activo: !act }).eq('id', btn.dataset.id); if (error) throw error; navigate('admin') }
+      catch (e) { btn.textContent = act ? 'Desactivar' : 'Activar'; btn.disabled = false; alert('Sin conexión.') }
+    })
+  })
+  document.querySelectorAll('.btn-descargar-qr').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const url = `${window.location.origin}/#/negocio/${btn.dataset.id}`
+      const canvas = document.getElementById('qr-canvas')
+      await QRCode.toCanvas(canvas, url, { width: 400, margin: 2, color: { dark: '#000000', light: '#ffffff' } })
+      const cf = document.createElement('canvas'); cf.width = canvas.width; cf.height = canvas.height + 50
+      const ctx = cf.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cf.width, cf.height)
+      ctx.drawImage(canvas, 0, 0); ctx.fillStyle = '#000'; ctx.font = 'bold 22px Arial'; ctx.textAlign = 'center'
+      ctx.fillText(btn.dataset.nombre, canvas.width / 2, canvas.height + 35)
+      const link = document.createElement('a'); link.download = `QR-${btn.dataset.nombre}.png`; link.href = cf.toDataURL('image/png'); link.click()
+    })
+  })
+  // Botón limpiar datos de prueba
+  document.querySelectorAll('.btn-limpiar-negocio').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm(`¿Eliminar TODOS los clientes y visitas de "${btn.dataset.nombre}"? Esto no se puede deshacer.`)) return
+      btn.disabled = true; btn.textContent = '...'
+      try {
+        const { data: cls } = await supabase.from('clientes').select('id').eq('negocio_id', btn.dataset.id)
+        const ids = (cls||[]).map(c => c.id)
+        if (ids.length > 0) {
+          await supabase.from('visitas').delete().in('cliente_id', ids)
+          await supabase.from('canjes').delete().in('cliente_id', ids)
+          await supabase.from('clientes').delete().eq('negocio_id', btn.dataset.id)
+        }
+        await supabase.from('visitas').delete().eq('negocio_id', btn.dataset.id)
+        alert(`✓ Datos de "${btn.dataset.nombre}" eliminados.`)
+        navigate('admin')
+      } catch (e) { alert('Sin conexión.'); btn.disabled = false; btn.textContent = '🗑 Datos' }
+    })
+  })
 }
 
-// ── VISTA CLIENTE ──────────────────────────────────────────
 export async function paginaCliente(telefono) {
   inyectarEstilos()
   try {
-    const{data,error}=await supabase.from('clientes').select('*, negocios(nombre,meta_puntos,color_principal,emoji_negocio,descripcion)').eq('telefono',telefono).single()
-    if(error)throw error
-    if(!data)return`<div class="sc-root"><div class="sc-hero"><div class="sc-hero-name">No encontrado</div></div></div>`
-
-    const{data:niveles}=await supabase.from('niveles').select('*').eq('negocio_id',data.negocios?.id||data.negocio_id).order('visitas_minimas',{ascending:true})
-    const{data:historial}=await supabase.from('visitas').select('fecha').eq('cliente_id',data.id).order('fecha',{ascending:false}).limit(10)
-    const{data:premiosActivos}=await supabase.from('premios').select('*').eq('negocio_id',data.negocio_id).eq('activo',true)
-
-    const colorNegocio=data.negocios?.color_principal||DS.green800
-    const emojiNegocio=data.negocios?.emoji_negocio||'☕'
+    const { data, error } = await supabase.from('clientes').select('*, negocios(id,nombre,meta_puntos,color_principal,emoji_negocio,descripcion,logo_url)').eq('telefono', telefono).single()
+    if (error) throw error
+    if (!data) return `<div class="sc-root"><div class="sc-hero"><div class="sc-hero-name">No encontrado</div></div></div>`
+    const { data: niveles } = await supabase.from('niveles').select('*').eq('negocio_id', data.negocios?.id || data.negocio_id).order('visitas_minimas', { ascending: true })
+    const { data: historial } = await supabase.from('visitas').select('fecha').eq('cliente_id', data.id).order('fecha', { ascending: false }).limit(10)
+    const colorNegocio = data.negocios?.color_principal || DS.green800
+    const emojiNegocio = data.negocios?.emoji_negocio || '☕'
+    const logoUrl = data.negocios?.logo_url || ''
     aplicarColorNegocio(colorNegocio)
-
-    const meta=data.negocios?.meta_puntos||META_VISITAS
-    const ciclo=data.puntos_actuales%meta
-    const pct=data.puntos_actuales===0?0:Math.min(Math.round((ciclo/meta)*100),100)
-    const tienePremio=data.puntos_actuales>0&&data.puntos_actuales%meta===0
-    const nivelActual=getNivelActual(data.total_visitas,niveles)
-    const sigNivel=getSiguienteNivel(data.total_visitas,niveles)
-    const nivelColor=colorNivel(nivelActual)
-
-    // Progreso hacia siguiente nivel
-    let nivelProgPct=100
-    if(sigNivel){const rango=sigNivel.visitas_minimas-nivelActual.visitas_minimas;const avance=data.total_visitas-nivelActual.visitas_minimas;nivelProgPct=Math.min(Math.round((avance/rango)*100),100)}
-
-    let mensajeProgreso
-    if(data.puntos_actuales===0)mensajeProgreso=`Empieza a visitar para acumular visitas ☕`
-    else if(tienePremio)mensajeProgreso=`🏆 ¡Tienes un premio disponible! Muéstraselo al cajero.`
-    else mensajeProgreso=`Te falta${meta-ciclo===1?'':'n'} <strong>${meta-ciclo}</strong> visita${meta-ciclo===1?'':'s'} para tu próximo premio`
-
-    const filasHistorial=(historial||[]).map(v=>{
-      const fecha=new Date(v.fecha).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})
-      return`<div class="s-row"><div class="s-row-title" style="font-weight:400;font-size:13px">📍 Visita registrada</div><div style="font-size:12px;color:${DS.gray500}">${fecha}</div></div>`
+    const nivelActual = getNivelActual(data.total_visitas, niveles)
+    const sigNivel = getSiguienteNivel(data.total_visitas, niveles)
+    const nivelColor = colorNivel(nivelActual)
+    let nivelProgPct = 100
+    if (sigNivel) { const rango = sigNivel.visitas_minimas - nivelActual.visitas_minimas; const avance = data.total_visitas - nivelActual.visitas_minimas; nivelProgPct = Math.min(Math.round((avance / rango) * 100), 100) }
+    const filasHistorial = (historial||[]).map(v => {
+      const fecha = new Date(v.fecha).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      return `<div class="s-row"><div class="s-row-title" style="font-weight:400;font-size:13px">📍 Visita registrada</div><div style="font-size:12px;color:${DS.gray500}">${fecha}</div></div>`
     }).join('')
-
-    // Premio disponible para compartir
-    const premioParaCompartir=tienePremio&&premiosActivos&&premiosActivos.length>0?premiosActivos[0]:null
-
     return `
       <div class="sc-root">
         <div class="sc-hero">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">${logoSVG(28,'rgba(255,255,255,0.6)')}<span style="font-size:13px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.1em">Sello</span></div>
-          <div class="sc-hero-negocio">${emojiNegocio} ${data.negocios?.nombre||'Programa de Lealtad'}</div>
-          <div class="sc-hero-name">Hola, ${data.nombre?.split(' ')[0]||'Cliente'} 👋</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+            ${logoUrl ? `<img src="${logoUrl}" style="width:40px;height:40px;border-radius:10px;object-fit:cover;border:2px solid rgba(255,255,255,0.3)" onerror="this.style.display='none'" />` : logoSVG(28, 'rgba(255,255,255,0.6)')}
+            <span style="font-size:13px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.1em">Sello</span>
+          </div>
+          <div class="sc-hero-negocio">${emojiNegocio} ${data.negocios?.nombre || 'Programa de Lealtad'}</div>
+          <div class="sc-hero-name">Hola, ${data.nombre?.split(' ')[0] || 'Cliente'} 👋</div>
           <div class="sc-hero-sub">Aquí está tu progreso</div>
         </div>
-
         <div class="sc-puntos-card">
-          <!-- Nivel actual -->
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
             <div class="nivel-badge" style="background:${nivelColor}20;color:${nivelColor};font-size:14px">${nivelActual.emoji} ${nivelActual.nombre}</div>
-            ${sigNivel?`<div style="font-size:12px;color:${DS.gray500}">Siguiente: ${sigNivel.emoji} ${sigNivel.nombre} (${sigNivel.visitas_minimas} visitas)</div>`:`<div style="font-size:12px;color:${DS.gold500}">💎 Nivel máximo</div>`}
+            ${sigNivel ? `<div style="font-size:12px;color:${DS.gray500}">Siguiente: ${sigNivel.emoji} ${sigNivel.nombre} (${sigNivel.visitas_minimas})</div>` : `<div style="font-size:12px;color:${DS.gold500}">💎 Nivel máximo</div>`}
           </div>
-          ${sigNivel?`<div class="nivel-prog-track"><div class="nivel-prog-fill" style="width:${nivelProgPct}%;background:${nivelColor}"></div></div><p style="font-size:11px;color:${DS.gray500};margin-top:4px;margin-bottom:16px">${sigNivel.visitas_minimas-data.total_visitas} visitas para ${sigNivel.emoji} ${sigNivel.nombre}</p>`:''}
-
-          <!-- Stats -->
+          ${sigNivel ? `<div class="nivel-prog-track"><div class="nivel-prog-fill" style="width:${nivelProgPct}%;background:${nivelColor}"></div></div><p style="font-size:11px;color:${DS.gray500};margin-top:4px;margin-bottom:16px">${sigNivel.visitas_minimas - data.total_visitas} visitas para ${sigNivel.emoji} ${sigNivel.nombre}${sigNivel.premio_bienvenida ? ' · Premio: '+sigNivel.premio_bienvenida : ''}</p>` : ''}
           <div class="sc-puntos-grid">
             <div class="sc-punto-box"><div class="sc-punto-num">${data.total_visitas}</div><div class="sc-punto-lbl">Visitas totales</div></div>
-            <div class="sc-punto-box"><div class="sc-punto-num ${tienePremio?'gold':''}">${ciclo}/${meta}</div><div class="sc-punto-lbl">Para el premio</div></div>
+            <div class="sc-punto-box"><div class="sc-punto-num">${sigNivel ? sigNivel.visitas_minimas - data.total_visitas : '💎'}</div><div class="sc-punto-lbl">${sigNivel ? 'Para '+sigNivel.emoji+' '+sigNivel.nombre : 'Nivel máximo'}</div></div>
           </div>
-
-          <!-- Barra de progreso al premio -->
-          <div class="s-prog-header"><span style="font-size:13px;color:${DS.gray500}">Progreso al premio</span><span style="font-size:13px;font-weight:600;color:${DS.green800}">${pct}%</span></div>
-          <div class="s-prog-track" style="height:12px"><div class="${'s-prog-fill'+(tienePremio?' gold':'')}" id="lc-fill" style="width:0%"></div></div>
-          <div class="sc-mensaje ${tienePremio?'premio':data.puntos_actuales===0?'inicio':'normal'}" style="margin-top:16px">${mensajeProgreso}</div>
-
-          <!-- Botones de compartir -->
-          ${tienePremio&&premioParaCompartir?`
-          <button class="s-btn share" id="btn-compartir-premio" style="margin-top:12px">
-            📲 Compartir mi premio en historias
-          </button>
-          `:''}
-          ${nivelActual.nombre!=='Bronce'?`
-          <button class="s-btn" id="btn-compartir-nivel" style="margin-top:8px;background:${nivelColor}20;color:${nivelColor};border:1.5px solid ${nivelColor}40">
-            ${nivelActual.emoji} Compartir mi nivel ${nivelActual.nombre}
-          </button>
-          `:''}
+          <div class="sc-mensaje ${sigNivel ? 'normal' : 'premio'}" style="margin-top:8px">
+            ${sigNivel ? `Te falta${sigNivel.visitas_minimas - data.total_visitas === 1 ? '' : 'n'} <strong>${sigNivel.visitas_minimas - data.total_visitas}</strong> visita${sigNivel.visitas_minimas - data.total_visitas === 1 ? '' : 's'} para ${sigNivel.emoji} ${sigNivel.nombre}${sigNivel.premio_bienvenida ? ' y ganar: '+sigNivel.premio_bienvenida : ''}` : `🏆 ¡Llegaste al nivel máximo! Eres ${nivelActual.emoji} ${nivelActual.nombre}`}
+          </div>
+          ${nivelActual.nombre !== 'Bronce' ? `<button class="s-btn share" id="btn-compartir-nivel" style="margin-top:12px">${nivelActual.emoji} Compartir mi nivel ${nivelActual.nombre}</button>` : ''}
         </div>
-
-        <!-- QR -->
         <div class="s-card">
           <div class="s-section-label">Tu código QR</div>
           <div style="text-align:center">
@@ -967,72 +956,48 @@ export async function paginaCliente(telefono) {
             <p style="font-size:12px;color:${DS.gray500};margin-top:10px">Muéstralo al cajero para sumar visitas</p>
           </div>
         </div>
-
-        <!-- Historial -->
-        ${historial&&historial.length>0?`<div class="s-card"><div class="s-section-label">Historial de visitas</div>${filasHistorial}</div>`:''}
+        ${historial && historial.length > 0 ? `<div class="s-card"><div class="s-section-label">Historial de visitas</div>${filasHistorial}</div>` : ''}
       </div>
     `
-  } catch(e){return`<div class="sc-root"><div class="sc-hero"><div class="sc-hero-name">Error de conexión</div></div><div class="s-card">${errMsg()}</div></div>`}
+  } catch (e) { return `<div class="sc-root"><div class="sc-hero"><div class="sc-hero-name">Error de conexión</div></div><div class="s-card">${errMsg()}</div></div>` }
 }
 
 export async function initCliente(telefono) {
   inyectarEstilos()
-  // Animar barra
-  setTimeout(()=>{const fill=document.getElementById('lc-fill');const header=document.querySelector('.s-prog-header span:last-child');if(fill&&header){const pct=parseInt(header.textContent)||0;setTimeout(()=>{fill.style.width=pct+'%'},80)}},100)
-
-  // QR
-  const qrDiv=document.getElementById('qrcode')
-  if(qrDiv){QRCode.toCanvas(document.createElement('canvas'),`${window.location.origin}/#/cliente/${telefono}`,{width:180,margin:1,color:{dark:DS.green900,light:'#ffffff'}},(err,canvas)=>{if(!err)qrDiv.appendChild(canvas)})}
-
-  // Datos para compartir
+  const qrDiv = document.getElementById('qrcode')
+  if (qrDiv) {
+    QRCode.toCanvas(document.createElement('canvas'), `${window.location.origin}/#/cliente/${telefono}`,
+      { width: 180, margin: 1, color: { dark: DS.green900, light: '#ffffff' } },
+      (err, canvas) => { if (!err) qrDiv.appendChild(canvas) })
+  }
   try {
-    const{data}=await supabase.from('clientes').select('*, negocios(nombre,color_principal,emoji_negocio)').eq('telefono',telefono).single()
-    const{data:niveles}=await supabase.from('niveles').select('*').eq('negocio_id',data?.negocio_id).order('visitas_minimas',{ascending:true})
-    const{data:premiosActivos}=await supabase.from('premios').select('*').eq('negocio_id',data?.negocio_id).eq('activo',true)
-    const nivelActual=getNivelActual(data?.total_visitas||0,niveles)
-    const meta=data?.negocios?.meta_puntos||META_VISITAS
-    const tienePremio=data?.puntos_actuales>0&&data?.puntos_actuales%meta===0
-
-    const datosCompartir={
-      negocioNombre:data?.negocios?.nombre||'',
-      negocioEmoji:data?.negocios?.emoji_negocio||'☕',
-      colorNegocio:data?.negocios?.color_principal||DS.green800,
-      nivelNombre:nivelActual.nombre,
-      nivelEmoji:nivelActual.emoji,
-      totalVisitas:data?.total_visitas||0,
-      premioNombre:premiosActivos?.[0]?.nombre||'Premio especial',
-    }
-
-    document.getElementById('btn-compartir-premio')?.addEventListener('click',async()=>{
-      const btn=document.getElementById('btn-compartir-premio')
-      btn.disabled=true;btn.textContent='Generando imagen...'
-      await compartirHistoria({...datosCompartir,tipo:'premio'})
-      btn.disabled=false;btn.textContent='📲 Compartir mi premio en historias'
+    const { data } = await supabase.from('clientes').select('*, negocios(nombre,color_principal,emoji_negocio)').eq('telefono', telefono).single()
+    const { data: niveles } = await supabase.from('niveles').select('*').eq('negocio_id', data?.negocio_id).order('visitas_minimas', { ascending: true })
+    const nivelActual = getNivelActual(data?.total_visitas || 0, niveles)
+    const datosCompartir = { negocioNombre: data?.negocios?.nombre || '', negocioEmoji: data?.negocios?.emoji_negocio || '☕', colorNegocio: data?.negocios?.color_principal || DS.green800, nivelNombre: nivelActual.nombre, nivelEmoji: nivelActual.emoji, totalVisitas: data?.total_visitas || 0 }
+    document.getElementById('btn-compartir-nivel')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btn-compartir-nivel'); btn.disabled = true; btn.textContent = 'Generando...'
+      await compartirHistoria({ ...datosCompartir, tipo: 'nivel' })
+      btn.disabled = false; btn.textContent = `${nivelActual.emoji} Compartir mi nivel ${nivelActual.nombre}`
     })
-
-    document.getElementById('btn-compartir-nivel')?.addEventListener('click',async()=>{
-      const btn=document.getElementById('btn-compartir-nivel')
-      btn.disabled=true;btn.textContent='Generando imagen...'
-      await compartirHistoria({...datosCompartir,tipo:'nivel'})
-      btn.disabled=false;btn.textContent=`${nivelActual.emoji} Compartir mi nivel ${nivelActual.nombre}`
-    })
-  } catch(e){/* opcional */}
+  } catch (e) {}
 }
 
-// ── QR NEGOCIO ─────────────────────────────────────────────
 export async function paginaQRNegocio(negocioId) {
   inyectarEstilos()
   try {
-    const{data:negocio,error}=await supabase.from('negocios').select('*').eq('id',negocioId).single()
-    if(error)throw error
-    if(!negocio)return`<div class="sq-root"><h1>No encontrado</h1></div>`
+    const { data: negocio, error } = await supabase.from('negocios').select('*').eq('id', negocioId).single()
+    if (error) throw error
+    if (!negocio) return `<div class="sq-root"><h1>No encontrado</h1></div>`
     aplicarColorNegocio(negocio.color_principal)
     return `
       <div class="sq-root">
-        <div class="sq-logo">${logoSVG(52,DS.white)}</div>
+        <div class="sq-logo">
+          ${negocio.logo_url ? `<img src="${negocio.logo_url}" style="width:80px;height:80px;border-radius:20px;object-fit:cover;border:3px solid rgba(255,255,255,0.3)" onerror="this.outerHTML='${logoSVG(52, DS.white)}'" />` : logoSVG(52, DS.white)}
+        </div>
         <div class="sq-negocio">Programa de lealtad</div>
-        <h1 class="sq-nombre">${negocio.emoji_negocio||'☕'} ${negocio.nombre}</h1>
-        <p class="sq-sub">${negocio.descripcion||'Acumula visitas y gana premios exclusivos'}</p>
+        <h1 class="sq-nombre">${negocio.emoji_negocio || '☕'} ${negocio.nombre}</h1>
+        <p class="sq-sub">${negocio.descripcion || 'Acumula visitas y sube de nivel'}</p>
         <div class="sq-form">
           <label style="font-size:13px;color:rgba(255,255,255,0.5);display:block;text-align:left;margin-bottom:8px">Tu número de teléfono</label>
           <input type="tel" id="tel-negocio" class="sq-input" placeholder="10 dígitos" />
@@ -1041,30 +1006,33 @@ export async function paginaQRNegocio(negocioId) {
         </div>
       </div>
     `
-  } catch(e){return`<div class="sq-root"><div class="sq-form">${errMsg()}</div></div>`}
+  } catch (e) { return `<div class="sq-root"><div class="sq-form">${errMsg()}</div></div>` }
 }
 
 export function initQRNegocio(negocioId) {
   inyectarEstilos()
-  const doEntrar=async()=>{
-    const telefono=document.getElementById('tel-negocio').value.trim();if(!telefono)return
-    const msg=document.getElementById('msg-negocio');const btn=document.getElementById('btn-entrar')
-    msg.textContent='Buscando...';btn.disabled=true
-    try{const{data,error}=await supabase.from('clientes').select('*').eq('telefono',telefono).eq('negocio_id',negocioId).single();if(error&&error.code!=='PGRST116')throw error;if(data)navigate('cliente',telefono);else navigate('registro-cliente',`${negocioId}/${telefono}`)}
-    catch(e){msg.innerHTML=errMsg();btn.disabled=false}
+  const doEntrar = async () => {
+    const telefono = document.getElementById('tel-negocio').value.trim(); if (!telefono) return
+    const msg = document.getElementById('msg-negocio'); const btn = document.getElementById('btn-entrar')
+    msg.textContent = 'Buscando...'; btn.disabled = true
+    try {
+      const { data, error } = await supabase.from('clientes').select('*').eq('telefono', telefono).eq('negocio_id', negocioId).single()
+      if (error && error.code !== 'PGRST116') throw error
+      if (data) navigate('cliente', telefono)
+      else navigate('registro-cliente', `${negocioId}/${telefono}`)
+    } catch (e) { msg.innerHTML = errMsg(); btn.disabled = false }
   }
-  document.getElementById('btn-entrar')?.addEventListener('click',doEntrar)
-  document.getElementById('tel-negocio')?.addEventListener('keydown',e=>{if(e.key==='Enter')doEntrar()})
+  document.getElementById('btn-entrar')?.addEventListener('click', doEntrar)
+  document.getElementById('tel-negocio')?.addEventListener('keydown', e => { if (e.key === 'Enter') doEntrar() })
 }
 
-// ── REGISTRO DESDE QR ──────────────────────────────────────
-export function paginaRegistroCliente(negocioId,telefono) {
+export function paginaRegistroCliente(negocioId, telefono) {
   inyectarEstilos()
   return `
     <div class="sq-root">
-      <div class="sq-logo">${logoSVG(52,DS.white)}</div>
+      <div class="sq-logo">${logoSVG(52, DS.white)}</div>
       <h1 class="sq-nombre">Bienvenido 👋</h1>
-      <p class="sq-sub">Regístrate para acumular visitas y ganar premios</p>
+      <p class="sq-sub">Regístrate para acumular visitas y subir de nivel</p>
       <div class="sq-form">
         <label style="font-size:13px;color:rgba(255,255,255,0.5);display:block;text-align:left;margin-bottom:8px">Tu nombre</label>
         <input type="text" id="nombre-cliente" class="sq-input" placeholder="¿Cómo te llamas?" style="margin-bottom:12px" />
@@ -1077,110 +1045,110 @@ export function paginaRegistroCliente(negocioId,telefono) {
   `
 }
 
-export function initRegistroCliente(negocioId,telefono) {
+export function initRegistroCliente(negocioId, telefono) {
   inyectarEstilos()
-  document.getElementById('btn-registrar-cliente').addEventListener('click',async()=>{
-    const nombre=document.getElementById('nombre-cliente').value.trim();const msg=document.getElementById('msg-registro');const btn=document.getElementById('btn-registrar-cliente')
-    if(!nombre){msg.innerHTML=`<p style="color:#f87171">Escribe tu nombre</p>`;return}
-    btn.disabled=true;btn.textContent='Registrando...'
-    try{const{error}=await supabase.from('clientes').insert({nombre,telefono,negocio_id:negocioId,puntos_actuales:0,total_visitas:0});if(error)throw error;navigate('cliente',telefono)}
-    catch(e){msg.innerHTML=errMsg('registrarte');btn.disabled=false;btn.textContent='Registrarme →'}
+  document.getElementById('btn-registrar-cliente').addEventListener('click', async () => {
+    const nombre = document.getElementById('nombre-cliente').value.trim()
+    const msg = document.getElementById('msg-registro'); const btn = document.getElementById('btn-registrar-cliente')
+    if (!nombre) { msg.innerHTML = `<p style="color:#f87171">Escribe tu nombre</p>`; return }
+    btn.disabled = true; btn.textContent = 'Registrando...'
+    try {
+      const { error } = await supabase.from('clientes').insert({ nombre, telefono, negocio_id: negocioId, puntos_actuales: 0, total_visitas: 0 })
+      if (error) throw error
+      navigate('cliente', telefono)
+    } catch (e) { msg.innerHTML = errMsg('registrarte'); btn.disabled = false; btn.textContent = 'Registrarme →' }
   })
 }
 
-// ── LANDING PÚBLICA ────────────────────────────────────────
 export async function paginaLanding(negocioId) {
   inyectarEstilos()
   try {
-    const{data:negocio,error}=await supabase.from('negocios').select('*').eq('id',negocioId).single()
-    if(error)throw error
-    if(!negocio)return`<div style="padding:40px;text-align:center">No encontrado</div>`
+    const { data: negocio, error } = await supabase.from('negocios').select('*').eq('id', negocioId).single()
+    if (error) throw error
+    if (!negocio) return `<div style="padding:40px;text-align:center">No encontrado</div>`
     aplicarColorNegocio(negocio.color_principal)
-    const{data:premios}=await supabase.from('premios').select('*').eq('negocio_id',negocioId).eq('activo',true)
-    const{data:niveles}=await supabase.from('niveles').select('*').eq('negocio_id',negocioId).order('visitas_minimas',{ascending:true})
-    const{data:clientes}=await supabase.from('clientes').select('id').eq('negocio_id',negocioId)
-    const{data:visitas}=await supabase.from('visitas').select('id').eq('negocio_id',negocioId)
-
-    const filasPremios=(premios||[]).map(p=>`<div class="landing-premio"><div style="font-size:28px">🏆</div><div><div style="font-size:15px;font-weight:600;color:${DS.gray900}">${p.nombre}</div><div style="font-size:12px;color:${DS.gray500};margin-top:2px">Gánalo con ${p.puntos_requeridos} visitas</div></div></div>`).join('')
-
-    const filasNiveles=(niveles||[]).map(n=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid ${DS.gray100}"><div style="font-size:24px">${n.emoji}</div><div><div style="font-size:14px;font-weight:600;color:${DS.gray900}">${n.nombre}</div><div style="font-size:12px;color:${DS.gray500}">${n.visitas_minimas===0?'Nivel inicial':n.visitas_minimas+' visitas'}${n.premio_bienvenida?' · Premio: '+n.premio_bienvenida:''}</div></div></div>`).join('')
-
+    const { data: niveles } = await supabase.from('niveles').select('*').eq('negocio_id', negocioId).order('visitas_minimas', { ascending: true })
+    const { data: clientes } = await supabase.from('clientes').select('id').eq('negocio_id', negocioId)
+    const { data: visitas } = await supabase.from('visitas').select('id').eq('negocio_id', negocioId)
+    const filasNiveles = (niveles||[]).filter(n => n.premio_bienvenida).map(n => `
+      <div class="landing-premio">
+        <div style="font-size:28px">${n.emoji}</div>
+        <div>
+          <div style="font-size:15px;font-weight:600;color:${DS.gray900}">${n.nombre}</div>
+          <div style="font-size:12px;color:${DS.gray500};margin-top:2px">Desde ${n.visitas_minimas} visitas · Premio: ${n.premio_bienvenida}</div>
+        </div>
+      </div>
+    `).join('')
     return `
       <div class="landing-root">
         <div class="landing-hero">
-          <div style="margin-bottom:16px">${logoSVG(40,'rgba(255,255,255,0.5)')}</div>
-          <div style="font-size:48px;margin-bottom:8px">${negocio.emoji_negocio||'☕'}</div>
+          ${negocio.logo_url ? `<img src="${negocio.logo_url}" style="width:80px;height:80px;border-radius:20px;object-fit:cover;border:3px solid rgba(255,255,255,0.3);margin-bottom:16px" onerror="this.style.display='none'" />` : `<div style="margin-bottom:16px">${logoSVG(40, 'rgba(255,255,255,0.5)')}</div>`}
+          <div style="font-size:40px;margin-bottom:8px">${negocio.emoji_negocio || '☕'}</div>
           <div class="landing-nombre">${negocio.nombre}</div>
-          <div class="landing-tag">${negocio.descripcion||'Programa de lealtad digital'}</div>
+          <div class="landing-tag">${negocio.descripcion || 'Programa de lealtad digital'}</div>
         </div>
-
         <div style="padding:24px 16px 0;margin-top:-20px;position:relative;z-index:1">
-          <h2 style="font-family:'Sora',sans-serif;font-size:18px;font-weight:800;color:${DS.gray900};margin-bottom:16px">🏆 Premios disponibles</h2>
-          ${filasPremios||`<div class="landing-premio"><div>🎁</div><div><div style="font-size:15px;font-weight:600">Próximamente</div></div></div>`}
+          <h2 style="font-family:'Sora',sans-serif;font-size:18px;font-weight:800;color:${DS.gray900};margin-bottom:16px">⭐ Niveles y premios</h2>
+          ${filasNiveles || `<div class="landing-premio"><div>🏆</div><div><div style="font-size:15px;font-weight:600">Sube de nivel y gana premios</div></div></div>`}
         </div>
-
-        ${niveles&&niveles.length>0?`
-        <div style="padding:24px 16px 0">
-          <h2 style="font-family:'Sora',sans-serif;font-size:18px;font-weight:800;color:${DS.gray900};margin-bottom:12px">⭐ Niveles de lealtad</h2>
-          <div style="background:white;border-radius:14px;padding:4px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">${filasNiveles}</div>
-        </div>`:''} 
-
         <div style="margin:24px 16px">
           <button class="landing-cta-btn" id="landing-registrar">Registrarme en el programa →</button>
         </div>
-
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 32px">
           <div style="background:white;border-radius:14px;padding:20px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.04)"><div style="font-family:'Sora',sans-serif;font-size:32px;font-weight:800;color:${DS.green800}">${(clientes||[]).length}</div><div style="font-size:12px;color:${DS.gray500};margin-top:4px">Clientes registrados</div></div>
           <div style="background:white;border-radius:14px;padding:20px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.04)"><div style="font-family:'Sora',sans-serif;font-size:32px;font-weight:800;color:${DS.green800}">${(visitas||[]).length}</div><div style="font-size:12px;color:${DS.gray500};margin-top:4px">Visitas registradas</div></div>
         </div>
-
-        <div style="text-align:center;padding:0 16px 32px;font-size:12px;color:${DS.gray300}">
-          Powered by <strong style="color:${DS.green800}">Sello</strong> · Programa de lealtad digital
-        </div>
+        <div style="text-align:center;padding:0 16px 32px;font-size:12px;color:${DS.gray300}">Powered by <strong style="color:${DS.green800}">Sello</strong></div>
       </div>
     `
-  } catch(e){return`<div style="padding:40px;text-align:center">${errMsg()}</div>`}
+  } catch (e) { return `<div style="padding:40px;text-align:center">${errMsg()}</div>` }
 }
 
 export function initLanding(negocioId) {
   inyectarEstilos()
-  document.getElementById('landing-registrar')?.addEventListener('click',()=>navigate('negocio',negocioId))
+  document.getElementById('landing-registrar')?.addEventListener('click', () => navigate('negocio', negocioId))
 }
 
-// ── PANEL DUEÑO ────────────────────────────────────────────
+// ── PANEL DUEÑO — solo niveles, sin premios separados ─────
 export async function paginaDueno() {
   inyectarEstilos()
   try {
-    const{getNegocioActual}=await import('./auth.js');const negocio=getNegocioActual()
-    if(!negocio){window.location.hash='#/login';window.dispatchEvent(new Event('hashchange'));return'<div></div>'}
-    const{data:nd,error:e0}=await supabase.from('negocios').select('*').eq('id',negocio.id).single();if(e0)throw e0
-    if(nd?.activo===false){const{logout}=await import('./auth.js');logout();return'<div></div>'}
+    const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
+    if (!negocio) { window.location.hash = '#/login'; window.dispatchEvent(new Event('hashchange')); return '<div></div>' }
+    const { data: nd, error: e0 } = await supabase.from('negocios').select('*').eq('id', negocio.id).single(); if (e0) throw e0
+    if (nd?.activo === false) { const { logout } = await import('./auth.js'); logout(); return '<div></div>' }
     aplicarColorNegocio(nd?.color_principal)
+    const { data: clientes } = await supabase.from('clientes').select('*').eq('negocio_id', negocio.id)
+    const { data: visitas } = await supabase.from('visitas').select('*').eq('negocio_id', negocio.id)
+    const { data: niveles } = await supabase.from('niveles').select('*').eq('negocio_id', negocio.id).order('visitas_minimas', { ascending: true })
+    const hoy = new Date().toISOString().split('T')[0]
+    const vhoy = (visitas||[]).filter(v => v.fecha && v.fecha.startsWith(hoy)).length
+    const top5 = [...(clientes||[])].sort((a, b) => b.total_visitas - a.total_visitas).slice(0, 5)
+    const landingUrl = `${window.location.origin}/#/landing/${negocio.id}`
 
-    const meta=nd?.meta_puntos||10
-    const{data:clientes}=await supabase.from('clientes').select('*').eq('negocio_id',negocio.id)
-    const{data:visitas}=await supabase.from('visitas').select('*').eq('negocio_id',negocio.id)
-    const{data:premios}=await supabase.from('premios').select('*').eq('negocio_id',negocio.id)
-    const{data:niveles}=await supabase.from('niveles').select('*').eq('negocio_id',negocio.id).order('visitas_minimas',{ascending:true})
-    const premioIds=(premios||[]).map(p=>p.id)
-    const{data:canjes}=premioIds.length>0?await supabase.from('canjes').select('*,premios(nombre),clientes(nombre)').in('premio_id',premioIds).order('fecha',{ascending:false}).limit(10):{data:[]}
+    const filasClientes = top5.map(c => {
+      const nivel = getNivelActual(c.total_visitas, niveles); const nc = colorNivel(nivel)
+      return `<div class="s-row"><div><div class="s-row-title">${c.nombre}</div><div class="s-row-sub">${c.telefono}</div></div><div style="display:flex;align-items:center;gap:8px"><div class="nivel-badge" style="background:${nc}20;color:${nc};font-size:11px;padding:3px 8px">${nivel.emoji} ${nivel.nombre}</div><div style="font-size:13px;color:${DS.gray500}">${c.total_visitas}</div></div></div>`
+    }).join('')
 
-    const hoy=new Date().toISOString().split('T')[0]
-    const vhoy=(visitas||[]).filter(v=>v.fecha&&v.fecha.startsWith(hoy)).length
-    const top5=[...(clientes||[])].sort((a,b)=>b.total_visitas-a.total_visitas).slice(0,5)
-    const landingUrl=`${window.location.origin}/#/landing/${negocio.id}`
-
-    const filasClientes=top5.map(c=>{const nivel=getNivelActual(c.total_visitas,niveles);const nc=colorNivel(nivel);return`<div class="s-row"><div><div class="s-row-title">${c.nombre}</div><div class="s-row-sub">${c.telefono}</div></div><div style="display:flex;align-items:center;gap:8px"><div class="nivel-badge" style="background:${nc}20;color:${nc};font-size:11px;padding:3px 8px">${nivel.emoji} ${nivel.nombre}</div><div style="font-size:13px;color:${DS.gray500}">${c.total_visitas}</div></div></div>`}).join('')
-
-    const filasPremios=(premios||[]).map(p=>`<div class="s-row"><div><div class="s-row-title">${p.nombre}</div><div class="s-row-sub">Se gana a las ${p.puntos_requeridos} visitas</div></div><div class="s-row-actions"><span class="s-badge ${p.activo?'active':'inactive'}">${p.activo?'Activo':'Inactivo'}</span><button class="btn-toggle-premio" data-id="${p.id}" data-activo="${p.activo}" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:${DS.gray100};color:${DS.gray700}">${p.activo?'Desactivar':'Activar'}</button><button class="btn-eliminar-premio" data-id="${p.id}" data-nombre="${p.nombre}" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;font-size:13px;background:#fee2e2;color:#dc2626;font-weight:600">🗑</button></div></div>`).join('')
-
-    const filasNiveles=(niveles||[]).map(n=>`<div class="s-row"><div><div class="s-row-title">${n.emoji} ${n.nombre}</div><div class="s-row-sub">Desde ${n.visitas_minimas} visitas${n.premio_bienvenida?' · Premio: '+n.premio_bienvenida:''}</div></div><div class="s-row-actions"><button class="btn-editar-nivel" data-id="${n.id}" data-nombre="${n.nombre}" data-emoji="${n.emoji}" data-visitas="${n.visitas_minimas}" data-premio="${n.premio_bienvenida||''}" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;font-size:12px;background:${DS.gray100};color:${DS.gray700};font-weight:600">✏️ Editar</button><button class="btn-eliminar-nivel" data-id="${n.id}" data-nombre="${n.nombre}" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;font-size:12px;background:#fee2e2;color:#dc2626;font-weight:600">🗑</button></div></div>`).join('')
-
-    const filasCanjes=(canjes||[]).length===0?`<p style="color:#aaa;font-size:13px;text-align:center;padding:8px 0">No hay premios entregados aún</p>`:(canjes||[]).map(c=>{const fecha=c.fecha?new Date(c.fecha).toLocaleDateString('es-MX',{day:'2-digit',month:'short'}):'—';return`<div class="s-row"><div><div class="s-row-title">${c.premios?.nombre||'Premio'}</div><div class="s-row-sub">${c.clientes?.nombre||'—'} · ${fecha}</div></div><span style="font-size:12px;color:#059669;font-weight:600">✓ Entregado</span></div>`}).join('')
+    const filasNiveles = (niveles||[]).map(n => `
+      <div class="s-row">
+        <div>
+          <div class="s-row-title">${n.emoji} ${n.nombre}</div>
+          <div class="s-row-sub">Desde ${n.visitas_minimas} visitas${n.premio_bienvenida ? ' · Premio: ' + n.premio_bienvenida : ' · Sin premio'}</div>
+        </div>
+        <div class="s-row-actions">
+          <button class="btn-editar-nivel" data-id="${n.id}" data-nombre="${n.nombre}" data-emoji="${n.emoji}" data-visitas="${n.visitas_minimas}" data-premio="${n.premio_bienvenida||''}"
+            style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;font-size:12px;background:${DS.gray100};color:${DS.gray700};font-weight:600">✏️</button>
+          <button class="btn-eliminar-nivel" data-id="${n.id}" data-nombre="${n.nombre}"
+            style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;font-size:12px;background:#fee2e2;color:#dc2626;font-weight:600">🗑</button>
+        </div>
+      </div>
+    `).join('')
 
     return `
       <div style="padding-bottom:72px">
-        <div class="sello-topbar"><div class="sello-topbar-brand">${logoSVG(28,'#fff')} Sell<span>o</span></div><span style="font-size:13px;color:rgba(255,255,255,0.6)">${nd?.nombre||negocio.nombre}</span></div>
+        <div class="sello-topbar">${topbarBrand()}<span style="font-size:13px;color:rgba(255,255,255,0.6)">${nd?.nombre || negocio.nombre}</span></div>
 
         <!-- Resumen -->
         <div class="s-card" style="margin-top:16px">
@@ -1188,11 +1156,11 @@ export async function paginaDueno() {
           <div class="s-stats">
             <div class="s-stat"><div class="s-stat-num">${(clientes||[]).length}</div><div class="s-stat-lbl">Clientes</div></div>
             <div class="s-stat"><div class="s-stat-num" style="color:${DS.gold500}">${vhoy}</div><div class="s-stat-lbl">Hoy</div></div>
-            <div class="s-stat"><div class="s-stat-num">${(visitas||[]).length}</div><div class="s-stat-lbl">Total</div></div>
+            <div class="s-stat"><div class="s-stat-num">${(visitas||[]).length}</div><div class="s-stat-lbl">Visitas</div></div>
           </div>
         </div>
 
-        <!-- Dashboard -->
+        <!-- Gráficas -->
         <div class="s-card"><div class="s-section-label">Visitas — últimos 7 días</div><div class="s-chart-wrap"><canvas id="chart-barras"></canvas></div></div>
         <div class="s-card"><div class="s-section-label">Este mes vs mes anterior</div><div class="s-chart-wrap"><canvas id="chart-meses"></canvas></div></div>
         <div class="s-card"><div class="s-section-label">Clientes nuevos vs recurrentes</div><div class="s-chart-wrap donut"><canvas id="chart-dona"></canvas></div></div>
@@ -1200,42 +1168,47 @@ export async function paginaDueno() {
         <!-- Personalización -->
         <div class="s-card">
           <div class="s-section-label">Personalización</div>
+          <div class="s-field">
+            <label class="s-label">Logo del negocio (URL de imagen)</label>
+            <input type="url" id="input-logo" class="s-input" value="${nd?.logo_url||''}" placeholder="https://... (link de tu logo)" />
+            <p style="font-size:11px;color:${DS.gray500};margin-top:4px">Sube tu logo a Google Drive, Instagram o Imgur y pega el link aquí</p>
+          </div>
+          ${nd?.logo_url ? `<img src="${nd.logo_url}" style="width:64px;height:64px;border-radius:12px;object-fit:cover;margin-bottom:14px;border:2px solid ${DS.gray100}" onerror="this.style.display='none'" />` : ''}
           <div class="s-field"><label class="s-label">Emoji del negocio</label><input type="text" id="input-emoji" class="s-input" value="${nd?.emoji_negocio||'☕'}" placeholder="☕" style="font-size:24px;text-align:center" /></div>
-          <div class="s-field"><label class="s-label">Color principal</label><div style="display:flex;gap:10px;align-items:center"><input type="color" id="input-color" value="${nd?.color_principal||DS.green800}" style="width:48px;height:48px;border:none;border-radius:10px;cursor:pointer;padding:2px" /><span style="font-size:13px;color:${DS.gray500}">Color que aparece en la app de tus clientes</span></div></div>
+          <div class="s-field">
+            <label class="s-label">Color principal</label>
+            <div style="display:flex;gap:10px;align-items:center">
+              <input type="color" id="input-color" value="${nd?.color_principal||DS.green800}" style="width:48px;height:48px;border:none;border-radius:10px;cursor:pointer;padding:2px" />
+              <span style="font-size:13px;color:${DS.gray500}">Aparece en la app de tus clientes</span>
+            </div>
+          </div>
           <div class="s-field"><label class="s-label">Descripción corta</label><input type="text" id="input-descripcion" class="s-input" value="${nd?.descripcion||''}" placeholder="Ej: El mejor café de Chetumal" /></div>
           <button id="btn-guardar-personalizacion" class="s-btn primary" style="margin-top:4px">Guardar personalización</button>
           <div id="msg-personalizacion" style="margin-top:10px"></div>
         </div>
 
-        <!-- Premios -->
+        <!-- Niveles de lealtad — sistema unificado -->
         <div class="s-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="s-section-label" style="margin-bottom:0">Premios</div><button id="btn-nuevo-premio" style="background:${DS.green800};color:white;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">+ Nuevo</button></div>
-          <p style="font-size:12px;color:${DS.gray300};margin-bottom:14px">El cajero ve qué premio entregar cuando el cliente completa el ciclo</p>
-          <div id="form-premio" style="display:none;background:${DS.gray50};padding:16px;border-radius:12px;margin-bottom:14px">
-            <div class="s-field"><label class="s-label">Nombre del premio</label><input type="text" id="nombre-premio" class="s-input" placeholder="Ej: Café gratis, Descuento 20%..." /></div>
-            <div class="s-field"><label class="s-label">¿A cuántas visitas se gana?</label><input type="number" id="visitas-premio" class="s-input" value="${meta}" min="1" /></div>
-            <button id="btn-guardar-premio" class="s-btn primary" style="margin-top:8px">Guardar premio</button>
-            <div id="msg-premio" style="margin-top:10px"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <div class="s-section-label" style="margin-bottom:0">Niveles de lealtad</div>
+            <button id="btn-nuevo-nivel" style="background:${DS.green800};color:white;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">+ Nuevo nivel</button>
           </div>
-          <div id="lista-premios">${filasPremios||`<p style="color:#aaa;font-size:13px;text-align:center;padding:8px 0">No hay premios configurados aún</p>`}</div>
-        </div>
-
-        <!-- Niveles configurables -->
-        <div class="s-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="s-section-label" style="margin-bottom:0">Niveles de lealtad</div><button id="btn-nuevo-nivel" style="background:${DS.green800};color:white;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">+ Nuevo</button></div>
-          <p style="font-size:12px;color:${DS.gray300};margin-bottom:14px">Los clientes suben de nivel según sus visitas acumuladas. Puedes dar un premio al subir.</p>
+          <p style="font-size:12px;color:${DS.gray500};margin-bottom:14px">Cada nivel tiene un premio que se entrega cuando el cliente llega a las visitas necesarias.</p>
           <div id="form-nivel" style="display:none;background:${DS.gray50};padding:16px;border-radius:12px;margin-bottom:14px">
             <input type="hidden" id="nivel-editando-id" value="" />
-            <div style="display:grid;grid-template-columns:80px 1fr;gap:10px">
-              <div class="s-field"><label class="s-label">Emoji</label><input type="text" id="nivel-emoji" class="s-input" placeholder="🥉" style="font-size:22px;text-align:center" /></div>
+            <div style="display:grid;grid-template-columns:90px 1fr;gap:10px">
+              <div class="s-field">
+                <label class="s-label">Emoji</label>
+                <input type="text" id="nivel-emoji" class="s-input" placeholder="🥉" style="font-size:22px;text-align:center" maxlength="4" />
+              </div>
               <div class="s-field"><label class="s-label">Nombre del nivel</label><input type="text" id="nivel-nombre" class="s-input" placeholder="Ej: Bronce, VIP, Estrella..." /></div>
             </div>
-            <div class="s-field"><label class="s-label">Visitas mínimas para este nivel</label><input type="number" id="nivel-visitas" class="s-input" placeholder="Ej: 10" min="0" /></div>
-            <div class="s-field"><label class="s-label">Premio al llegar a este nivel (opcional)</label><input type="text" id="nivel-premio" class="s-input" placeholder="Ej: Café mediano gratis" /></div>
+            <div class="s-field"><label class="s-label">Visitas mínimas para este nivel</label><input type="number" id="nivel-visitas" class="s-input" placeholder="Ej: 0, 10, 25, 50..." min="0" /></div>
+            <div class="s-field"><label class="s-label">Premio al llegar a este nivel (opcional)</label><input type="text" id="nivel-premio" class="s-input" placeholder="Ej: Café mediano gratis, 20% descuento..." /></div>
             <button id="btn-guardar-nivel" class="s-btn primary" style="margin-top:8px">Guardar nivel</button>
             <div id="msg-nivel" style="margin-top:10px"></div>
           </div>
-          <div id="lista-niveles">${filasNiveles||`<p style="color:#aaa;font-size:13px;text-align:center;padding:8px 0">No hay niveles configurados aún</p>`}</div>
+          <div id="lista-niveles">${filasNiveles || `<p style="color:#aaa;font-size:13px;text-align:center;padding:16px 0">No hay niveles configurados. Agrega el primero con "+ Nuevo nivel"</p>`}</div>
         </div>
 
         <!-- Exportar CSV -->
@@ -1249,7 +1222,7 @@ export async function paginaDueno() {
         <!-- Landing pública -->
         <div class="s-card">
           <div class="s-section-label">Tu página pública</div>
-          <p style="font-size:13px;color:${DS.gray500};margin-bottom:12px">Comparte este link en Instagram o WhatsApp para que tus clientes vean los premios y niveles.</p>
+          <p style="font-size:13px;color:${DS.gray500};margin-bottom:12px">Comparte en Instagram o WhatsApp para que tus clientes vean los niveles y premios.</p>
           <div style="background:${DS.gray50};border-radius:10px;padding:12px 14px;font-size:12px;color:${DS.gray700};word-break:break-all;margin-bottom:12px;border:1px solid ${DS.gray100}">${landingUrl}</div>
           <div style="display:flex;gap:8px">
             <button id="btn-copiar-landing" style="flex:1;padding:10px;background:${DS.gray100};color:${DS.gray700};border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">📋 Copiar link</button>
@@ -1258,92 +1231,135 @@ export async function paginaDueno() {
           <div id="msg-landing" style="margin-top:8px"></div>
         </div>
 
-        <!-- Canjes -->
-        <div class="s-card"><div class="s-section-label">Últimos premios entregados</div>${filasCanjes}</div>
-
         <!-- Top clientes -->
-        <div class="s-card"><div class="s-section-label">Clientes más frecuentes</div>${filasClientes||`<p style="color:#aaa;font-size:13px;text-align:center;padding:8px 0">Aún no hay clientes</p>`}</div>
+        <div class="s-card">
+          <div class="s-section-label">Clientes más frecuentes</div>
+          ${filasClientes || `<p style="color:#aaa;font-size:13px;text-align:center;padding:8px 0">Aún no hay clientes</p>`}
+        </div>
       </div>
-      ${navBar('panel')}
+      ${navBarDueno('panel')}
     `
-  } catch(e){return`<div class="sello-topbar"><div class="sello-topbar-brand">Sello</div></div><div class="s-card">${errMsg('cargar tu panel')}</div>`}
+  } catch (e) { return `<div class="sello-topbar">${topbarBrand()}</div><div class="s-card">${errMsg('cargar tu panel')}</div>` }
 }
 
 export async function initDueno(negocioId) {
-  inyectarEstilos();initNav()
+  inyectarEstilos(); initNavDueno()
 
   // Gráficas
-  try{const{getNegocioActual}=await import('./auth.js');const negocio=getNegocioActual();const{data:visitas}=await supabase.from('visitas').select('fecha').eq('negocio_id',negocio.id);const{data:clientes}=await supabase.from('clientes').select('total_visitas').eq('negocio_id',negocio.id);await renderizarGraficas(visitas,clientes)}catch(e){}
+  try {
+    const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
+    const { data: visitas } = await supabase.from('visitas').select('fecha').eq('negocio_id', negocio.id)
+    const { data: clientes } = await supabase.from('clientes').select('total_visitas').eq('negocio_id', negocio.id)
+    await renderizarGraficas(visitas, clientes)
+  } catch (e) {}
 
   // Personalización
-  document.getElementById('btn-guardar-personalizacion')?.addEventListener('click',async()=>{
-    const emoji=document.getElementById('input-emoji').value.trim()
-    const color=document.getElementById('input-color').value
-    const descripcion=document.getElementById('input-descripcion').value.trim()
-    const msg=document.getElementById('msg-personalizacion');const btn=document.getElementById('btn-guardar-personalizacion')
-    btn.disabled=true;btn.textContent='Guardando...'
-    try{const{error}=await supabase.from('negocios').update({emoji_negocio:emoji,color_principal:color,descripcion}).eq('id',negocioId);if(error)throw error;aplicarColorNegocio(color);msg.innerHTML=`<div class="s-success">✓ Personalización guardada</div>`;setTimeout(()=>{msg.innerHTML=''},3000)}
-    catch(e){msg.innerHTML=errMsg('guardar')}
-    finally{btn.disabled=false;btn.textContent='Guardar personalización'}
+  document.getElementById('btn-guardar-personalizacion')?.addEventListener('click', async () => {
+    const logo = document.getElementById('input-logo').value.trim()
+    const emoji = document.getElementById('input-emoji').value.trim()
+    const color = document.getElementById('input-color').value
+    const descripcion = document.getElementById('input-descripcion').value.trim()
+    const msg = document.getElementById('msg-personalizacion'); const btn = document.getElementById('btn-guardar-personalizacion')
+    btn.disabled = true; btn.textContent = 'Guardando...'
+    try {
+      const { error } = await supabase.from('negocios').update({ logo_url: logo, emoji_negocio: emoji, color_principal: color, descripcion }).eq('id', negocioId)
+      if (error) throw error
+      aplicarColorNegocio(color)
+      msg.innerHTML = `<div class="s-success">✓ Personalización guardada</div>`
+      setTimeout(() => { msg.innerHTML = ''; navigate('dueno') }, 1500)
+    } catch (e) { msg.innerHTML = errMsg('guardar') }
+    finally { btn.disabled = false; btn.textContent = 'Guardar personalización' }
   })
-
-  // Premios
-  document.getElementById('btn-nuevo-premio')?.addEventListener('click',()=>{const f=document.getElementById('form-premio');const open=f.style.display!=='none';if(!open)document.getElementById('nombre-premio').value='';f.style.display=open?'none':'block'})
-  document.getElementById('btn-guardar-premio')?.addEventListener('click',async()=>{
-    const nombre=document.getElementById('nombre-premio').value.trim();const visitas=parseInt(document.getElementById('visitas-premio').value);const msg=document.getElementById('msg-premio');const btn=document.getElementById('btn-guardar-premio')
-    if(!nombre||!visitas||visitas<1){msg.innerHTML=`<p class="s-error">Llena todos los campos correctamente</p>`;return}
-    btn.disabled=true;btn.textContent='Guardando...'
-    try{const{error}=await supabase.from('premios').insert({negocio_id:negocioId,nombre,puntos_requeridos:visitas,activo:true});if(error)throw error;msg.innerHTML=`<div class="s-success">✓ Premio creado</div>`;setTimeout(()=>navigate('dueno'),1000)}
-    catch(e){msg.innerHTML=errMsg('guardar el premio');btn.disabled=false;btn.textContent='Guardar premio'}
-  })
-  document.querySelectorAll('.btn-toggle-premio').forEach(btn=>{btn.addEventListener('click',async()=>{const act=btn.dataset.activo==='true';try{const{error}=await supabase.from('premios').update({activo:!act}).eq('id',btn.dataset.id);if(error)throw error;navigate('dueno')}catch(e){alert('Sin conexión.')}})})
-  document.querySelectorAll('.btn-eliminar-premio').forEach(btn=>{btn.addEventListener('click',async()=>{if(!confirm(`¿Eliminar el premio "${btn.dataset.nombre}"?`))return;btn.disabled=true;btn.textContent='...';try{const{error}=await supabase.from('premios').delete().eq('id',btn.dataset.id);if(error)throw error;navigate('dueno')}catch(e){alert('Sin conexión.');btn.disabled=false;btn.textContent='🗑'}})})
 
   // Niveles
-  document.getElementById('btn-nuevo-nivel')?.addEventListener('click',()=>{
-    const f=document.getElementById('form-nivel');const open=f.style.display!=='none'
-    if(!open){document.getElementById('nivel-editando-id').value='';document.getElementById('nivel-emoji').value='';document.getElementById('nivel-nombre').value='';document.getElementById('nivel-visitas').value='';document.getElementById('nivel-premio').value='';document.getElementById('btn-guardar-nivel').textContent='Guardar nivel'}
-    f.style.display=open?'none':'block'
+  document.getElementById('btn-nuevo-nivel')?.addEventListener('click', () => {
+    const f = document.getElementById('form-nivel'); const open = f.style.display !== 'none'
+    if (!open) {
+      document.getElementById('nivel-editando-id').value = ''
+      document.getElementById('nivel-emoji').value = ''
+      document.getElementById('nivel-nombre').value = ''
+      document.getElementById('nivel-visitas').value = ''
+      document.getElementById('nivel-premio').value = ''
+      document.getElementById('btn-guardar-nivel').textContent = 'Guardar nivel'
+    }
+    f.style.display = open ? 'none' : 'block'
   })
-  document.getElementById('btn-guardar-nivel')?.addEventListener('click',async()=>{
-    const id=document.getElementById('nivel-editando-id').value
-    const emoji=document.getElementById('nivel-emoji').value.trim()
-    const nombre=document.getElementById('nivel-nombre').value.trim()
-    const visitas=parseInt(document.getElementById('nivel-visitas').value)
-    const premio=document.getElementById('nivel-premio').value.trim()
-    const msg=document.getElementById('msg-nivel');const btn=document.getElementById('btn-guardar-nivel')
-    if(!emoji||!nombre||isNaN(visitas)){msg.innerHTML=`<p class="s-error">Llena todos los campos obligatorios</p>`;return}
-    btn.disabled=true;btn.textContent='Guardando...'
-    try{
-      if(id){const{error}=await supabase.from('niveles').update({emoji,nombre,visitas_minimas:visitas,premio_bienvenida:premio}).eq('id',id);if(error)throw error}
-      else{const{data:nivelesExistentes}=await supabase.from('niveles').select('orden').eq('negocio_id',negocioId).order('orden',{ascending:false}).limit(1);const orden=(nivelesExistentes?.[0]?.orden||0)+1;const{error}=await supabase.from('niveles').insert({negocio_id:negocioId,emoji,nombre,visitas_minimas:visitas,premio_bienvenida:premio,orden});if(error)throw error}
-      msg.innerHTML=`<div class="s-success">✓ Nivel guardado</div>`;setTimeout(()=>navigate('dueno'),1000)
-    }catch(e){msg.innerHTML=errMsg('guardar el nivel');btn.disabled=false;btn.textContent='Guardar nivel'}
+
+  document.getElementById('btn-guardar-nivel')?.addEventListener('click', async () => {
+    const id = document.getElementById('nivel-editando-id').value
+    const emojiVal = document.getElementById('nivel-emoji').value.trim()
+    const nombre = document.getElementById('nivel-nombre').value.trim()
+    const visitasVal = document.getElementById('nivel-visitas').value
+    const visitas = parseInt(visitasVal)
+    const premio = document.getElementById('nivel-premio').value.trim()
+    const msg = document.getElementById('msg-nivel'); const btn = document.getElementById('btn-guardar-nivel')
+
+    // FIX: validación más flexible para el emoji
+    if (!emojiVal || !nombre || visitasVal === '' || isNaN(visitas) || visitas < 0) {
+      msg.innerHTML = `<p class="s-error">Llena emoji, nombre y visitas mínimas</p>`; return
+    }
+    btn.disabled = true; btn.textContent = 'Guardando...'
+    try {
+      if (id) {
+        const { error } = await supabase.from('niveles').update({ emoji: emojiVal, nombre, visitas_minimas: visitas, premio_bienvenida: premio }).eq('id', id)
+        if (error) throw error
+      } else {
+        const { data: existentes } = await supabase.from('niveles').select('orden').eq('negocio_id', negocioId).order('orden', { ascending: false }).limit(1)
+        const orden = (existentes?.[0]?.orden || 0) + 1
+        const { error } = await supabase.from('niveles').insert({ negocio_id: negocioId, emoji: emojiVal, nombre, visitas_minimas: visitas, premio_bienvenida: premio, orden })
+        if (error) throw error
+      }
+      msg.innerHTML = `<div class="s-success">✓ Nivel guardado</div>`
+      setTimeout(() => navigate('dueno'), 1000)
+    } catch (e) { msg.innerHTML = errMsg('guardar el nivel'); btn.disabled = false; btn.textContent = 'Guardar nivel' }
   })
-  document.querySelectorAll('.btn-editar-nivel').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      const f=document.getElementById('form-nivel');f.style.display='block'
-      document.getElementById('nivel-editando-id').value=btn.dataset.id
-      document.getElementById('nivel-emoji').value=btn.dataset.emoji
-      document.getElementById('nivel-nombre').value=btn.dataset.nombre
-      document.getElementById('nivel-visitas').value=btn.dataset.visitas
-      document.getElementById('nivel-premio').value=btn.dataset.premio
-      document.getElementById('btn-guardar-nivel').textContent='Actualizar nivel'
-      f.scrollIntoView({behavior:'smooth'})
+
+  document.querySelectorAll('.btn-editar-nivel').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const f = document.getElementById('form-nivel'); f.style.display = 'block'
+      document.getElementById('nivel-editando-id').value = btn.dataset.id
+      document.getElementById('nivel-emoji').value = btn.dataset.emoji
+      document.getElementById('nivel-nombre').value = btn.dataset.nombre
+      document.getElementById('nivel-visitas').value = btn.dataset.visitas
+      document.getElementById('nivel-premio').value = btn.dataset.premio
+      document.getElementById('btn-guardar-nivel').textContent = 'Actualizar nivel'
+      f.scrollIntoView({ behavior: 'smooth' })
     })
   })
-  document.querySelectorAll('.btn-eliminar-nivel').forEach(btn=>{btn.addEventListener('click',async()=>{if(!confirm(`¿Eliminar el nivel "${btn.dataset.nombre}"?`))return;btn.disabled=true;btn.textContent='...';try{const{error}=await supabase.from('niveles').delete().eq('id',btn.dataset.id);if(error)throw error;navigate('dueno')}catch(e){alert('Sin conexión.');btn.disabled=false;btn.textContent='🗑'}})})
 
-  // Exportar CSV
-  document.getElementById('btn-exportar-csv')?.addEventListener('click',async()=>{
-    const btn=document.getElementById('btn-exportar-csv');const msg=document.getElementById('msg-exportar')
-    btn.textContent='Preparando...';btn.disabled=true
-    try{const{getNegocioActual}=await import('./auth.js');const negocio=getNegocioActual();const{data:clientes}=await supabase.from('clientes').select('*').eq('negocio_id',negocio.id);const{data:nd}=await supabase.from('negocios').select('nombre').eq('id',negocio.id).single();const{data:niveles}=await supabase.from('niveles').select('*').eq('negocio_id',negocio.id);exportarCSV(clientes,niveles,nd?.nombre||'negocio');msg.innerHTML=`<div class="s-success">✓ Archivo descargado</div>`;setTimeout(()=>{msg.innerHTML=''},3000)}
-    catch(e){msg.innerHTML=errMsg('descargar')}
-    finally{btn.textContent='⬇ Descargar clientes (.csv)';btn.disabled=false}
+  document.querySelectorAll('.btn-eliminar-nivel').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm(`¿Eliminar el nivel "${btn.dataset.nombre}"?`)) return
+      btn.disabled = true; btn.textContent = '...'
+      try { const { error } = await supabase.from('niveles').delete().eq('id', btn.dataset.id); if (error) throw error; navigate('dueno') }
+      catch (e) { alert('Sin conexión.'); btn.disabled = false; btn.textContent = '🗑' }
+    })
+  })
+
+  // CSV
+  document.getElementById('btn-exportar-csv')?.addEventListener('click', async () => {
+    const btn = document.getElementById('btn-exportar-csv'); const msg = document.getElementById('msg-exportar')
+    btn.textContent = 'Preparando...'; btn.disabled = true
+    try {
+      const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
+      const { data: clientes } = await supabase.from('clientes').select('*').eq('negocio_id', negocio.id)
+      const { data: nd } = await supabase.from('negocios').select('nombre').eq('id', negocio.id).single()
+      const { data: niveles } = await supabase.from('niveles').select('*').eq('negocio_id', negocio.id)
+      exportarCSV(clientes, niveles, nd?.nombre || 'negocio')
+      msg.innerHTML = `<div class="s-success">✓ Archivo descargado</div>`
+      setTimeout(() => { msg.innerHTML = '' }, 3000)
+    } catch (e) { msg.innerHTML = errMsg('descargar') }
+    finally { btn.textContent = '⬇ Descargar clientes (.csv)'; btn.disabled = false }
   })
 
   // Landing
-  document.getElementById('btn-copiar-landing')?.addEventListener('click',()=>{const url=`${window.location.origin}/#/landing/${negocioId}`;navigator.clipboard.writeText(url).then(()=>{const msg=document.getElementById('msg-landing');msg.innerHTML=`<div class="s-success">✓ Link copiado</div>`;setTimeout(()=>{msg.innerHTML=''},2000)})})
-  document.getElementById('btn-ver-landing')?.addEventListener('click',()=>navigate('landing',negocioId))
+  document.getElementById('btn-copiar-landing')?.addEventListener('click', () => {
+    const url = `${window.location.origin}/#/landing/${negocioId}`
+    navigator.clipboard.writeText(url).then(() => {
+      const msg = document.getElementById('msg-landing')
+      msg.innerHTML = `<div class="s-success">✓ Link copiado</div>`
+      setTimeout(() => { msg.innerHTML = '' }, 2000)
+    })
+  })
+  document.getElementById('btn-ver-landing')?.addEventListener('click', () => navigate('landing', negocioId))
 }
