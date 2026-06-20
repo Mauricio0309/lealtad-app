@@ -395,28 +395,87 @@ async function compartirHistoria({ tipo, negocioNombre, negocioEmoji, nivelNombr
     const canvas = document.createElement('canvas')
     canvas.width = 1080; canvas.height = 1920
     const ctx = canvas.getContext('2d')
+
+    // Fondo degradado verde oscuro → verde Sello
     const grad = ctx.createLinearGradient(0, 0, 0, 1920)
-    grad.addColorStop(0, '#052e1c'); grad.addColorStop(0.6, colorNegocio || DS.green800); grad.addColorStop(1, '#0d3d2e')
+    grad.addColorStop(0, '#052e1c')
+    grad.addColorStop(0.5, '#0a5c47')
+    grad.addColorStop(1, '#052e1c')
     ctx.fillStyle = grad; ctx.fillRect(0, 0, 1080, 1920)
-    ctx.globalAlpha = 0.08; ctx.fillStyle = '#ffffff'
-    ctx.beginPath(); ctx.arc(1080, 300, 400, 0, Math.PI*2); ctx.fill()
-    ctx.beginPath(); ctx.arc(0, 1700, 350, 0, Math.PI*2); ctx.fill()
+
+    // Círculo dorado grande de fondo
+    ctx.globalAlpha = 0.12
+    ctx.fillStyle = '#f5a623'
+    ctx.beginPath(); ctx.arc(540, 960, 500, 0, Math.PI*2); ctx.fill()
     ctx.globalAlpha = 1
-    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = 'bold 32px Arial'; ctx.textAlign = 'center'
-    ctx.fillText('● SELLO', 540, 140)
-    ctx.font = '220px Arial'; ctx.fillText(tipo === 'premio' ? '🏆' : (nivelEmoji || '⭐'), 540, 700)
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 80px Arial'
-    ctx.fillText(tipo === 'premio' ? '¡Gané un premio!' : `¡Llegué a ${nivelNombre}!`, 540, 850)
-    ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = '52px Arial'
-    ctx.fillText(tipo === 'premio' ? (premioNombre||'Premio especial') : `${totalVisitas} visitas acumuladas`, 540, 960)
-    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '44px Arial'
-    ctx.fillText(`en ${negocioEmoji||'☕'} ${negocioNombre}`, 540, 1060)
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 2
-    ctx.beginPath(); ctx.moveTo(200, 1140); ctx.lineTo(880, 1140); ctx.stroke()
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '38px Arial'
-    ctx.fillText('Programa de lealtad digital', 540, 1210)
-    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = 'bold 42px Arial'
-    ctx.fillText('sello.app', 540, 1270)
+
+    // Franja dorada superior
+    ctx.fillStyle = '#f5a623'
+    ctx.fillRect(0, 0, 1080, 12)
+
+    // Franja dorada inferior
+    ctx.fillRect(0, 1908, 1080, 12)
+
+    // Logo Sello arriba — círculo verde + palomita
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)'
+    ctx.lineWidth = 6
+    ctx.beginPath(); ctx.arc(540, 180, 55, 0, Math.PI*2); ctx.stroke()
+    ctx.beginPath(); ctx.arc(540, 180, 38, 0, Math.PI*2); ctx.stroke()
+    ctx.lineWidth = 7; ctx.lineCap = 'round'
+    const p = ctx.beginPath()
+    ctx.moveTo(510, 180); ctx.lineTo(530, 200); ctx.lineTo(570, 158); ctx.stroke()
+
+    // "Sello" debajo del logo
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 52px Arial'; ctx.textAlign = 'center'
+    ctx.fillText('Sell', 540 - 18, 280)
+    ctx.fillStyle = '#f5a623'
+    ctx.fillText('o', 540 + 52, 280)
+
+    // Emoji nivel grande
+    ctx.font = '280px Arial'; ctx.textAlign = 'center'
+    ctx.fillText(nivelEmoji || '⭐', 540, 780)
+
+    // Título principal
+    ctx.fillStyle = '#ffffff'
+    ctx.font = 'bold 88px Arial'
+    const titulo = tipo === 'premio' ? '¡Gané un premio!' : `¡Soy ${nivelNombre}!`
+    ctx.fillText(titulo, 540, 920)
+
+    // Premio en caja dorada
+    if (premioNombre) {
+      ctx.fillStyle = '#f5a623'
+      const rx = 140, ry = 960, rw = 800, rh = 110, r = 24
+      ctx.beginPath()
+      ctx.moveTo(rx+r, ry); ctx.lineTo(rx+rw-r, ry)
+      ctx.quadraticCurveTo(rx+rw, ry, rx+rw, ry+r)
+      ctx.lineTo(rx+rw, ry+rh-r)
+      ctx.quadraticCurveTo(rx+rw, ry+rh, rx+rw-r, ry+rh)
+      ctx.lineTo(rx+r, ry+rh)
+      ctx.quadraticCurveTo(rx, ry+rh, rx, ry+rh-r)
+      ctx.lineTo(rx, ry+r)
+      ctx.quadraticCurveTo(rx, ry, rx+r, ry)
+      ctx.closePath(); ctx.fill()
+      ctx.fillStyle = '#052e1c'; ctx.font = 'bold 52px Arial'
+      ctx.fillText(premioNombre, 540, 1030)
+    }
+
+    // Negocio
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '48px Arial'
+    ctx.fillText(`${negocioEmoji || '☕'} ${negocioNombre}`, 540, premioNombre ? 1140 : 1020)
+
+    // Visitas
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '40px Arial'
+    ctx.fillText(`${totalVisitas} visitas acumuladas`, 540, premioNombre ? 1220 : 1100)
+
+    // Línea separadora
+    ctx.strokeStyle = 'rgba(245,166,35,0.3)'; ctx.lineWidth = 2
+    ctx.beginPath(); ctx.moveTo(200, 1350); ctx.lineTo(880, 1350); ctx.stroke()
+
+    // Footer
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.font = '36px Arial'
+    ctx.fillText('Programa de lealtad digital', 540, 1420)
+    ctx.fillStyle = '#f5a623'; ctx.font = 'bold 44px Arial'
+    ctx.fillText('Sello', 540, 1490)
     canvas.toBlob(async (blob) => {
       const file = new File([blob], 'sello-historia.png', { type: 'image/png' })
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -774,9 +833,13 @@ export function initRegistro() {
     btn.disabled = true; btn.textContent = 'Guardando...'
     try {
       const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
-      const { error } = await supabase.from('clientes').insert({ nombre, telefono, negocio_id: negocio?.id, puntos_actuales: 0, total_visitas: 0 })
+      const { data: nuevoCliente, error } = await supabase.from('clientes').insert({ nombre, telefono, negocio_id: negocio?.id, puntos_actuales: 1, total_visitas: 1 }).select().single()
       if (error) throw error
-      msg.innerHTML = `<div class="s-success">✓ Cliente registrado correctamente</div>`
+      // Registrar primera visita automáticamente
+      if (nuevoCliente) {
+        await supabase.from('visitas').insert({ cliente_id: nuevoCliente.id, negocio_id: negocio?.id, puntos_sumados: 1 })
+      }
+      msg.innerHTML = `<div class="s-success">✓ Cliente registrado — primera visita sumada automáticamente</div>`
       setTimeout(() => navigate('cajero'), 1500)
     } catch (e) { msg.innerHTML = errMsg('guardar el cliente') }
     finally { btn.disabled = false; btn.textContent = 'Guardar cliente' }
@@ -968,17 +1031,25 @@ export async function paginaCliente(telefono) {
             <div class="sc-punto-box"><div class="sc-punto-num">${data.total_visitas}</div><div class="sc-punto-lbl">Visitas totales</div></div>
             <div class="sc-punto-box"><div class="sc-punto-num">${sigNivel ? sigNivel.visitas_minimas - data.total_visitas : '💎'}</div><div class="sc-punto-lbl">${sigNivel ? 'Para '+sigNivel.emoji+' '+sigNivel.nombre : 'Nivel máximo'}</div></div>
           </div>
-          <div class="sc-mensaje ${sigNivel ? 'normal' : 'premio'}" style="margin-top:8px">
-            ${sigNivel ? `Te falta${sigNivel.visitas_minimas - data.total_visitas === 1 ? '' : 'n'} <strong>${sigNivel.visitas_minimas - data.total_visitas}</strong> visita${sigNivel.visitas_minimas - data.total_visitas === 1 ? '' : 's'} para ${sigNivel.emoji} ${sigNivel.nombre}${sigNivel.premio_bienvenida ? ' y ganar: '+sigNivel.premio_bienvenida : ''}` : `🏆 ¡Llegaste al nivel máximo! Eres ${nivelActual.emoji} ${nivelActual.nombre}`}
-          </div>
-          ${nivelActual.nombre !== 'Bronce' ? `<button class="s-btn share" id="btn-compartir-nivel" style="margin-top:12px">${nivelActual.emoji} Compartir mi nivel ${nivelActual.nombre}</button>` : ''}
+          ${sigNivel && sigNivel.premio_bienvenida ? `
+          <div style="background:linear-gradient(135deg,${DS.gold100},#fffdf5);border:1.5px solid #fde68a;border-radius:14px;padding:14px 16px;margin-top:12px;text-align:center">
+            <div style="font-size:11px;color:#92400e;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">🎁 Tu próximo premio</div>
+            <div style="font-family:'Sora',sans-serif;font-size:18px;font-weight:800;color:#78350f">${sigNivel.premio_bienvenida}</div>
+            <div style="font-size:12px;color:#92400e;margin-top:4px">Al llegar a ${sigNivel.emoji} ${sigNivel.nombre} (${sigNivel.visitas_minimas - data.total_visitas} visita${sigNivel.visitas_minimas - data.total_visitas === 1 ? '' : 's'} más)</div>
+          </div>` : sigNivel ? `
+          <div class="sc-mensaje normal" style="margin-top:8px">
+            Te falta${sigNivel.visitas_minimas - data.total_visitas === 1 ? '' : 'n'} <strong>${sigNivel.visitas_minimas - data.total_visitas}</strong> visita${sigNivel.visitas_minimas - data.total_visitas === 1 ? '' : 's'} para ${sigNivel.emoji} ${sigNivel.nombre}
+          </div>` : `
+          <div class="sc-mensaje premio" style="margin-top:8px">🏆 ¡Llegaste al nivel máximo! Eres ${nivelActual.emoji} ${nivelActual.nombre}</div>`}
+          ${nivelActual.visitas_minimas > 0 ? `<button class="s-btn share" id="btn-compartir-nivel" style="margin-top:12px">${nivelActual.emoji} Compartir mi nivel ${nivelActual.nombre}</button>` : ''}
         </div>
-        <div class="s-card">
-          <div class="s-section-label">Tu código QR</div>
-          <div style="text-align:center">
-            <div id="qrcode" style="display:inline-block;padding:14px;background:white;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,0.08)"></div>
-            <p style="font-size:12px;color:${DS.gray500};margin-top:10px">Muéstralo al cajero para sumar visitas</p>
-          </div>
+        <div class="s-card" style="text-align:center">
+          <div class="s-section-label">Muestra esta pantalla al cajero</div>
+          <div style="font-family:'Sora',sans-serif;font-size:32px;font-weight:800;color:${DS.gray900};margin:8px 0">${data.nombre?.split(' ')[0] || 'Cliente'}</div>
+          <div class="nivel-badge" style="background:${nivelColor}20;color:${nivelColor};font-size:16px;margin:0 auto 8px">${nivelActual.emoji} ${nivelActual.nombre}</div>
+          <div style="font-size:13px;color:${DS.gray500};margin-bottom:16px">${data.total_visitas} visitas acumuladas</div>
+          <div id="qrcode" style="display:inline-block;padding:12px;background:white;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,0.08);margin-bottom:8px"></div>
+          <p style="font-size:11px;color:${DS.gray300}">O di tu número de teléfono al cajero</p>
         </div>
         ${historial && historial.length > 0 ? `<div class="s-card"><div class="s-section-label">Historial de visitas</div>${filasHistorial}</div>` : ''}
       </div>
@@ -1017,7 +1088,7 @@ export async function paginaQRNegocio(negocioId) {
     return `
       <div class="sq-root">
         <div class="sq-logo">
-          ${negocio.logo_url ? `<img src="${negocio.logo_url}" style="width:80px;height:80px;border-radius:20px;object-fit:cover;border:3px solid rgba(255,255,255,0.3)" onerror="this.outerHTML='${logoSVG(52, DS.white)}'" />` : logoSVG(52, DS.white)}
+          ${negocio.logo_url ? `<img src="${negocio.logo_url}" style="width:80px;height:80px;border-radius:20px;object-fit:cover;border:3px solid rgba(255,255,255,0.3)" onerror="this.style.display='none'" id="logo-negocio-qr" />` : logoSVG(52, DS.white)}
         </div>
         <div class="sq-negocio">Programa de lealtad</div>
         <h1 class="sq-nombre">${negocio.emoji_negocio || '☕'} ${negocio.nombre}</h1>
@@ -1230,7 +1301,7 @@ export async function paginaDueno() {
 
     return `
       <div style="padding-bottom:72px">
-        <div class="sello-topbar">${topbarBrand()}<span style="font-size:13px;color:rgba(255,255,255,0.6)">${nd?.nombre || negocio.nombre}</span></div>
+        <div class="sello-topbar">${topbarBrand()}<span style="font-size:13px;color:rgba(255,255,255,0.6)">${(nd?.nombre || negocio.nombre).substring(0,20)}</span></div>
 
         <!-- Resumen -->
         <div class="s-card" style="margin-top:16px">
@@ -1241,6 +1312,17 @@ export async function paginaDueno() {
             <div class="s-stat"><div class="s-stat-num">${(visitas||[]).length}</div><div class="s-stat-lbl">Visitas</div></div>
           </div>
         </div>
+
+        <!-- Distribución de niveles -->
+        ${(() => {
+          const nivelesOrdenados = [...(niveles||[])].sort((a,b) => a.visitas_minimas - b.visitas_minimas)
+          if (nivelesOrdenados.length === 0) return ''
+          const dist = nivelesOrdenados.map(n => {
+            const count = (clientes||[]).filter(c => getNivelActual(c.total_visitas, nivelesOrdenados).nombre === n.nombre).length
+            return `<div class="s-stat"><div class="s-stat-num" style="font-size:20px">${n.emoji} ${count}</div><div class="s-stat-lbl">${n.nombre}</div></div>`
+          }).join('')
+          return `<div class="s-card"><div class="s-section-label">Clientes por nivel</div><div class="s-stats" style="grid-template-columns:repeat(${Math.min(nivelesOrdenados.length,4)},1fr)">${dist}</div></div>`
+        })()}
 
         <!-- Gráficas -->
         <div class="s-card"><div class="s-section-label">Visitas — últimos 7 días</div><div class="s-chart-wrap"><canvas id="chart-barras"></canvas></div></div>
@@ -1253,7 +1335,7 @@ export async function paginaDueno() {
           <div class="s-field">
             <label class="s-label">Logo del negocio (URL de imagen)</label>
             <input type="url" id="input-logo" class="s-input" value="${nd?.logo_url||''}" placeholder="https://... (link de tu logo)" />
-            <p style="font-size:11px;color:${DS.gray500};margin-top:4px">Sube tu logo a Google Drive, Instagram o Imgur y pega el link aquí</p>
+            <p style="font-size:11px;color:${DS.gray500};margin-top:4px">Sube tu logo en <strong>imgur.com</strong> (gratis, sin cuenta) → clic derecho en la imagen → "Copiar dirección de imagen" → pégala aquí</p>
           </div>
           ${nd?.logo_url ? `<img src="${nd.logo_url}" style="width:64px;height:64px;border-radius:12px;object-fit:cover;margin-bottom:14px;border:2px solid ${DS.gray100}" onerror="this.style.display='none'" />` : ''}
           <div class="s-field"><label class="s-label">Emoji del negocio</label><input type="text" id="input-emoji" class="s-input" value="${nd?.emoji_negocio||'☕'}" placeholder="☕" style="font-size:24px;text-align:center" /></div>
@@ -1348,9 +1430,10 @@ export async function initDueno(negocioId) {
       if (error) throw error
       aplicarColorNegocio(color)
       msg.innerHTML = `<div class="s-success">✓ Personalización guardada</div>`
-      setTimeout(() => { msg.innerHTML = ''; navigate('dueno') }, 1500)
+      btn.textContent = 'Actualizar personalización'
+      setTimeout(() => { msg.innerHTML = '' }, 2500)
     } catch (e) { msg.innerHTML = errMsg('guardar') }
-    finally { btn.disabled = false; btn.textContent = 'Guardar personalización' }
+    finally { btn.disabled = false }
   })
 
   // Niveles
@@ -1376,9 +1459,15 @@ export async function initDueno(negocioId) {
     const premio = document.getElementById('nivel-premio').value.trim()
     const msg = document.getElementById('msg-nivel'); const btn = document.getElementById('btn-guardar-nivel')
 
-    // FIX: validación más flexible para el emoji
+    // Validación campos obligatorios
     if (!emojiVal || !nombre || visitasVal === '' || isNaN(visitas) || visitas < 0) {
       msg.innerHTML = `<p class="s-error">Llena emoji, nombre y visitas mínimas</p>`; return
+    }
+    // Validación: no duplicar visitas mínimas
+    const { data: nivelesExistentes } = await supabase.from('niveles').select('id,visitas_minimas,nombre').eq('negocio_id', negocioId)
+    const duplicado = (nivelesExistentes||[]).find(n => n.visitas_minimas === visitas && n.id !== id)
+    if (duplicado) {
+      msg.innerHTML = `<p class="s-error">Ya existe el nivel "${duplicado.nombre}" con ${visitas} visitas. Usa un número diferente.</p>`; return
     }
     btn.disabled = true; btn.textContent = 'Guardando...'
     try {
@@ -1386,8 +1475,8 @@ export async function initDueno(negocioId) {
         const { error } = await supabase.from('niveles').update({ emoji: emojiVal, nombre, visitas_minimas: visitas, premio_bienvenida: premio }).eq('id', id)
         if (error) throw error
       } else {
-        const { data: existentes } = await supabase.from('niveles').select('orden').eq('negocio_id', negocioId).order('orden', { ascending: false }).limit(1)
-        const orden = (existentes?.[0]?.orden || 0) + 1
+        const { data: ordenData } = await supabase.from('niveles').select('orden').eq('negocio_id', negocioId).order('orden', { ascending: false }).limit(1)
+        const orden = (ordenData?.[0]?.orden || 0) + 1
         const { error } = await supabase.from('niveles').insert({ negocio_id: negocioId, emoji: emojiVal, nombre, visitas_minimas: visitas, premio_bienvenida: premio, orden })
         if (error) throw error
       }
