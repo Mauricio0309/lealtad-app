@@ -443,6 +443,8 @@ export function paginaLogin() {
         <div class="s-field"><label class="s-label">Contraseña</label>${pwField('password')}</div>
         <button class="s-btn primary" id="btn-login" style="margin-top:8px">Entrar</button>
         <div id="msg" style="margin-top:10px"></div>
+        <button id="btn-olvide" style="background:none;border:none;color:${DS.gray500};font-size:13px;cursor:pointer;margin-top:14px;width:100%;text-align:center;font-family:'Inter',sans-serif;">¿Olvidaste tu contraseña?</button>
+        <div id="msg-reset" style="margin-top:8px"></div>
       </div>
     </div>
   `
@@ -468,6 +470,28 @@ export function initLogin() {
   }
   document.getElementById('btn-login').addEventListener('click', doLogin)
   document.getElementById('password')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin() })
+
+  // Recuperar contraseña
+  document.getElementById('btn-olvide')?.addEventListener('click', async () => {
+    const email = document.getElementById('email').value.trim()
+    const msgR = document.getElementById('msg-reset')
+    if (!email) { msgR.innerHTML = `<p class="s-error">Escribe tu correo arriba primero</p>`; return }
+    msgR.innerHTML = `<p style="color:${DS.gray500};font-size:13px;text-align:center">Buscando...</p>`
+    try {
+      const { data } = await supabase.from('negocios').select('id,nombre').eq('email', email).single()
+      if (!data) { msgR.innerHTML = `<p class="s-error">No encontramos una cuenta con ese correo</p>`; return }
+      const token = Math.random().toString(36).substring(2, 10).toUpperCase()
+      const expira = new Date(Date.now() + 60 * 60 * 1000).toISOString()
+      await supabase.from('negocios').update({ reset_token: token, reset_expira: expira }).eq('id', data.id)
+      msgR.innerHTML = `
+        <div class="s-success" style="flex-direction:column;align-items:flex-start;gap:6px">
+          <div style="font-weight:700">Código de recuperación:</div>
+          <div style="font-family:'Sora',sans-serif;font-size:28px;font-weight:800;color:${DS.green800};letter-spacing:0.1em">${token}</div>
+          <div style="font-size:12px;color:${DS.gray500}">Compártelo con el administrador de Sello para restablecer tu contraseña. Válido por 1 hora.</div>
+        </div>
+      `
+    } catch (e) { msgR.innerHTML = `<p class="s-error">Sin conexión. Intenta de nuevo.</p>` }
+  })
 }
 
 export function paginaOnboarding(paso = 0) {
@@ -1039,7 +1063,11 @@ export function paginaRegistroCliente(negocioId, telefono) {
         <label style="font-size:13px;color:rgba(255,255,255,0.5);display:block;text-align:left;margin-bottom:8px">Teléfono</label>
         <input type="tel" id="tel-cliente" class="sq-input" value="${telefono}" readonly style="opacity:0.5;margin-bottom:16px" />
         <button class="sq-btn" id="btn-registrar-cliente">Registrarme →</button>
-        <div id="msg-registro" style="margin-top:12px;font-size:13px;color:rgba(255,255,255,0.4);text-align:center"></div>
+        <p style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:12px;text-align:center;line-height:16px">
+          Al registrarte aceptas nuestro
+          <span id="link-privacidad" style="text-decoration:underline;cursor:pointer;color:rgba(255,255,255,0.5)">aviso de privacidad</span>
+        </p>
+        <div id="msg-registro" style="margin-top:8px;font-size:13px;color:rgba(255,255,255,0.4);text-align:center"></div>
       </div>
     </div>
   `
@@ -1047,6 +1075,7 @@ export function paginaRegistroCliente(negocioId, telefono) {
 
 export function initRegistroCliente(negocioId, telefono) {
   inyectarEstilos()
+  document.getElementById('link-privacidad')?.addEventListener('click', () => navigate('privacidad'))
   document.getElementById('btn-registrar-cliente').addEventListener('click', async () => {
     const nombre = document.getElementById('nombre-cliente').value.trim()
     const msg = document.getElementById('msg-registro'); const btn = document.getElementById('btn-registrar-cliente')
@@ -1058,6 +1087,59 @@ export function initRegistroCliente(negocioId, telefono) {
       navigate('cliente', telefono)
     } catch (e) { msg.innerHTML = errMsg('registrarte'); btn.disabled = false; btn.textContent = 'Registrarme →' }
   })
+}
+
+
+// ── AVISO DE PRIVACIDAD ────────────────────────────────────
+export function paginaPrivacidad() {
+  inyectarEstilos()
+  return `
+    <div style="min-height:100vh;background:${DS.gray50};padding-bottom:40px">
+      <div class="sello-topbar">
+        ${topbarBrand()}
+        <button id="btn-privacidad-back" style="background:rgba(255,255,255,0.15);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px">← Volver</button>
+      </div>
+      <div class="s-card" style="margin-top:16px">
+        <div style="font-family:'Sora',sans-serif;font-size:18px;font-weight:800;color:${DS.gray900};margin-bottom:4px">Aviso de Privacidad</div>
+        <div style="font-size:12px;color:${DS.gray500};margin-bottom:20px">Última actualización: ${new Date().toLocaleDateString('es-MX', {year:'numeric',month:'long',day:'numeric'})}</div>
+
+        <div style="font-size:14px;font-weight:600;color:${DS.gray900};margin-bottom:6px">Responsable</div>
+        <p style="font-size:13px;color:${DS.gray500};margin-bottom:16px;line-height:1.6">
+          Sello (en adelante "Sello") es el responsable del uso y protección de tus datos personales, en cumplimiento con la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP) de México.
+        </p>
+
+        <div style="font-size:14px;font-weight:600;color:${DS.gray900};margin-bottom:6px">Datos que recopilamos</div>
+        <p style="font-size:13px;color:${DS.gray500};margin-bottom:16px;line-height:1.6">
+          Recopilamos únicamente: <strong>nombre</strong> y <strong>número de teléfono</strong>. Estos datos son proporcionados voluntariamente por el usuario al registrarse en el programa de lealtad de un negocio afiliado a Sello.
+        </p>
+
+        <div style="font-size:14px;font-weight:600;color:${DS.gray900};margin-bottom:6px">Finalidad</div>
+        <p style="font-size:13px;color:${DS.gray500};margin-bottom:16px;line-height:1.6">
+          Tus datos se utilizan exclusivamente para: identificarte en el programa de lealtad, registrar tus visitas al negocio y mostrarte tu progreso y nivel. No se usan para publicidad de terceros ni se venden a ninguna empresa.
+        </p>
+
+        <div style="font-size:14px;font-weight:600;color:${DS.gray900};margin-bottom:6px">Transferencia de datos</div>
+        <p style="font-size:13px;color:${DS.gray500};margin-bottom:16px;line-height:1.6">
+          Tus datos son accesibles únicamente por el negocio donde te registraste y por Sello como plataforma. No se comparten con terceros salvo obligación legal.
+        </p>
+
+        <div style="font-size:14px;font-weight:600;color:${DS.gray900};margin-bottom:6px">Derechos ARCO</div>
+        <p style="font-size:13px;color:${DS.gray500};margin-bottom:16px;line-height:1.6">
+          Tienes derecho a Acceder, Rectificar, Cancelar u Oponerte al uso de tus datos personales. Para ejercerlos, solicítalo directamente en el negocio donde te registraste o comunícate con el administrador de Sello a través de lealtad-app.vercel.app.
+        </p>
+
+        <div style="font-size:14px;font-weight:600;color:${DS.gray900};margin-bottom:6px">Seguridad</div>
+        <p style="font-size:13px;color:${DS.gray500};margin-bottom:4px;line-height:1.6">
+          Tus datos se almacenan en servidores seguros (Supabase) con cifrado en tránsito. Solo el negocio afiliado y el administrador de Sello tienen acceso.
+        </p>
+      </div>
+    </div>
+  `
+}
+
+export function initPrivacidad() {
+  inyectarEstilos()
+  document.getElementById('btn-privacidad-back')?.addEventListener('click', () => window.history.back())
 }
 
 export async function paginaLanding(negocioId) {

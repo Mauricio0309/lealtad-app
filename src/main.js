@@ -14,6 +14,7 @@ import {
   paginaOnboarding, initOnboarding,
   paginaKiosko, initKiosko,
   paginaLanding, initLanding,
+  paginaPrivacidad, initPrivacidad,
 } from './pages.js'
 
 if ('serviceWorker' in navigator) {
@@ -30,7 +31,7 @@ async function render() {
   const app = document.querySelector('#app')
   app.innerHTML = ''
 
-  // ── Públicas ──
+  // ── Páginas públicas ──
   if (page === 'cliente') {
     app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
     const telefono = hash.split('/')[2] || ''
@@ -64,13 +65,19 @@ async function render() {
     return
   }
 
+  if (page === 'privacidad') {
+    app.innerHTML = paginaPrivacidad()
+    initPrivacidad()
+    return
+  }
+
   if (page === 'login') {
     app.innerHTML = paginaLogin()
     initLogin()
     return
   }
 
-  // FIX: admin va antes del check de isLoggedIn — tiene su propia contraseña
+  // FIX: admin va antes del check de isLoggedIn
   if (page === 'admin') {
     app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
     app.innerHTML = await paginaAdmin()
@@ -109,7 +116,6 @@ async function render() {
   if (page === 'dueno') {
     app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
     app.innerHTML = await paginaDueno()
-    // FIX: obtener negocio después de renderizar la página para que ya esté en sesión
     const negocio = getNegocioActual()
     if (negocio) initDueno(negocio.id)
     return
