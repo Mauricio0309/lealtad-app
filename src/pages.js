@@ -287,6 +287,8 @@ function navBarDueno(active = 'panel') {
   return `
     <nav class="s-nav">
       <button class="s-nav-btn ${active === 'panel' ? 'active' : ''}" id="snav-panel"><span class="s-nav-icon">📊</span>Mi Panel</button>
+      <button class="s-nav-btn" id="snav-cajero-d"><span class="s-nav-icon">🧾</span>Cajero</button>
+      <button class="s-nav-btn" id="snav-kiosko-d"><span class="s-nav-icon">🖥️</span>Kiosko</button>
       <button class="s-nav-btn" id="snav-salir"><span class="s-nav-icon">🚪</span>Salir</button>
     </nav>
   `
@@ -299,6 +301,8 @@ function initNavCajero() {
 
 function initNavDueno() {
   document.getElementById('snav-panel')?.addEventListener('click', () => navigate('dueno'))
+  document.getElementById('snav-cajero-d')?.addEventListener('click', () => navigate('cajero'))
+  document.getElementById('snav-kiosko-d')?.addEventListener('click', () => navigate('kiosko'))
   document.getElementById('snav-salir')?.addEventListener('click', async () => { const { logout } = await import('./auth.js'); logout() })
 }
 
@@ -1256,8 +1260,7 @@ export function initQRNegocio(negocioId) {
     const msg = document.getElementById('msg-negocio'); const btn = document.getElementById('btn-entrar')
     msg.textContent = 'Buscando...'; btn.disabled = true
     try {
-      const { data, error } = await supabase.from('clientes').select('*').eq('telefono', telefono).eq('negocio_id', negocioId).single()
-      if (error && error.code !== 'PGRST116') throw error
+      const { data } = await supabase.from('clientes').select('id').eq('telefono', telefono).eq('negocio_id', negocioId).maybeSingle()
       if (data) navigate('cliente', telefono)
       else navigate('registro-cliente', `${negocioId}/${telefono}`)
     } catch (e) { msg.innerHTML = errMsg(); btn.disabled = false }
@@ -1291,7 +1294,10 @@ export function paginaRegistroCliente(negocioId, telefono) {
 
 export function initRegistroCliente(negocioId, telefono) {
   inyectarEstilos()
-  document.getElementById('link-privacidad')?.addEventListener('click', () => navigate('privacidad'))
+  document.getElementById('link-privacidad')?.addEventListener('click', () => {
+    window.location.hash = '#/privacidad'
+    window.dispatchEvent(new Event('hashchange'))
+  })
   document.getElementById('btn-registrar-cliente').addEventListener('click', async () => {
     const nombre = document.getElementById('nombre-cliente').value.trim()
     const msg = document.getElementById('msg-registro'); const btn = document.getElementById('btn-registrar-cliente')
@@ -1299,7 +1305,13 @@ export function initRegistroCliente(negocioId, telefono) {
     btn.disabled = true; btn.textContent = 'Registrando...'
     try {
       const { error } = await supabase.from('clientes').insert({ nombre, telefono, negocio_id: negocioId, puntos_actuales: 0, total_visitas: 0 })
-      if (error) throw error
+      if (error) {
+        // Si el teléfono ya existe (duplicado), ir directo a su perfil
+        if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
+          navigate('cliente', telefono); return
+        }
+        throw error
+      }
       navigate('cliente', telefono)
     } catch (e) { msg.innerHTML = errMsg('registrarte'); btn.disabled = false; btn.textContent = 'Registrarme →' }
   })
@@ -1487,10 +1499,7 @@ export async function paginaDueno() {
             <label class="s-label">Color principal</label>
             <div style="display:flex;gap:10px;align-items:center">
               <input type="color" id="input-color" value="${nd?.color_principal||DS.green800}" style="width:48px;height:48px;border:none;border-radius:10px;cursor:pointer;padding:2px" />
-              <div>
-                <div style="font-size:13px;color:${DS.gray500}">Lo ven tus clientes, no tú</div>
-                <div style="font-size:11px;color:${DS.gray300};margin-top:2px">Tu panel siempre se ve verde — el color que eliges aparece en la pantalla de tus clientes cuando escanean el QR</div>
-              </div>
+<span style="font-size:13px;color:${DS.gray500}">Lo ven tus clientes cuando escanean el QR</span>
             </div>
           </div>
           <div class="s-field"><label class="s-label">Descripción corta</label><input type="text" id="input-descripcion" class="s-input" value="${nd?.descripcion||''}" placeholder="Ej: El mejor café de Chetumal" /></div>
