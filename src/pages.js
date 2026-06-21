@@ -447,7 +447,7 @@ async function compartirHistoria({ tipo, negocioNombre, negocioEmoji, nivelNombr
     ctx.beginPath(); ctx.moveTo(cx0+60, ly+120); ctx.lineTo(cx0+cw-60, ly+120); ctx.stroke()
 
     // Número grande de visitas
-    ctx.fillStyle = '#0a5c47'; ctx.font = 'bold 220px Arial'; ctx.textAlign = 'center'
+    ctx.fillStyle = '#f5a623'; ctx.font = 'bold 220px Arial'; ctx.textAlign = 'center'
     ctx.fillText(String(totalVisitas), cx, cy0 + 560)
 
     // "visitas acumuladas"
@@ -502,6 +502,38 @@ async function compartirHistoria({ tipo, negocioNombre, negocioEmoji, nivelNombr
   })
 }
 
+
+// ── Pantalla de celebración al subir de nivel ─────────────
+function mostrarCelebracion({ nombre, nivelNombre, nivelEmoji, premioNombre, negocioNombre, negocioEmoji, totalVisitas, colorNegocio, onConfirmar }) {
+  const el = document.createElement('div')
+  el.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;animation:sFadeIn 0.2s ease`
+  el.innerHTML = `
+    <div style="background:white;border-radius:24px;padding:32px 24px;text-align:center;max-width:320px;width:90%;animation:sPopIn 0.35s cubic-bezier(0.34,1.56,0.64,1)">
+      <div style="font-size:56px;margin-bottom:8px">${nivelEmoji}</div>
+      <div style="font-family:'Sora',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin-bottom:6px">¡Subiste a ${nivelNombre}!</div>
+      ${premioNombre ? `
+      <div style="background:linear-gradient(135deg,#fef3c7,#fffdf5);border:1.5px solid #fde68a;border-radius:14px;padding:14px;margin:12px 0">
+        <div style="font-size:11px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Tu premio</div>
+        <div style="font-family:'Sora',sans-serif;font-size:20px;font-weight:800;color:#78350f">${premioNombre}</div>
+        <div style="font-size:12px;color:#92400e;margin-top:4px">Muéstraselo al cajero para reclamarlo</div>
+      </div>
+      ` : `<div style="font-size:14px;color:#64748b;margin:12px 0">¡Nuevo nivel desbloqueado!</div>`}
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <button id="cel-compartir" style="width:100%;padding:12px;border:none;border-radius:12px;background:#0a5c47;color:white;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Compartir mi progreso</button>
+        <button id="cel-cerrar" style="width:100%;padding:12px;border:none;border-radius:12px;background:#f1f5f9;color:#334155;font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer">Cerrar</button>
+      </div>
+    </div>
+  `
+  document.body.appendChild(el)
+  el.querySelector('#cel-compartir')?.addEventListener('click', async () => {
+    const btn = el.querySelector('#cel-compartir')
+    btn.disabled = true; btn.textContent = 'Generando...'
+    await compartirHistoria({ tipo: 'nivel', negocioNombre, negocioEmoji, nivelNombre, nivelEmoji, premioNombre, totalVisitas, colorNegocio, clienteNombre: nombre })
+    btn.disabled = false; btn.textContent = 'Compartir mi progreso'
+  })
+  el.querySelector('#cel-cerrar')?.addEventListener('click', () => { el.remove(); if (onConfirmar) onConfirmar() })
+}
+
 // ═══════════════════════════════════════════════════════════
 // PÁGINAS
 // ═══════════════════════════════════════════════════════════
@@ -518,6 +550,9 @@ export function paginaLogin() {
         <div id="msg" style="margin-top:10px"></div>
         <button id="btn-olvide" style="background:none;border:none;color:${DS.gray500};font-size:13px;cursor:pointer;margin-top:14px;width:100%;text-align:center;font-family:'Inter',sans-serif;">¿Olvidaste tu contraseña?</button>
         <div id="msg-reset" style="margin-top:8px"></div>
+        <div style="text-align:center;margin-top:12px">
+          <button id="btn-privacidad-dueno" style="background:none;border:none;color:${DS.gray300};font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:underline">Aviso de privacidad</button>
+        </div>
       </div>
     </div>
   `
@@ -543,6 +578,7 @@ export function initLogin() {
   }
   document.getElementById('btn-login').addEventListener('click', doLogin)
   document.getElementById('password')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin() })
+  document.getElementById('btn-privacidad-dueno')?.addEventListener('click', () => navigate('privacidad', 'dueno'))
 
   // Recuperar contraseña
   document.getElementById('btn-olvide')?.addEventListener('click', async () => {
@@ -553,16 +589,21 @@ export function initLogin() {
     try {
       const { data } = await supabase.from('negocios').select('id,nombre').eq('email', email).single()
       if (!data) { msgR.innerHTML = `<p class="s-error">No encontramos una cuenta con ese correo</p>`; return }
-      const token = Math.random().toString(36).substring(2, 10).toUpperCase()
-      const expira = new Date(Date.now() + 60 * 60 * 1000).toISOString()
-      await supabase.from('negocios').update({ reset_token: token, reset_expira: expira }).eq('id', data.id)
+      // Generar contraseña temporal legible y activarla directamente
+      const palabras = ['cafe','mesa','luna','sol','mar','rio','pan','sal','dia','luz']
+      const num = Math.floor(Math.random() * 900) + 100
+      const nuevaPass = palabras[Math.floor(Math.random() * palabras.length)] + num
+      await supabase.from('negocios').update({ password: nuevaPass, password_hash: nuevaPass }).eq('id', data.id)
       msgR.innerHTML = `
-        <div class="s-success" style="flex-direction:column;align-items:flex-start;gap:6px">
-          <div style="font-weight:700">Código de recuperación:</div>
-          <div style="font-family:'Sora',sans-serif;font-size:28px;font-weight:800;color:${DS.green800};letter-spacing:0.1em">${token}</div>
-          <div style="font-size:12px;color:${DS.gray500}">Compártelo con el administrador de Sello para restablecer tu contraseña. Válido por 1 hora.</div>
+        <div style="background:${DS.green50};border:1.5px solid ${DS.green100};border-radius:12px;padding:16px;margin-top:4px">
+          <div style="font-size:12px;color:${DS.green800};font-weight:600;margin-bottom:8px">Tu nueva contraseña temporal es:</div>
+          <div style="font-family:'Sora',sans-serif;font-size:32px;font-weight:800;color:${DS.green800};letter-spacing:0.08em;text-align:center;padding:8px 0">${nuevaPass}</div>
+          <div style="font-size:11px;color:${DS.gray500};margin-top:8px;text-align:center">Escríbela arriba en "Contraseña" y entra. Cámbiala después si quieres.</div>
         </div>
       `
+      // Pre-llenar el campo contraseña
+      const pwField = document.getElementById('password')
+      if (pwField) pwField.value = nuevaPass
     } catch (e) { msgR.innerHTML = `<p class="s-error">Sin conexión. Intenta de nuevo.</p>` }
   })
 }
@@ -747,16 +788,27 @@ async function mostrarCliente(data) {
         cargarUltimosClientes()
 
         if (subioDeNivel) {
-          toast({
-            icon: nivelNuevo.emoji,
-            title: `${data.nombre.split(' ')[0]} subio a ${nivelNuevo.nombre}`,
-            sub: nivelNuevo.premio_bienvenida
-              ? `Entregale: ${nivelNuevo.premio_bienvenida}`
-              : 'Nuevo nivel desbloqueado — felicitalo',
-            nivel: true, autoClose: 0,
-            onTap: () => {
-              document.getElementById('msg-cajero').innerHTML = `<div class="s-success">${nivelNuevo.emoji} Premio entregado a ${data.nombre.split(' ')[0]}${nivelNuevo.premio_bienvenida ? ': ' + nivelNuevo.premio_bienvenida : ''}</div>`
-            }
+          // Pantalla grande para el cajero — énfasis en el premio a entregar
+          const el = document.createElement('div')
+          el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:9999;animation:sFadeIn 0.2s ease'
+          el.innerHTML = `
+            <div style="background:white;border-radius:24px;padding:32px 24px;text-align:center;max-width:340px;width:90%;animation:sPopIn 0.35s cubic-bezier(0.34,1.56,0.64,1)">
+              <div style="font-size:52px;margin-bottom:10px">${nivelNuevo.emoji}</div>
+              <div style="font-family:'Sora',sans-serif;font-size:13px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">¡Subió de nivel!</div>
+              <div style="font-family:'Sora',sans-serif;font-size:24px;font-weight:800;color:#0f172a;margin-bottom:16px">${data.nombre.split(' ')[0]} es ahora ${nivelNuevo.nombre}</div>
+              ${nivelNuevo.premio_bienvenida ? `
+              <div style="background:linear-gradient(135deg,#fef3c7,#fffdf5);border:2px solid #fde68a;border-radius:16px;padding:18px;margin-bottom:16px">
+                <div style="font-size:11px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Entrégale ahora</div>
+                <div style="font-family:'Sora',sans-serif;font-size:22px;font-weight:800;color:#78350f">${nivelNuevo.premio_bienvenida}</div>
+              </div>
+              ` : `<div style="font-size:14px;color:#64748b;margin-bottom:16px">Nuevo nivel desbloqueado — felicítalo</div>`}
+              <button id="cajero-cel-ok" style="width:100%;padding:14px;border:none;border-radius:12px;background:#0a5c47;color:white;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer">${nivelNuevo.premio_bienvenida ? '✓ Premio entregado' : 'Confirmar'}</button>
+            </div>
+          `
+          document.body.appendChild(el)
+          el.querySelector('#cajero-cel-ok')?.addEventListener('click', () => {
+            el.remove()
+            document.getElementById('msg-cajero').innerHTML = `<div class="s-success">${nivelNuevo.emoji} ${data.nombre.split(' ')[0]} subió a ${nivelNuevo.nombre}${nivelNuevo.premio_bienvenida ? ' — Premio entregado: ' + nivelNuevo.premio_bienvenida : ''}</div>`
           })
         } else {
           const sigNivelNuevo = getSiguienteNivel(nv, niveles)
@@ -824,10 +876,28 @@ export function initKiosko() {
       const subioDeNivel = nivelNuevo.nombre !== nivelAnterior.nombre
       const sigNivel = getSiguienteNivel(nv, niveles)
       if (subioDeNivel) {
-        toast({ icon: nivelNuevo.emoji, title: `¡${cliente.nombre.split(' ')[0]} subió a ${nivelNuevo.nombre}!`, sub: nivelNuevo.premio_bienvenida ? `Premio: ${nivelNuevo.premio_bienvenida}` : '¡Nuevo nivel!', nivel: true, autoClose: 4000 })
+        // Pantalla celebración grande en kiosko — el cliente ve lo que ganó
+        const el = document.createElement('div')
+        el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:9999;animation:sFadeIn 0.2s ease'
+        el.innerHTML = `
+          <div style="background:white;border-radius:24px;padding:36px 28px;text-align:center;max-width:340px;width:90%;animation:sPopIn 0.35s cubic-bezier(0.34,1.56,0.64,1)">
+            <div style="font-size:60px;margin-bottom:10px">${nivelNuevo.emoji}</div>
+            <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;color:#0f172a;margin-bottom:6px">¡Subiste a ${nivelNuevo.nombre}!</div>
+            ${nivelNuevo.premio_bienvenida ? `
+            <div style="background:linear-gradient(135deg,#fef3c7,#fffdf5);border:2px solid #fde68a;border-radius:16px;padding:18px;margin:14px 0">
+              <div style="font-size:11px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Ganaste</div>
+              <div style="font-family:'Sora',sans-serif;font-size:22px;font-weight:800;color:#78350f">${nivelNuevo.premio_bienvenida}</div>
+              <div style="font-size:13px;color:#92400e;margin-top:6px">Muéstraselo al cajero para reclamarlo</div>
+            </div>
+            ` : `<div style="font-size:14px;color:#64748b;margin:14px 0">¡Nuevo nivel desbloqueado!</div>`}
+            <button id="kiosko-cel-ok" style="width:100%;padding:14px;border:none;border-radius:12px;background:#0a5c47;color:white;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer">¡Entendido!</button>
+          </div>
+        `
+        document.body.appendChild(el)
+        el.querySelector('#kiosko-cel-ok')?.addEventListener('click', () => el.remove())
       } else {
         const faltan = sigNivel ? sigNivel.visitas_minimas - nv : 0
-        toast({ icon: nivelNuevo.emoji, title: `¡Hola ${cliente.nombre.split(' ')[0]}!`, sub: sigNivel ? `Visita registrada. Faltan ${faltan} para ${sigNivel.emoji} ${sigNivel.nombre}.` : '¡Nivel máximo alcanzado! 💎', autoClose: 3000 })
+        toast({ icon: nivelNuevo.emoji, title: `¡Hola ${cliente.nombre.split(' ')[0]}!`, sub: sigNivel ? `Visita registrada. Faltan ${faltan} para ${sigNivel.emoji} ${sigNivel.nombre}${sigNivel.premio_bienvenida ? ' y ganar: '+sigNivel.premio_bienvenida : ''}.` : '¡Nivel máximo! 💎', autoClose: 3000 })
       }
       document.getElementById('kiosko-tel').value = ''
       document.getElementById('kiosko-nombre').value = ''
@@ -1119,11 +1189,7 @@ export async function paginaCliente(telefono) {
           ` : ''}
 
           <!-- Botón compartir — solo si no es nivel inicial -->
-          ${!esNivelInicial ? `
-          <button id="btn-compartir-nivel" style="width:100%;margin-top:14px;padding:13px;border:none;border-radius:12px;background:${DS.green800};color:white;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-            Compartir mi progreso
-          </button>
-          ` : ''}
+
         </div>
 
         <!-- Tarjeta mostrar al cajero -->
@@ -1153,11 +1219,7 @@ export async function initCliente(telefono) {
     const { data: niveles } = await supabase.from('niveles').select('*').eq('negocio_id', data?.negocio_id).order('visitas_minimas', { ascending: true })
     const nivelActual = getNivelActual(data?.total_visitas || 0, niveles)
     const datosCompartir = { negocioNombre: data?.negocios?.nombre || '', negocioEmoji: data?.negocios?.emoji_negocio || '☕', colorNegocio: data?.negocios?.color_principal || DS.green800, nivelNombre: nivelActual.nombre, nivelEmoji: nivelActual.emoji, totalVisitas: data?.total_visitas || 0, clienteNombre: data?.nombre?.split(' ')[0] || '', premioNombre: nivelActual.premio_bienvenida || '' }
-    document.getElementById('btn-compartir-nivel')?.addEventListener('click', async () => {
-      const btn = document.getElementById('btn-compartir-nivel'); btn.disabled = true; btn.textContent = 'Generando...'
-      await compartirHistoria({ ...datosCompartir, tipo: 'nivel' })
-      btn.disabled = false; btn.textContent = `${nivelActual.emoji} Compartir mi nivel ${nivelActual.nombre}`
-    })
+    // Botón compartir aparece solo en celebración al subir de nivel — no permanente
   } catch (e) {}
 }
 
@@ -1245,12 +1307,16 @@ export function initRegistroCliente(negocioId, telefono) {
 
 
 // ── AVISO DE PRIVACIDAD ────────────────────────────────────
-export function paginaPrivacidad() {
+export function paginaPrivacidad(tipo = 'cliente') {
   inyectarEstilos()
+  const esDueno = tipo === 'dueno'
   return `
     <div style="min-height:100vh;background:${DS.gray50};padding-bottom:40px">
-      <div class="sello-topbar">
-        ${topbarBrand()}
+      <div style="background:${DS.green800};padding:14px 20px;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          ${logoSVG(22, DS.white)}
+          <span style="font-family:'Sora',sans-serif;font-weight:800;font-size:16px;color:${DS.white}">Sell<span style="color:${DS.gold400}">o</span></span>
+        </div>
         <button id="btn-privacidad-back" style="background:rgba(255,255,255,0.15);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px">← Volver</button>
       </div>
       <div class="s-card" style="margin-top:16px">
@@ -1415,12 +1481,7 @@ export async function paginaDueno() {
         <!-- Personalización -->
         <div class="s-card">
           <div class="s-section-label">Personalización</div>
-          <div class="s-field">
-            <label class="s-label">Logo del negocio (URL de imagen)</label>
-            <input type="url" id="input-logo" class="s-input" value="${nd?.logo_url||''}" placeholder="https://... (link de tu logo)" />
-            <p style="font-size:11px;color:${DS.gray500};margin-top:4px">Sube tu logo en <strong>imgur.com</strong> (gratis, sin cuenta) → clic derecho en la imagen → "Copiar dirección de imagen" → pégala aquí</p>
-          </div>
-          ${nd?.logo_url ? `<img src="${nd.logo_url}" style="width:64px;height:64px;border-radius:12px;object-fit:cover;margin-bottom:14px;border:2px solid ${DS.gray100}" onerror="this.style.display='none'" />` : ''}
+
           <div class="s-field"><label class="s-label">Emoji del negocio</label><input type="text" id="input-emoji" class="s-input" value="${nd?.emoji_negocio||'☕'}" placeholder="☕" style="font-size:24px;text-align:center" /></div>
           <div class="s-field">
             <label class="s-label">Color principal</label>
@@ -1443,7 +1504,8 @@ export async function paginaDueno() {
             <div class="s-section-label" style="margin-bottom:0">Niveles de lealtad</div>
             <button id="btn-nuevo-nivel" style="background:${DS.green800};color:white;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">+ Nuevo nivel</button>
           </div>
-          <p style="font-size:12px;color:${DS.gray500};margin-bottom:14px">Cada nivel tiene un premio que se entrega cuando el cliente llega a las visitas necesarias.</p>
+          <p style="font-size:12px;color:${DS.gray500};margin-bottom:6px">Cada nivel tiene un premio que se entrega cuando el cliente llega a las visitas necesarias.</p>
+          <div style="background:${DS.green50};border:1px solid ${DS.green100};border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:11px;color:${DS.green800}">Las visitas son <strong>acumuladas</strong> — el cliente nunca las pierde aunque pase tiempo sin venir. Configura niveles alcanzables para que los clientes vean progreso desde la primera visita.</div>
           <div id="form-nivel" style="display:none;background:${DS.gray50};padding:16px;border-radius:12px;margin-bottom:14px">
             <input type="hidden" id="nivel-editando-id" value="" />
             <div style="display:grid;grid-template-columns:90px 1fr;gap:10px">
@@ -1505,14 +1567,13 @@ export async function initDueno(negocioId) {
 
   // Personalización
   document.getElementById('btn-guardar-personalizacion')?.addEventListener('click', async () => {
-    const logo = document.getElementById('input-logo').value.trim()
     const emoji = document.getElementById('input-emoji').value.trim()
     const color = document.getElementById('input-color').value
     const descripcion = document.getElementById('input-descripcion').value.trim()
     const msg = document.getElementById('msg-personalizacion'); const btn = document.getElementById('btn-guardar-personalizacion')
     btn.disabled = true; btn.textContent = 'Guardando...'
     try {
-      const { error } = await supabase.from('negocios').update({ logo_url: logo, emoji_negocio: emoji, color_principal: color, descripcion }).eq('id', negocioId)
+      const { error } = await supabase.from('negocios').update({ emoji_negocio: emoji, color_principal: color, descripcion }).eq('id', negocioId)
       if (error) throw error
       aplicarColorNegocio(color)
       msg.innerHTML = `<div class="s-success">✓ Personalización guardada</div>`

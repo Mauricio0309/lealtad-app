@@ -66,7 +66,8 @@ async function render() {
   }
 
   if (page === 'privacidad') {
-    app.innerHTML = paginaPrivacidad()
+    const tipo = hash.split('/')[2] || 'cliente'
+    app.innerHTML = paginaPrivacidad(tipo)
     initPrivacidad()
     return
   }
