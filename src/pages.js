@@ -508,36 +508,6 @@ async function compartirHistoria({ tipo, negocioNombre, negocioEmoji, nivelNombr
 
 
 // ── Pantalla de celebración al subir de nivel ─────────────
-function mostrarCelebracion({ nombre, nivelNombre, nivelEmoji, premioNombre, negocioNombre, negocioEmoji, totalVisitas, colorNegocio, onConfirmar }) {
-  const el = document.createElement('div')
-  el.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;animation:sFadeIn 0.2s ease`
-  el.innerHTML = `
-    <div style="background:white;border-radius:24px;padding:32px 24px;text-align:center;max-width:320px;width:90%;animation:sPopIn 0.35s cubic-bezier(0.34,1.56,0.64,1)">
-      <div style="font-size:56px;margin-bottom:8px">${nivelEmoji}</div>
-      <div style="font-family:'Sora',sans-serif;font-size:22px;font-weight:800;color:#0f172a;margin-bottom:6px">¡Subiste a ${nivelNombre}!</div>
-      ${premioNombre ? `
-      <div style="background:linear-gradient(135deg,#fef3c7,#fffdf5);border:1.5px solid #fde68a;border-radius:14px;padding:14px;margin:12px 0">
-        <div style="font-size:11px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Tu premio</div>
-        <div style="font-family:'Sora',sans-serif;font-size:20px;font-weight:800;color:#78350f">${premioNombre}</div>
-        <div style="font-size:12px;color:#92400e;margin-top:4px">Muéstraselo al cajero para reclamarlo</div>
-      </div>
-      ` : `<div style="font-size:14px;color:#64748b;margin:12px 0">¡Nuevo nivel desbloqueado!</div>`}
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
-        <button id="cel-compartir" style="width:100%;padding:12px;border:none;border-radius:12px;background:#0a5c47;color:white;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Compartir mi progreso</button>
-        <button id="cel-cerrar" style="width:100%;padding:12px;border:none;border-radius:12px;background:#f1f5f9;color:#334155;font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer">Cerrar</button>
-      </div>
-    </div>
-  `
-  document.body.appendChild(el)
-  el.querySelector('#cel-compartir')?.addEventListener('click', async () => {
-    const btn = el.querySelector('#cel-compartir')
-    btn.disabled = true; btn.textContent = 'Generando...'
-    await compartirHistoria({ tipo: 'nivel', negocioNombre, negocioEmoji, nivelNombre, nivelEmoji, premioNombre, totalVisitas, colorNegocio, clienteNombre: nombre })
-    btn.disabled = false; btn.textContent = 'Compartir mi progreso'
-  })
-  el.querySelector('#cel-cerrar')?.addEventListener('click', () => { el.remove(); if (onConfirmar) onConfirmar() })
-}
-
 // ═══════════════════════════════════════════════════════════
 // PÁGINAS
 // ═══════════════════════════════════════════════════════════
@@ -789,9 +759,10 @@ async function mostrarCliente(data) {
         data.total_visitas = nv; data.puntos_actuales = nv
         const nivelNuevo = getNivelActual(nv, niveles)
         const subioDeNivel = nivelNuevo.nombre !== nivelAnterior.nombre
+                const llegaANivelConPremio = !subioDeNivel && nivelNuevo.premio_bienvenida && nv === nivelNuevo.visitas_minimas
         cargarUltimosClientes()
 
-        if (subioDeNivel) {
+        if (subioDeNivel || llegaANivelConPremio) {
           // Pantalla grande para el cajero — énfasis en el premio a entregar
           const el = document.createElement('div')
           el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:9999;animation:sFadeIn 0.2s ease'
@@ -812,6 +783,10 @@ async function mostrarCliente(data) {
           document.body.appendChild(el)
           el.querySelector('#cajero-cel-ok')?.addEventListener('click', () => {
             el.remove()
+            // Guardar en localStorage para que el cliente vea su premio cuando abra la app
+            if (nivelNuevo.premio_bienvenida) {
+              localStorage.setItem(`sello_premio_${data.telefono}`, `Subiste a ${nivelNuevo.nombre} y ganaste: ${nivelNuevo.premio_bienvenida}`)
+            }
             document.getElementById('msg-cajero').innerHTML = `<div class="s-success">${nivelNuevo.emoji} ${data.nombre.split(' ')[0]} subió a ${nivelNuevo.nombre}${nivelNuevo.premio_bienvenida ? ' — Premio entregado: ' + nivelNuevo.premio_bienvenida : ''}</div>`
           })
         } else {
@@ -878,8 +853,9 @@ export function initKiosko() {
       await supabase.from('clientes').update({ puntos_actuales: nv, total_visitas: nv }).eq('id', cliente.id)
       const nivelNuevo = getNivelActual(nv, niveles)
       const subioDeNivel = nivelNuevo.nombre !== nivelAnterior.nombre
+      const llegaANivelConPremio = !subioDeNivel && nivelNuevo.premio_bienvenida && nv === nivelNuevo.visitas_minimas
       const sigNivel = getSiguienteNivel(nv, niveles)
-      if (subioDeNivel) {
+      if (subioDeNivel || llegaANivelConPremio) {
         // Pantalla celebración grande en kiosko — el cliente ve lo que ganó
         const el = document.createElement('div')
         el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:9999;animation:sFadeIn 0.2s ease'
@@ -1159,7 +1135,7 @@ export async function paginaCliente(telefono) {
 
           <!-- Número grande de visitas -->
           <div style="text-align:center;padding:20px 0 16px">
-            <div style="font-family:'Sora',sans-serif;font-size:72px;font-weight:800;color:${DS.green800};line-height:1">${data.total_visitas}</div>
+            <div style="font-family:'Sora',sans-serif;font-size:72px;font-weight:800;color:${DS.gold500};line-height:1">${data.total_visitas}</div>
             <div style="font-size:13px;color:${DS.gray500};margin-top:4px">visitas acumuladas</div>
             <div style="font-size:11px;color:${DS.gray300};margin-top:2px">Las visitas nunca se pierden</div>
           </div>
@@ -1192,7 +1168,18 @@ export async function paginaCliente(telefono) {
           </div>
           ` : ''}
 
-          <!-- Botón compartir — solo si no es nivel inicial -->
+          <!-- Banner premio ganado (aparece cuando el cajero registró subida de nivel) -->
+          <div id="banner-premio-ganado" style="display:none;background:linear-gradient(135deg,#fef3c7,#fffdf5);border:2px solid #fde68a;border-radius:14px;padding:16px;text-align:center;margin-top:12px">
+            <div style="font-size:11px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">🎉 ¡Felicidades!</div>
+            <div id="banner-premio-texto" style="font-family:'Sora',sans-serif;font-size:17px;font-weight:800;color:#78350f"></div>
+            <div style="font-size:12px;color:#92400e;margin-top:4px">Muéstraselo al cajero para reclamarlo</div>
+            <button id="banner-cerrar" style="margin-top:10px;padding:8px 16px;border:none;border-radius:8px;background:#f5a623;color:white;font-family:'Sora',sans-serif;font-size:12px;font-weight:700;cursor:pointer">Entendido</button>
+          </div>
+
+          <!-- Botón compartir siempre visible -->
+          <button id="btn-compartir-nivel" style="width:100%;margin-top:14px;padding:13px;border:none;border-radius:12px;background:${DS.green800};color:white;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+            Compartir mi progreso
+          </button>
 
         </div>
 
@@ -1223,7 +1210,30 @@ export async function initCliente(telefono) {
     const { data: niveles } = await supabase.from('niveles').select('*').eq('negocio_id', data?.negocio_id).order('visitas_minimas', { ascending: true })
     const nivelActual = getNivelActual(data?.total_visitas || 0, niveles)
     const datosCompartir = { negocioNombre: data?.negocios?.nombre || '', negocioEmoji: data?.negocios?.emoji_negocio || '☕', colorNegocio: data?.negocios?.color_principal || DS.green800, nivelNombre: nivelActual.nombre, nivelEmoji: nivelActual.emoji, totalVisitas: data?.total_visitas || 0, clienteNombre: data?.nombre?.split(' ')[0] || '', premioNombre: nivelActual.premio_bienvenida || '' }
-    // Botón compartir aparece solo en celebración al subir de nivel — no permanente
+
+    // Banner de premio ganado — se activa desde localStorage cuando el cajero registró subida
+    const key = `sello_premio_${telefono}`
+    const premioGuardado = localStorage.getItem(key)
+    if (premioGuardado) {
+      const banner = document.getElementById('banner-premio-ganado')
+      const texto = document.getElementById('banner-premio-texto')
+      if (banner && texto) {
+        texto.textContent = premioGuardado
+        banner.style.display = 'block'
+        document.getElementById('banner-cerrar')?.addEventListener('click', () => {
+          localStorage.removeItem(key)
+          banner.style.display = 'none'
+        })
+      }
+    }
+
+    // Botón compartir
+    document.getElementById('btn-compartir-nivel')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btn-compartir-nivel')
+      btn.disabled = true; btn.textContent = 'Generando...'
+      await compartirHistoria({ ...datosCompartir, tipo: 'nivel' })
+      btn.disabled = false; btn.textContent = 'Compartir mi progreso'
+    })
   } catch (e) {}
 }
 
@@ -1295,8 +1305,28 @@ export function paginaRegistroCliente(negocioId, telefono) {
 export function initRegistroCliente(negocioId, telefono) {
   inyectarEstilos()
   document.getElementById('link-privacidad')?.addEventListener('click', () => {
-    window.location.hash = '#/privacidad'
-    window.dispatchEvent(new Event('hashchange'))
+    const modal = document.createElement('div')
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:flex-end;justify-content:center;z-index:9999;animation:sFadeIn 0.2s ease'
+    modal.innerHTML = `
+      <div style="background:white;border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="font-family:'Sora',sans-serif;font-size:16px;font-weight:800;color:#0f172a">Aviso de Privacidad</div>
+          <button id="cerrar-privacidad" style="background:#f1f5f9;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;color:#64748b">Cerrar</button>
+        </div>
+        <div style="font-size:13px;color:#334155;line-height:1.7">
+          <p style="font-weight:600;color:#0f172a;margin-bottom:6px">¿Qué datos guardamos?</p>
+          <p style="margin-bottom:12px">Solo tu nombre y número de teléfono. Nada más.</p>
+          <p style="font-weight:600;color:#0f172a;margin-bottom:6px">¿Para qué se usan?</p>
+          <p style="margin-bottom:12px">Únicamente para identificarte en el programa de lealtad y registrar tus visitas. No se venden ni se comparten con terceros.</p>
+          <p style="font-weight:600;color:#0f172a;margin-bottom:6px">¿Puedo eliminar mis datos?</p>
+          <p style="margin-bottom:12px">Sí. Solicítalo directamente en el negocio donde te registraste.</p>
+          <p style="font-size:11px;color:#94a3b8;margin-top:16px">En cumplimiento con la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP) de México.</p>
+        </div>
+      </div>
+    `
+    document.body.appendChild(modal)
+    modal.querySelector('#cerrar-privacidad')?.addEventListener('click', () => modal.remove())
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
   })
   document.getElementById('btn-registrar-cliente').addEventListener('click', async () => {
     const nombre = document.getElementById('nombre-cliente').value.trim()
