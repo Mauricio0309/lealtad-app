@@ -1525,9 +1525,9 @@ export async function initDueno(negocioId) {
   // Niveles
   document.getElementById('btn-nuevo-nivel')?.addEventListener('click', () => {
     const f = document.getElementById('form-nivel')
+    if (!f) return
     const isHidden = f.style.display === 'none' || f.style.display === ''
     if (isHidden) {
-      // Limpiar formulario
       document.getElementById('nivel-editando-id').value = ''
       document.getElementById('nivel-emoji').value = ''
       document.getElementById('nivel-nombre').value = ''
@@ -1536,7 +1536,7 @@ export async function initDueno(negocioId) {
       document.getElementById('msg-nivel').innerHTML = ''
       document.getElementById('btn-guardar-nivel').textContent = 'Guardar nivel'
       f.style.display = 'block'
-      f.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      setTimeout(() => { document.getElementById('nivel-emoji')?.focus() }, 80)
     } else {
       f.style.display = 'none'
     }
