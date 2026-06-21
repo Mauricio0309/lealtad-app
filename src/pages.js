@@ -390,92 +390,106 @@ const PASOS_ONBOARDING = [
   { icon: '📊', titulo: 'Ve tus estadísticas en tiempo real', desc: 'Consulta cuántos clientes tienes, qué días son más concurridos y quiénes son tus clientes más fieles.' },
 ]
 
-async function compartirHistoria({ tipo, negocioNombre, negocioEmoji, nivelNombre, nivelEmoji, premioNombre, totalVisitas, colorNegocio }) {
+async function compartirHistoria({ tipo, negocioNombre, negocioEmoji, nivelNombre, nivelEmoji, premioNombre, totalVisitas, colorNegocio, clienteNombre }) {
   return new Promise((resolve) => {
+    // Formato vertical tipo tarjeta — estilo Duolingo
     const canvas = document.createElement('canvas')
     canvas.width = 1080; canvas.height = 1920
     const ctx = canvas.getContext('2d')
 
-    // Fondo degradado verde oscuro → verde Sello
-    const grad = ctx.createLinearGradient(0, 0, 0, 1920)
-    grad.addColorStop(0, '#052e1c')
-    grad.addColorStop(0.5, '#0a5c47')
-    grad.addColorStop(1, '#052e1c')
-    ctx.fillStyle = grad; ctx.fillRect(0, 0, 1080, 1920)
+    // Fondo gris muy claro
+    ctx.fillStyle = '#f1f5f9'
+    ctx.fillRect(0, 0, 1080, 1920)
 
-    // Círculo dorado grande de fondo
-    ctx.globalAlpha = 0.12
-    ctx.fillStyle = '#f5a623'
-    ctx.beginPath(); ctx.arc(540, 960, 500, 0, Math.PI*2); ctx.fill()
-    ctx.globalAlpha = 1
+    // Tarjeta blanca centrada con sombra simulada
+    const cx = 540, cy = 960
+    const cw = 860, ch = 1200
+    const cx0 = cx - cw/2, cy0 = cy - ch/2
 
-    // Franja dorada superior
-    ctx.fillStyle = '#f5a623'
-    ctx.fillRect(0, 0, 1080, 12)
+    // Sombra
+    ctx.fillStyle = 'rgba(0,0,0,0.08)'
+    ctx.beginPath()
+    const sr = 48
+    ctx.roundRect(cx0+8, cy0+12, cw, ch, sr)
+    ctx.fill()
 
-    // Franja dorada inferior
-    ctx.fillRect(0, 1908, 1080, 12)
-
-    // Logo Sello arriba — círculo verde + palomita
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)'
-    ctx.lineWidth = 6
-    ctx.beginPath(); ctx.arc(540, 180, 55, 0, Math.PI*2); ctx.stroke()
-    ctx.beginPath(); ctx.arc(540, 180, 38, 0, Math.PI*2); ctx.stroke()
-    ctx.lineWidth = 7; ctx.lineCap = 'round'
-    const p = ctx.beginPath()
-    ctx.moveTo(510, 180); ctx.lineTo(530, 200); ctx.lineTo(570, 158); ctx.stroke()
-
-    // "Sello" debajo del logo
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 52px Arial'; ctx.textAlign = 'center'
-    ctx.fillText('Sell', 540 - 18, 280)
-    ctx.fillStyle = '#f5a623'
-    ctx.fillText('o', 540 + 52, 280)
-
-    // Emoji nivel grande
-    ctx.font = '280px Arial'; ctx.textAlign = 'center'
-    ctx.fillText(nivelEmoji || '⭐', 540, 780)
-
-    // Título principal
+    // Tarjeta blanca
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 88px Arial'
-    const titulo = tipo === 'premio' ? '¡Gané un premio!' : `¡Soy ${nivelNombre}!`
-    ctx.fillText(titulo, 540, 920)
+    ctx.beginPath()
+    ctx.roundRect(cx0, cy0, cw, ch, sr)
+    ctx.fill()
 
-    // Premio en caja dorada
-    if (premioNombre) {
-      ctx.fillStyle = '#f5a623'
-      const rx = 140, ry = 960, rw = 800, rh = 110, r = 24
-      ctx.beginPath()
-      ctx.moveTo(rx+r, ry); ctx.lineTo(rx+rw-r, ry)
-      ctx.quadraticCurveTo(rx+rw, ry, rx+rw, ry+r)
-      ctx.lineTo(rx+rw, ry+rh-r)
-      ctx.quadraticCurveTo(rx+rw, ry+rh, rx+rw-r, ry+rh)
-      ctx.lineTo(rx+r, ry+rh)
-      ctx.quadraticCurveTo(rx, ry+rh, rx, ry+rh-r)
-      ctx.lineTo(rx, ry+r)
-      ctx.quadraticCurveTo(rx, ry, rx+r, ry)
-      ctx.closePath(); ctx.fill()
-      ctx.fillStyle = '#052e1c'; ctx.font = 'bold 52px Arial'
-      ctx.fillText(premioNombre, 540, 1030)
+    // Franja verde superior de la tarjeta
+    ctx.fillStyle = '#0a5c47'
+    ctx.beginPath()
+    ctx.roundRect(cx0, cy0, cw, 16, [sr, sr, 0, 0])
+    ctx.fill()
+
+    // Logo Sello — círculo verde + palomita
+    const lx = cx, ly = cy0 + 110
+    ctx.strokeStyle = '#0a5c47'; ctx.lineWidth = 8
+    ctx.beginPath(); ctx.arc(lx, ly, 52, 0, Math.PI*2); ctx.stroke()
+    ctx.beginPath(); ctx.arc(lx, ly, 36, 0, Math.PI*2); ctx.stroke()
+    ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.strokeStyle = '#0a5c47'
+    const lpath = ctx.beginPath()
+    ctx.moveTo(lx-16, ly+2); ctx.lineTo(lx-4, ly+16); ctx.lineTo(lx+18, ly-14); ctx.stroke()
+
+    // "Sell" + "o" dorado
+    ctx.textAlign = 'center'
+    ctx.fillStyle = '#0a5c47'; ctx.font = 'bold 56px Arial'
+    const sellW = ctx.measureText('Sell').width
+    ctx.fillText('Sell', cx - ctx.measureText('o').width/2, ly + 90)
+    ctx.fillStyle = '#f5a623'
+    ctx.fillText('o', cx + sellW/2 - 2, ly + 90)
+
+    // Línea divisora
+    ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1.5
+    ctx.beginPath(); ctx.moveTo(cx0+60, ly+120); ctx.lineTo(cx0+cw-60, ly+120); ctx.stroke()
+
+    // Número grande de visitas
+    ctx.fillStyle = '#0a5c47'; ctx.font = 'bold 220px Arial'; ctx.textAlign = 'center'
+    ctx.fillText(String(totalVisitas), cx, cy0 + 560)
+
+    // "visitas acumuladas"
+    ctx.fillStyle = '#64748b'; ctx.font = '48px Arial'
+    ctx.fillText('visitas acumuladas', cx, cy0 + 630)
+
+    // Línea divisora
+    ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1.5
+    ctx.beginPath(); ctx.moveTo(cx0+60, cy0+670); ctx.lineTo(cx0+cw-60, cy0+670); ctx.stroke()
+
+    // Premio o nivel — texto principal
+    const textoLogro = premioNombre
+      ? `${clienteNombre || 'Cliente'} ganó ${premioNombre}`
+      : `${clienteNombre || 'Cliente'} llegó a ${nivelNombre}`
+    ctx.fillStyle = '#0f172a'; ctx.font = 'bold 62px Arial'; ctx.textAlign = 'center'
+    // Wrap texto si es largo
+    const maxW = cw - 120
+    const words = textoLogro.split(' '); let line = ''; const lines = []
+    for (const w of words) {
+      const test = line ? line + ' ' + w : w
+      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w }
+      else line = test
     }
+    if (line) lines.push(line)
+    const lineH = 76; const startY = cy0 + 760
+    lines.forEach((l, i) => ctx.fillText(l, cx, startY + i * lineH))
 
     // Negocio
-    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '48px Arial'
-    ctx.fillText(`${negocioEmoji || '☕'} ${negocioNombre}`, 540, premioNombre ? 1140 : 1020)
+    const afterText = startY + lines.length * lineH + 20
+    ctx.fillStyle = '#64748b'; ctx.font = '44px Arial'
+    ctx.fillText(`en ${negocioNombre}`, cx, afterText)
 
-    // Visitas
-    ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '40px Arial'
-    ctx.fillText(`${totalVisitas} visitas acumuladas`, 540, premioNombre ? 1220 : 1100)
+    // Línea divisora
+    ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1.5
+    ctx.beginPath(); ctx.moveTo(cx0+60, cy0+1080); ctx.lineTo(cx0+cw-60, cy0+1080); ctx.stroke()
 
-    // Línea separadora
-    ctx.strokeStyle = 'rgba(245,166,35,0.3)'; ctx.lineWidth = 2
-    ctx.beginPath(); ctx.moveTo(200, 1350); ctx.lineTo(880, 1350); ctx.stroke()
-
-    // Footer
-    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.font = '36px Arial'
-    ctx.fillText('Programa de lealtad digital', 540, 1420)
-    ctx.fillStyle = '#f5a623'; ctx.font = 'bold 44px Arial'
-    ctx.fillText('Sello', 540, 1490)
+    // Fecha y negocio pie
+    const fecha = new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
+    ctx.fillStyle = '#94a3b8'; ctx.font = '38px Arial'; ctx.textAlign = 'left'
+    ctx.fillText(negocioNombre, cx0 + 60, cy0 + 1130)
+    ctx.textAlign = 'right'
+    ctx.fillText(fecha, cx0 + cw - 60, cy0 + 1130)
     canvas.toBlob(async (blob) => {
       const file = new File([blob], 'sello-historia.png', { type: 'image/png' })
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -735,17 +749,19 @@ async function mostrarCliente(data) {
         if (subioDeNivel) {
           toast({
             icon: nivelNuevo.emoji,
-            title: `¡${data.nombre.split(' ')[0]} subió a ${nivelNuevo.nombre}!`,
-            sub: nivelNuevo.premio_bienvenida ? `Premio: ${nivelNuevo.premio_bienvenida}` : '¡Nuevo nivel desbloqueado!',
+            title: `${data.nombre.split(' ')[0]} subio a ${nivelNuevo.nombre}`,
+            sub: nivelNuevo.premio_bienvenida
+              ? `Entregale: ${nivelNuevo.premio_bienvenida}`
+              : 'Nuevo nivel desbloqueado — felicitalo',
             nivel: true, autoClose: 0,
             onTap: () => {
-              document.getElementById('msg-cajero').innerHTML = `<div class="s-success">${nivelNuevo.emoji} ¡${data.nombre.split(' ')[0]} llegó a ${nivelNuevo.nombre}!${nivelNuevo.premio_bienvenida ? ` Premio entregado: ${nivelNuevo.premio_bienvenida}` : ''}</div>`
+              document.getElementById('msg-cajero').innerHTML = `<div class="s-success">${nivelNuevo.emoji} Premio entregado a ${data.nombre.split(' ')[0]}${nivelNuevo.premio_bienvenida ? ': ' + nivelNuevo.premio_bienvenida : ''}</div>`
             }
           })
         } else {
           const sigNivelNuevo = getSiguienteNivel(nv, niveles)
           const faltan = sigNivelNuevo ? sigNivelNuevo.visitas_minimas - nv : 0
-          toast({ icon: '✅', title: 'Visita registrada', sub: sigNivelNuevo ? `Faltan ${faltan} visita${faltan===1?'':'s'} para ${sigNivelNuevo.emoji} ${sigNivelNuevo.nombre}` : '¡Nivel máximo alcanzado! 💎' })
+          toast({ icon: '✅', title: 'Visita registrada', sub: sigNivelNuevo ? `A ${data.nombre.split(' ')[0]} le faltan ${faltan} visita${faltan===1?'':'s'} para ${sigNivelNuevo.emoji} ${sigNivelNuevo.nombre}` : `${data.nombre.split(' ')[0]} alcanzo el nivel maximo` })
         }
       } catch (e) { document.getElementById('msg-cajero').innerHTML = errMsg('registrar la visita') }
       finally { btn.disabled = false; btn.textContent = '+ Registrar visita' }
@@ -767,6 +783,8 @@ export async function paginaKiosko() {
         <div class="kiosko-titulo" style="margin-top:16px">Bienvenido a</div>
         <div class="kiosko-nombre">${nd?.nombre || negocio.nombre}</div>
         <input type="tel" id="kiosko-tel" class="kiosko-input" placeholder="Tu teléfono" />
+        <div style="font-size:14px;color:rgba(255,255,255,0.3);margin-bottom:12px">o busca por nombre</div>
+        <input type="text" id="kiosko-nombre" class="kiosko-input" style="font-size:20px;margin-bottom:16px" placeholder="Tu nombre" />
         <button class="kiosko-btn" id="kiosko-entrar">Registrar mi visita →</button>
         <div id="kiosko-msg" style="margin-top:20px;font-size:14px;color:rgba(255,255,255,0.5)"></div>
       </div>
@@ -778,14 +796,26 @@ export function initKiosko() {
   inyectarEstilos()
   document.getElementById('kiosko-salir')?.addEventListener('click', () => navigate('bienvenida'))
   const doRegistrar = async () => {
-    const telefono = document.getElementById('kiosko-tel').value.trim(); if (!telefono) return
+    const telefono = document.getElementById('kiosko-tel').value.trim()
+    const nombre = document.getElementById('kiosko-nombre').value.trim()
+    if (!telefono && !nombre) { document.getElementById('kiosko-msg').textContent = 'Escribe tu teléfono o nombre'; return }
     const msg = document.getElementById('kiosko-msg'); const btn = document.getElementById('kiosko-entrar')
     btn.disabled = true; btn.textContent = 'Procesando...'; msg.textContent = ''
     try {
       const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
       const { data: niveles } = await supabase.from('niveles').select('*').eq('negocio_id', negocio.id).order('visitas_minimas', { ascending: true })
-      const { data: cliente } = await supabase.from('clientes').select('*').eq('telefono', telefono).eq('negocio_id', negocio.id).single()
-      if (!cliente) { navigate('registro-cliente', `${negocio.id}/${telefono}`); return }
+      let cliente = null
+      if (telefono) {
+        const { data } = await supabase.from('clientes').select('*').eq('telefono', telefono).eq('negocio_id', negocio.id).single()
+        cliente = data
+      } else {
+        const { data } = await supabase.from('clientes').select('*').ilike('nombre', `%${nombre}%`).eq('negocio_id', negocio.id).limit(1).single()
+        cliente = data
+      }
+      if (!cliente) {
+        if (telefono) { navigate('registro-cliente', `${negocio.id}/${telefono}`); return }
+        msg.textContent = 'No se encontró ese nombre. Intenta con el teléfono.'; btn.disabled = false; btn.textContent = 'Registrar mi visita →'; return
+      }
       const nivelAnterior = getNivelActual(cliente.total_visitas, niveles)
       await supabase.from('visitas').insert({ cliente_id: cliente.id, negocio_id: negocio.id, puntos_sumados: 1 })
       const nv = cliente.total_visitas + 1
@@ -800,6 +830,7 @@ export function initKiosko() {
         toast({ icon: nivelNuevo.emoji, title: `¡Hola ${cliente.nombre.split(' ')[0]}!`, sub: sigNivel ? `Visita registrada. Faltan ${faltan} para ${sigNivel.emoji} ${sigNivel.nombre}.` : '¡Nivel máximo alcanzado! 💎', autoClose: 3000 })
       }
       document.getElementById('kiosko-tel').value = ''
+      document.getElementById('kiosko-nombre').value = ''
     } catch (e) { msg.textContent = 'Sin conexión. Intenta de nuevo.' }
     finally { btn.disabled = false; btn.textContent = 'Registrar mi visita →' }
   }
@@ -994,82 +1025,134 @@ export async function paginaCliente(telefono) {
   try {
     const { data, error } = await supabase.from('clientes').select('*, negocios(id,nombre,meta_puntos,color_principal,emoji_negocio,descripcion,logo_url)').eq('telefono', telefono).single()
     if (error) throw error
-    if (!data) return `<div class="sc-root"><div class="sc-hero"><div class="sc-hero-name">No encontrado</div></div></div>`
+    if (!data) return `<div style="min-height:100vh;background:${DS.gray50};display:flex;align-items:center;justify-content:center"><div class="s-card" style="text-align:center"><p style="color:${DS.gray500}">No encontrado</p></div></div>`
     const { data: niveles } = await supabase.from('niveles').select('*').eq('negocio_id', data.negocios?.id || data.negocio_id).order('visitas_minimas', { ascending: true })
-    const { data: historial } = await supabase.from('visitas').select('fecha').eq('cliente_id', data.id).order('fecha', { ascending: false }).limit(10)
+    const { data: historial } = await supabase.from('visitas').select('fecha').eq('cliente_id', data.id).order('fecha', { ascending: false }).limit(8)
     const colorNegocio = data.negocios?.color_principal || DS.green800
     const emojiNegocio = data.negocios?.emoji_negocio || '☕'
     const logoUrl = data.negocios?.logo_url || ''
+    const negocioNombre = data.negocios?.nombre || 'Programa de Lealtad'
     aplicarColorNegocio(colorNegocio)
     const nivelActual = getNivelActual(data.total_visitas, niveles)
     const sigNivel = getSiguienteNivel(data.total_visitas, niveles)
     const nivelColor = colorNivel(nivelActual)
     let nivelProgPct = 100
-    if (sigNivel) { const rango = sigNivel.visitas_minimas - nivelActual.visitas_minimas; const avance = data.total_visitas - nivelActual.visitas_minimas; nivelProgPct = Math.min(Math.round((avance / rango) * 100), 100) }
+    if (sigNivel) {
+      const rango = sigNivel.visitas_minimas - nivelActual.visitas_minimas
+      const avance = data.total_visitas - nivelActual.visitas_minimas
+      nivelProgPct = Math.min(Math.round((avance / rango) * 100), 100)
+    }
+    const esNivelInicial = nivelActual.visitas_minimas === 0
     const filasHistorial = (historial||[]).map(v => {
-      const fecha = new Date(v.fecha).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-      return `<div class="s-row"><div class="s-row-title" style="font-weight:400;font-size:13px">📍 Visita registrada</div><div style="font-size:12px;color:${DS.gray500}">${fecha}</div></div>`
+      const fecha = new Date(v.fecha).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+      return `<div class="s-row"><div class="s-row-title" style="font-weight:400;font-size:13px;color:${DS.gray700}">Visita registrada</div><div style="font-size:12px;color:${DS.gray500}">${fecha}</div></div>`
     }).join('')
+
     return `
-      <div class="sc-root">
-        <div class="sc-hero">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-            ${logoUrl ? `<img src="${logoUrl}" style="width:40px;height:40px;border-radius:10px;object-fit:cover;border:2px solid rgba(255,255,255,0.3)" onerror="this.style.display='none'" />` : logoSVG(28, 'rgba(255,255,255,0.6)')}
-            <span style="font-size:13px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.1em">Sello</span>
+      <div style="min-height:100vh;background:${DS.gray50};padding-bottom:40px">
+
+        <!-- Header minimalista -->
+        <div style="background:${DS.white};border-bottom:1px solid ${DS.gray100};padding:14px 20px;display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:10px">
+            ${logoSVG(22, DS.green800)}
+            <span style="font-family:'Sora',sans-serif;font-weight:800;font-size:16px;color:${DS.green800}">Sell<span style="color:${DS.gold500}">o</span></span>
           </div>
-          <div class="sc-hero-negocio">${emojiNegocio} ${data.negocios?.nombre || 'Programa de Lealtad'}</div>
-          <div class="sc-hero-name">Hola, ${data.nombre?.split(' ')[0] || 'Cliente'} 👋</div>
-          <div class="sc-hero-sub">Aquí está tu progreso</div>
+          <span style="font-size:12px;color:${DS.gray500}">${emojiNegocio} ${negocioNombre}</span>
         </div>
-        <div class="sc-puntos-card">
+
+        <!-- Hero negocio -->
+        <div style="background:var(--negocio-color,${DS.green800});padding:28px 20px 56px;position:relative;overflow:hidden">
+          <div style="position:absolute;top:-30px;right:-30px;width:160px;height:160px;background:rgba(255,255,255,0.06);border-radius:50%"></div>
+          <div style="position:absolute;bottom:-40px;left:-20px;width:120px;height:120px;background:rgba(255,255,255,0.04);border-radius:50%"></div>
+          ${logoUrl ? `<img src="${logoUrl}" style="width:52px;height:52px;border-radius:14px;object-fit:cover;border:2px solid rgba(255,255,255,0.25);margin-bottom:12px;display:block" onerror="this.style.display='none'" />` : ''}
+          <div style="font-size:11px;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">${negocioNombre}</div>
+          <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;color:${DS.white};line-height:1.1">Hola, ${data.nombre?.split(' ')[0] || 'Cliente'}</div>
+          <div style="font-size:13px;color:rgba(255,255,255,0.55);margin-top:4px">Aquí está tu progreso</div>
+        </div>
+
+        <!-- Tarjeta principal flotante -->
+        <div style="margin:-28px 16px 14px;background:${DS.white};border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,0.10);padding:20px;position:relative;z-index:1">
+
+          <!-- Nivel actual -->
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <div class="nivel-badge" style="background:${nivelColor}20;color:${nivelColor};font-size:14px">${nivelActual.emoji} ${nivelActual.nombre}</div>
-            ${sigNivel ? `<div style="font-size:12px;color:${DS.gray500}">Siguiente: ${sigNivel.emoji} ${sigNivel.nombre} (${sigNivel.visitas_minimas})</div>` : `<div style="font-size:12px;color:${DS.gold500}">💎 Nivel máximo</div>`}
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="background:${nivelColor}18;border-radius:10px;padding:8px 12px;font-family:'Sora',sans-serif;font-weight:700;font-size:13px;color:${nivelColor}">${nivelActual.emoji} ${nivelActual.nombre}</div>
+            </div>
+            ${sigNivel
+              ? `<div style="font-size:11px;color:${DS.gray500};text-align:right">Siguiente<br><strong style="color:${DS.gray700}">${sigNivel.emoji} ${sigNivel.nombre}</strong></div>`
+              : `<div style="font-size:11px;color:${DS.gold500};font-weight:700">💎 Nivel máximo</div>`}
           </div>
-          ${sigNivel ? `<div class="nivel-prog-track"><div class="nivel-prog-fill" style="width:${nivelProgPct}%;background:${nivelColor}"></div></div><p style="font-size:11px;color:${DS.gray500};margin-top:4px;margin-bottom:16px">${sigNivel.visitas_minimas - data.total_visitas} visitas para ${sigNivel.emoji} ${sigNivel.nombre}${sigNivel.premio_bienvenida ? ' · Premio: '+sigNivel.premio_bienvenida : ''}</p>` : ''}
-          <div class="sc-puntos-grid">
-            <div class="sc-punto-box"><div class="sc-punto-num">${data.total_visitas}</div><div class="sc-punto-lbl">Visitas totales</div></div>
-            <div class="sc-punto-box"><div class="sc-punto-num">${sigNivel ? sigNivel.visitas_minimas - data.total_visitas : '💎'}</div><div class="sc-punto-lbl">${sigNivel ? 'Para '+sigNivel.emoji+' '+sigNivel.nombre : 'Nivel máximo'}</div></div>
+
+          <!-- Número grande de visitas -->
+          <div style="text-align:center;padding:20px 0 16px">
+            <div style="font-family:'Sora',sans-serif;font-size:72px;font-weight:800;color:${DS.green800};line-height:1">${data.total_visitas}</div>
+            <div style="font-size:13px;color:${DS.gray500};margin-top:4px">visitas acumuladas</div>
+            <div style="font-size:11px;color:${DS.gray300};margin-top:2px">Las visitas nunca se pierden</div>
           </div>
+
+          <!-- Barra de progreso -->
+          ${sigNivel ? `
+          <div style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:${DS.gray500};margin-bottom:6px">
+              <span>${nivelActual.emoji} ${nivelActual.nombre}</span>
+              <span>${data.total_visitas}/${sigNivel.visitas_minimas}</span>
+            </div>
+            <div style="height:6px;background:${DS.gray100};border-radius:999px;overflow:hidden">
+              <div style="height:100%;width:${nivelProgPct}%;background:${nivelColor};border-radius:999px;transition:width 1s ease"></div>
+            </div>
+            <div style="font-size:11px;color:${DS.gray500};margin-top:5px;text-align:right">${sigNivel.visitas_minimas - data.total_visitas} visita${sigNivel.visitas_minimas - data.total_visitas === 1 ? '' : 's'} para ${sigNivel.emoji} ${sigNivel.nombre}</div>
+          </div>
+          ` : ''}
+
+          <!-- Premio próximo destacado -->
           ${sigNivel && sigNivel.premio_bienvenida ? `
-          <div style="background:linear-gradient(135deg,${DS.gold100},#fffdf5);border:1.5px solid #fde68a;border-radius:14px;padding:14px 16px;margin-top:12px;text-align:center">
-            <div style="font-size:11px;color:#92400e;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">🎁 Tu próximo premio</div>
-            <div style="font-family:'Sora',sans-serif;font-size:18px;font-weight:800;color:#78350f">${sigNivel.premio_bienvenida}</div>
-            <div style="font-size:12px;color:#92400e;margin-top:4px">Al llegar a ${sigNivel.emoji} ${sigNivel.nombre} (${sigNivel.visitas_minimas - data.total_visitas} visita${sigNivel.visitas_minimas - data.total_visitas === 1 ? '' : 's'} más)</div>
-          </div>` : sigNivel ? `
-          <div class="sc-mensaje normal" style="margin-top:8px">
-            Te falta${sigNivel.visitas_minimas - data.total_visitas === 1 ? '' : 'n'} <strong>${sigNivel.visitas_minimas - data.total_visitas}</strong> visita${sigNivel.visitas_minimas - data.total_visitas === 1 ? '' : 's'} para ${sigNivel.emoji} ${sigNivel.nombre}
-          </div>` : `
-          <div class="sc-mensaje premio" style="margin-top:8px">🏆 ¡Llegaste al nivel máximo! Eres ${nivelActual.emoji} ${nivelActual.nombre}</div>`}
-          ${nivelActual.visitas_minimas > 0 ? `<button class="s-btn share" id="btn-compartir-nivel" style="margin-top:12px">${nivelActual.emoji} Compartir mi nivel ${nivelActual.nombre}</button>` : ''}
+          <div style="background:linear-gradient(135deg,${DS.gold100},#fffdf5);border:1.5px solid #fde68a;border-radius:14px;padding:14px 16px;text-align:center">
+            <div style="font-size:10px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Tu próximo premio</div>
+            <div style="font-family:'Sora',sans-serif;font-size:17px;font-weight:800;color:#78350f">${sigNivel.premio_bienvenida}</div>
+            <div style="font-size:11px;color:#92400e;margin-top:3px">Faltan ${sigNivel.visitas_minimas - data.total_visitas} visita${sigNivel.visitas_minimas - data.total_visitas === 1 ? '' : 's'}</div>
+          </div>
+          ` : !sigNivel ? `
+          <div style="background:linear-gradient(135deg,${DS.gold100},#fffdf5);border:1.5px solid #fde68a;border-radius:14px;padding:14px 16px;text-align:center">
+            <div style="font-family:'Sora',sans-serif;font-size:16px;font-weight:800;color:#78350f">🏆 Nivel máximo alcanzado</div>
+            <div style="font-size:12px;color:#92400e;margin-top:3px">Eres ${nivelActual.emoji} ${nivelActual.nombre}</div>
+          </div>
+          ` : ''}
+
+          <!-- Botón compartir — solo si no es nivel inicial -->
+          ${!esNivelInicial ? `
+          <button id="btn-compartir-nivel" style="width:100%;margin-top:14px;padding:13px;border:none;border-radius:12px;background:${DS.green800};color:white;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+            Compartir mi progreso
+          </button>
+          ` : ''}
         </div>
-        <div class="s-card" style="text-align:center">
-          <div class="s-section-label">Muestra esta pantalla al cajero</div>
-          <div style="font-family:'Sora',sans-serif;font-size:32px;font-weight:800;color:${DS.gray900};margin:8px 0">${data.nombre?.split(' ')[0] || 'Cliente'}</div>
-          <div class="nivel-badge" style="background:${nivelColor}20;color:${nivelColor};font-size:16px;margin:0 auto 8px">${nivelActual.emoji} ${nivelActual.nombre}</div>
-          <div style="font-size:13px;color:${DS.gray500};margin-bottom:16px">${data.total_visitas} visitas acumuladas</div>
-          <div id="qrcode" style="display:inline-block;padding:12px;background:white;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,0.08);margin-bottom:8px"></div>
-          <p style="font-size:11px;color:${DS.gray300}">O di tu número de teléfono al cajero</p>
+
+        <!-- Tarjeta mostrar al cajero -->
+        <div style="margin:0 16px 14px;background:${DS.white};border-radius:16px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${DS.gray500};margin-bottom:14px">Muestra al cajero</div>
+          <div style="font-family:'Sora',sans-serif;font-size:36px;font-weight:800;color:${DS.gray900};line-height:1">${data.nombre || 'Cliente'}</div>
+          <div style="font-size:16px;color:${DS.gray500};margin-top:6px;letter-spacing:0.03em">${data.telefono}</div>
+          <div style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;background:${nivelColor}18;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:${nivelColor}">${nivelActual.emoji} ${nivelActual.nombre} · ${data.total_visitas} visitas</div>
         </div>
-        ${historial && historial.length > 0 ? `<div class="s-card"><div class="s-section-label">Historial de visitas</div>${filasHistorial}</div>` : ''}
+
+        <!-- Historial -->
+        ${historial && historial.length > 0 ? `
+        <div style="margin:0 16px;background:${DS.white};border-radius:16px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${DS.gray500};margin-bottom:4px">Historial</div>
+          ${filasHistorial}
+        </div>
+        ` : ''}
       </div>
     `
-  } catch (e) { return `<div class="sc-root"><div class="sc-hero"><div class="sc-hero-name">Error de conexión</div></div><div class="s-card">${errMsg()}</div></div>` }
+  } catch (e) { return `<div style="min-height:100vh;background:${DS.gray50};display:flex;align-items:center;justify-content:center"><div class="s-card">${errMsg()}</div></div>` }
 }
 
 export async function initCliente(telefono) {
   inyectarEstilos()
-  const qrDiv = document.getElementById('qrcode')
-  if (qrDiv) {
-    QRCode.toCanvas(document.createElement('canvas'), `${window.location.origin}/#/cliente/${telefono}`,
-      { width: 180, margin: 1, color: { dark: DS.green900, light: '#ffffff' } },
-      (err, canvas) => { if (!err) qrDiv.appendChild(canvas) })
-  }
   try {
     const { data } = await supabase.from('clientes').select('*, negocios(nombre,color_principal,emoji_negocio)').eq('telefono', telefono).single()
     const { data: niveles } = await supabase.from('niveles').select('*').eq('negocio_id', data?.negocio_id).order('visitas_minimas', { ascending: true })
     const nivelActual = getNivelActual(data?.total_visitas || 0, niveles)
-    const datosCompartir = { negocioNombre: data?.negocios?.nombre || '', negocioEmoji: data?.negocios?.emoji_negocio || '☕', colorNegocio: data?.negocios?.color_principal || DS.green800, nivelNombre: nivelActual.nombre, nivelEmoji: nivelActual.emoji, totalVisitas: data?.total_visitas || 0 }
+    const datosCompartir = { negocioNombre: data?.negocios?.nombre || '', negocioEmoji: data?.negocios?.emoji_negocio || '☕', colorNegocio: data?.negocios?.color_principal || DS.green800, nivelNombre: nivelActual.nombre, nivelEmoji: nivelActual.emoji, totalVisitas: data?.total_visitas || 0, clienteNombre: data?.nombre?.split(' ')[0] || '', premioNombre: nivelActual.premio_bienvenida || '' }
     document.getElementById('btn-compartir-nivel')?.addEventListener('click', async () => {
       const btn = document.getElementById('btn-compartir-nivel'); btn.disabled = true; btn.textContent = 'Generando...'
       await compartirHistoria({ ...datosCompartir, tipo: 'nivel' })
@@ -1343,7 +1426,10 @@ export async function paginaDueno() {
             <label class="s-label">Color principal</label>
             <div style="display:flex;gap:10px;align-items:center">
               <input type="color" id="input-color" value="${nd?.color_principal||DS.green800}" style="width:48px;height:48px;border:none;border-radius:10px;cursor:pointer;padding:2px" />
-              <span style="font-size:13px;color:${DS.gray500}">Aparece en la app de tus clientes</span>
+              <div>
+                <div style="font-size:13px;color:${DS.gray500}">Lo ven tus clientes, no tú</div>
+                <div style="font-size:11px;color:${DS.gray300};margin-top:2px">Tu panel siempre se ve verde — el color que eliges aparece en la pantalla de tus clientes cuando escanean el QR</div>
+              </div>
             </div>
           </div>
           <div class="s-field"><label class="s-label">Descripción corta</label><input type="text" id="input-descripcion" class="s-input" value="${nd?.descripcion||''}" placeholder="Ej: El mejor café de Chetumal" /></div>
@@ -1438,16 +1524,22 @@ export async function initDueno(negocioId) {
 
   // Niveles
   document.getElementById('btn-nuevo-nivel')?.addEventListener('click', () => {
-    const f = document.getElementById('form-nivel'); const open = f.style.display !== 'none'
-    if (!open) {
+    const f = document.getElementById('form-nivel')
+    const isHidden = f.style.display === 'none' || f.style.display === ''
+    if (isHidden) {
+      // Limpiar formulario
       document.getElementById('nivel-editando-id').value = ''
       document.getElementById('nivel-emoji').value = ''
       document.getElementById('nivel-nombre').value = ''
       document.getElementById('nivel-visitas').value = ''
       document.getElementById('nivel-premio').value = ''
+      document.getElementById('msg-nivel').innerHTML = ''
       document.getElementById('btn-guardar-nivel').textContent = 'Guardar nivel'
+      f.style.display = 'block'
+      f.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else {
+      f.style.display = 'none'
     }
-    f.style.display = open ? 'none' : 'block'
   })
 
   document.getElementById('btn-guardar-nivel')?.addEventListener('click', async () => {
