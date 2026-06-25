@@ -16,10 +16,7 @@ const DS = {
 }
 
 const NIVELES_DEFAULT = [
-  { nombre: 'Bronce',  emoji: '🥉', visitas_minimas: 0,  premio_bienvenida: '' },
-  { nombre: 'Plata',   emoji: '🥈', visitas_minimas: 10, premio_bienvenida: 'Café mediano gratis' },
-  { nombre: 'Oro',     emoji: '🥇', visitas_minimas: 25, premio_bienvenida: 'Café grande + pan' },
-  { nombre: 'Platino', emoji: '💎', visitas_minimas: 50, premio_bienvenida: 'Desayuno completo' },
+  { nombre: 'Inicio', emoji: '⭐', visitas_minimas: 0, premio_bienvenida: '' },
 ]
 
 function getNivelActual(totalVisitas, niveles) {
@@ -291,6 +288,9 @@ function navBarDueno(active = 'panel') {
       <button class="s-nav-btn" id="snav-kiosko-d"><span class="s-nav-icon">🖥️</span>Kiosko</button>
       <button class="s-nav-btn" id="snav-salir"><span class="s-nav-icon">🚪</span>Salir</button>
     </nav>
+    <div style="text-align:center;padding:4px 0 8px;border-top:1px solid rgba(255,255,255,0.08)">
+      <button id="snav-privacidad-dueno" style="background:none;border:none;color:rgba(255,255,255,0.3);font-size:10px;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:underline">Aviso de privacidad</button>
+    </div>
   `
 }
 
@@ -304,6 +304,28 @@ function initNavDueno() {
   document.getElementById('snav-cajero-d')?.addEventListener('click', () => navigate('cajero'))
   document.getElementById('snav-kiosko-d')?.addEventListener('click', () => navigate('kiosko'))
   document.getElementById('snav-salir')?.addEventListener('click', async () => { const { logout } = await import('./auth.js'); logout() })
+  document.getElementById('snav-privacidad-dueno')?.addEventListener('click', () => {
+    const modal = document.createElement('div')
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:flex-end;justify-content:center;z-index:9999'
+    modal.innerHTML = `<div style="background:white;border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-family:'Sora',sans-serif;font-size:16px;font-weight:800;color:#0f172a">Aviso de Privacidad — Dueños</div>
+        <button id="cerrar-priv-dueno" style="background:#f1f5f9;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;color:#64748b">Cerrar</button>
+      </div>
+      <div style="font-size:13px;color:#334155;line-height:1.7">
+        <p style="font-weight:600;color:#0f172a;margin-bottom:6px">¿Qué datos guardamos de tu negocio?</p>
+        <p style="margin-bottom:12px">Nombre del negocio, correo electrónico y contraseña (encriptada). No guardamos datos bancarios.</p>
+        <p style="font-weight:600;color:#0f172a;margin-bottom:6px">¿Qué datos guardamos de tus clientes?</p>
+        <p style="margin-bottom:12px">Solo nombre y teléfono de los clientes que se registran en tu programa. Tú eres responsable de informarles que sus datos se guardan.</p>
+        <p style="font-weight:600;color:#0f172a;margin-bottom:6px">¿Se comparten los datos?</p>
+        <p style="margin-bottom:12px">No. Los datos de tu negocio y clientes son privados y no se venden ni comparten con terceros.</p>
+        <p style="font-size:11px;color:#94a3b8;margin-top:16px">En cumplimiento con la LFPDPPP de México.</p>
+      </div>
+    </div>`
+    document.body.appendChild(modal)
+    modal.querySelector('#cerrar-priv-dueno')?.addEventListener('click', () => modal.remove())
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
+  })
 }
 
 function cargarChartJS() {
@@ -718,6 +740,7 @@ async function mostrarCliente(data) {
   try {
     const { data: nd } = await supabase.from('negocios').select('meta_puntos,color_principal').eq('id', data.negocio_id).single()
     const { data: niveles } = await supabase.from('niveles').select('*').eq('negocio_id', data.negocio_id).order('visitas_minimas', { ascending: true })
+    const tieneNiveles = niveles && niveles.length > 0
     const nivelActual = getNivelActual(data.total_visitas, niveles)
     const sigNivel = getSiguienteNivel(data.total_visitas, niveles)
     const nivelColor = colorNivel(nivelActual)
@@ -752,6 +775,13 @@ async function mostrarCliente(data) {
     document.getElementById('registrar').addEventListener('click', async () => {
       const btn = document.getElementById('registrar'); btn.disabled = true; btn.textContent = 'Registrando...'
       try {
+        // Anti-fraude: verificar si ya tiene visita hoy
+        const hoyStr = new Date().toISOString().split('T')[0]
+        const { data: visitaHoy } = await supabase.from('visitas').select('id').eq('cliente_id', data.id).gte('fecha', hoyStr).limit(1).maybeSingle()
+        if (visitaHoy) {
+          document.getElementById('msg-cajero').innerHTML = `<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;font-size:14px;color:#92400e;margin-top:4px">⏰ ${data.nombre.split(' ')[0]} ya tiene una visita registrada hoy. Vuelve mañana.</div>`
+          btn.disabled = false; btn.textContent = '+ Registrar visita'; return
+        }
         const { error: ev } = await supabase.from('visitas').insert({ cliente_id: data.id, negocio_id: data.negocio_id, puntos_sumados: 1 }); if (ev) throw ev
         const nv = data.total_visitas + 1
         const { error: ec } = await supabase.from('clientes').update({ puntos_actuales: nv, total_visitas: nv }).eq('id', data.id); if (ec) throw ec
@@ -1073,16 +1103,19 @@ export function initAdmin() {
 export async function paginaCliente(telefono) {
   inyectarEstilos()
   try {
-    const { data, error } = await supabase.from('clientes').select('*, negocios(id,nombre,meta_puntos,color_principal,emoji_negocio,descripcion,logo_url)').eq('telefono', telefono).single()
+    // Fix: usar maybeSingle y order para evitar error si teléfono en dos negocios
+    const { data: clientes_encontrados } = await supabase.from('clientes').select('*, negocios(id,nombre,meta_puntos,color_principal,emoji_negocio,descripcion)').eq('telefono', telefono).order('total_visitas', { ascending: false })
+    const data = clientes_encontrados?.[0] || null
+    const error = !data ? { message: 'No encontrado' } : null
     if (error) throw error
     if (!data) return `<div style="min-height:100vh;background:${DS.gray50};display:flex;align-items:center;justify-content:center"><div class="s-card" style="text-align:center"><p style="color:${DS.gray500}">No encontrado</p></div></div>`
     const { data: niveles } = await supabase.from('niveles').select('*').eq('negocio_id', data.negocios?.id || data.negocio_id).order('visitas_minimas', { ascending: true })
     const { data: historial } = await supabase.from('visitas').select('fecha').eq('cliente_id', data.id).order('fecha', { ascending: false }).limit(8)
     const colorNegocio = data.negocios?.color_principal || DS.green800
     const emojiNegocio = data.negocios?.emoji_negocio || '☕'
-    const logoUrl = data.negocios?.logo_url || ''
     const negocioNombre = data.negocios?.nombre || 'Programa de Lealtad'
     aplicarColorNegocio(colorNegocio)
+    const tieneNiveles = niveles && niveles.length > 0
     const nivelActual = getNivelActual(data.total_visitas, niveles)
     const sigNivel = getSiguienteNivel(data.total_visitas, niveles)
     const nivelColor = colorNivel(nivelActual)
@@ -1090,7 +1123,7 @@ export async function paginaCliente(telefono) {
     if (sigNivel) {
       const rango = sigNivel.visitas_minimas - nivelActual.visitas_minimas
       const avance = data.total_visitas - nivelActual.visitas_minimas
-      nivelProgPct = Math.min(Math.round((avance / rango) * 100), 100)
+      nivelProgPct = rango > 0 ? Math.min(Math.round((avance / rango) * 100), 100) : 0
     }
     const esNivelInicial = nivelActual.visitas_minimas === 0
     const filasHistorial = (historial||[]).map(v => {
@@ -1114,7 +1147,7 @@ export async function paginaCliente(telefono) {
         <div style="background:var(--negocio-color,${DS.green800});padding:28px 20px 56px;position:relative;overflow:hidden">
           <div style="position:absolute;top:-30px;right:-30px;width:160px;height:160px;background:rgba(255,255,255,0.06);border-radius:50%"></div>
           <div style="position:absolute;bottom:-40px;left:-20px;width:120px;height:120px;background:rgba(255,255,255,0.04);border-radius:50%"></div>
-          ${logoUrl ? `<img src="${logoUrl}" style="width:52px;height:52px;border-radius:14px;object-fit:cover;border:2px solid rgba(255,255,255,0.25);margin-bottom:12px;display:block" onerror="this.style.display='none'" />` : ''}
+
           <div style="font-size:11px;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">${negocioNombre}</div>
           <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;color:${DS.white};line-height:1.1">Hola, ${data.nombre?.split(' ')[0] || 'Cliente'}</div>
           <div style="font-size:13px;color:rgba(255,255,255,0.55);margin-top:4px">Aquí está tu progreso</div>
@@ -1124,6 +1157,7 @@ export async function paginaCliente(telefono) {
         <div style="margin:-28px 16px 14px;background:${DS.white};border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,0.10);padding:20px;position:relative;z-index:1">
 
           <!-- Nivel actual -->
+          ${tieneNiveles ? `
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
             <div style="display:flex;align-items:center;gap:8px">
               <div style="background:${nivelColor}18;border-radius:10px;padding:8px 12px;font-family:'Sora',sans-serif;font-weight:700;font-size:13px;color:${nivelColor}">${nivelActual.emoji} ${nivelActual.nombre}</div>
@@ -1132,10 +1166,11 @@ export async function paginaCliente(telefono) {
               ? `<div style="font-size:11px;color:${DS.gray500};text-align:right">Siguiente<br><strong style="color:${DS.gray700}">${sigNivel.emoji} ${sigNivel.nombre}</strong></div>`
               : `<div style="font-size:11px;color:${DS.gold500};font-weight:700">💎 Nivel máximo</div>`}
           </div>
+          ` : `<div style="font-size:12px;color:${DS.gray500};text-align:center;padding:8px 0;margin-bottom:8px">Sin niveles configurados aún</div>`}
 
           <!-- Número grande de visitas -->
           <div style="text-align:center;padding:20px 0 16px">
-            <div style="font-family:'Sora',sans-serif;font-size:72px;font-weight:800;color:${DS.gold500};line-height:1">${data.total_visitas}</div>
+            <div style="font-family:'Sora',sans-serif;font-size:72px;font-weight:800;color:${DS.green800};line-height:1">${data.total_visitas}</div>
             <div style="font-size:13px;color:${DS.gray500};margin-top:4px">visitas acumuladas</div>
             <div style="font-size:11px;color:${DS.gray300};margin-top:2px">Las visitas nunca se pierden</div>
           </div>
@@ -1143,8 +1178,7 @@ export async function paginaCliente(telefono) {
           <!-- Barra de progreso -->
           ${sigNivel ? `
           <div style="margin-bottom:16px">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:${DS.gray500};margin-bottom:6px">
-              <span>${nivelActual.emoji} ${nivelActual.nombre}</span>
+            <div style="display:flex;justify-content:flex-end;font-size:11px;color:${DS.gray500};margin-bottom:6px">
               <span>${data.total_visitas}/${sigNivel.visitas_minimas}</span>
             </div>
             <div style="height:6px;background:${DS.gray100};border-radius:999px;overflow:hidden">
@@ -1177,8 +1211,8 @@ export async function paginaCliente(telefono) {
           </div>
 
           <!-- Botón compartir siempre visible -->
-          <button id="btn-compartir-nivel" style="width:100%;margin-top:14px;padding:13px;border:none;border-radius:12px;background:${DS.green800};color:white;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-            Compartir mi progreso
+          <button id="btn-compartir-nivel" style="width:100%;margin-top:14px;padding:13px;border:none;border-radius:12px;background:linear-gradient(135deg,${DS.gold500},${DS.gold400});color:white;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(245,166,35,0.45);animation:sGlow 2.5s ease-in-out infinite">
+            Compartir mi progreso ✨
           </button>
 
         </div>
@@ -1520,6 +1554,12 @@ export async function paginaDueno() {
         <div class="s-card"><div class="s-section-label">Este mes vs mes anterior</div><div class="s-chart-wrap"><canvas id="chart-meses"></canvas></div></div>
         <div class="s-card"><div class="s-section-label">Clientes nuevos vs recurrentes</div><div class="s-chart-wrap donut"><canvas id="chart-dona"></canvas></div></div>
 
+        <!-- Clientes cerca de subir -->
+        <div class="s-card" id="card-cerca-nivel">
+          <div class="s-section-label">⚡ Cerca de subir de nivel</div>
+          <div id="lista-cerca-nivel"><p style="color:#aaa;font-size:13px;text-align:center;padding:8px 0">Calculando...</p></div>
+        </div>
+
         <!-- Personalización -->
         <div class="s-card">
           <div class="s-section-label">Personalización</div>
@@ -1555,11 +1595,17 @@ export async function paginaDueno() {
               <div class="s-field"><label class="s-label">Nombre del nivel</label><input type="text" id="nivel-nombre" class="s-input" placeholder="Ej: Bronce, VIP, Estrella..." /></div>
             </div>
             <div class="s-field"><label class="s-label">Visitas mínimas para este nivel</label><input type="number" id="nivel-visitas" class="s-input" placeholder="Ej: 0, 10, 25, 50..." min="0" /></div>
-            <div class="s-field"><label class="s-label">Premio al llegar a este nivel (opcional)</label><input type="text" id="nivel-premio" class="s-input" placeholder="Ej: Café mediano gratis, 20% descuento..." /></div>
+            <div class="s-field"><label class="s-label">Premio al llegar a este nivel (opcional)</label><input type="text" id="nivel-premio" class="s-input" placeholder="ej: café gratis, corte gratis..." /><div style="font-size:11px;color:#64748b;margin-top:4px">Escribe solo el premio corto. Ej: <strong>café gratis</strong> — no: "10% de descuento en tu primera compra"</div></div>
             <button id="btn-guardar-nivel" class="s-btn primary" style="margin-top:8px">Guardar nivel</button>
             <div id="msg-nivel" style="margin-top:10px"></div>
           </div>
           <div id="lista-niveles">${filasNiveles || `<p style="color:#aaa;font-size:13px;text-align:center;padding:16px 0">No hay niveles configurados. Agrega el primero con "+ Nuevo nivel"</p>`}</div>
+        </div>
+
+        <!-- Clientes cerca de nivel -->
+        <div class="s-card">
+          <div class="s-section-label">Clientes cerca de subir de nivel</div>
+          <div id="lista-cerca-nivel" style="margin-top:8px"><div style="font-size:13px;color:#94a3b8">Cargando...</div></div>
         </div>
 
         <!-- Exportar CSV -->
@@ -1714,6 +1760,35 @@ export async function initDueno(negocioId) {
     } catch (e) { msg.innerHTML = errMsg('descargar') }
     finally { btn.textContent = '⬇ Descargar clientes (.csv)'; btn.disabled = false }
   })
+
+  // Clientes cerca de subir de nivel
+  ;(async () => {
+    try {
+      const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
+      const { data: nivelesD } = await supabase.from('niveles').select('*').eq('negocio_id', negocio.id).order('visitas_minimas', { ascending: true })
+      const { data: clientesD } = await supabase.from('clientes').select('nombre,telefono,total_visitas').eq('negocio_id', negocio.id)
+      const el = document.getElementById('lista-cerca-nivel'); if (!el) return
+      if (!clientesD?.length || !nivelesD || nivelesD.length < 2) {
+        el.innerHTML = '<div style="font-size:13px;color:#94a3b8">Configura al menos 2 niveles para ver esta sección.</div>'; return
+      }
+      const cercanos = (clientesD||[]).filter(c => {
+        const sig = getSiguienteNivel(c.total_visitas, nivelesD)
+        if (!sig) return false
+        const faltan = sig.visitas_minimas - c.total_visitas
+        return faltan > 0 && faltan <= 3
+      }).sort((a,b) => {
+        const fA = getSiguienteNivel(a.total_visitas, nivelesD).visitas_minimas - a.total_visitas
+        const fB = getSiguienteNivel(b.total_visitas, nivelesD).visitas_minimas - b.total_visitas
+        return fA - fB
+      }).slice(0, 10)
+      if (!cercanos.length) { el.innerHTML = '<div style="font-size:13px;color:#94a3b8">Ningún cliente está a 3 visitas o menos de subir.</div>'; return }
+      el.innerHTML = cercanos.map(c => {
+        const sig = getSiguienteNivel(c.total_visitas, nivelesD)
+        const faltan = sig.visitas_minimas - c.total_visitas
+        return `<div class="s-row" style="padding:10px 0"><div><div style="font-weight:600;font-size:14px;color:#0f172a">${c.nombre}</div><div style="font-size:12px;color:#64748b">${c.total_visitas} visitas acumuladas</div></div><div style="text-align:right"><div style="font-size:13px;font-weight:700;color:#0a5c47">Le falta${faltan===1?'':'n'} ${faltan}</div><div style="font-size:11px;color:#94a3b8">para ${sig.emoji} ${sig.nombre}${sig.premio_bienvenida?' · '+sig.premio_bienvenida:''}</div></div></div>`
+      }).join('')
+    } catch(e) { const el=document.getElementById('lista-cerca-nivel'); if(el) el.innerHTML='' }
+  })()
 
   // Landing
   document.getElementById('btn-copiar-landing')?.addEventListener('click', () => {
