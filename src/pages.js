@@ -416,7 +416,7 @@ const PASOS_ONBOARDING = [
   { icon: '📊', titulo: 'Ve tus estadísticas en tiempo real', desc: 'Consulta cuántos clientes tienes, qué días son más concurridos y quiénes son tus clientes más fieles.' },
 ]
 
-async function compartirHistoria({ tipo, negocioNombre, negocioEmoji, nivelNombre, nivelEmoji, premioNombre, totalVisitas, colorNegocio, clienteNombre }) {
+async function compartirHistoria({ tipo, negocioNombre, negocioEmoji, nivelNombre, nivelEmoji, premioNombre, totalVisitas, colorNegocio, clienteNombre, faltanVisitas, sigNivelPremio }) {
   return new Promise((resolve) => {
     // Formato vertical tipo tarjeta — estilo Duolingo
     const canvas = document.createElement('canvas')
@@ -484,27 +484,39 @@ async function compartirHistoria({ tipo, negocioNombre, negocioEmoji, nivelNombr
     ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1.5
     ctx.beginPath(); ctx.moveTo(cx0+60, cy0+670); ctx.lineTo(cx0+cw-60, cy0+670); ctx.stroke()
 
-    // Premio o nivel — texto principal
-    const textoLogro = premioNombre
-      ? `${clienteNombre || 'Cliente'} ganó ${premioNombre}`
-      : `${clienteNombre || 'Cliente'} llegó a ${nivelNombre}`
-    ctx.fillStyle = '#0f172a'; ctx.font = 'bold 62px Arial'; ctx.textAlign = 'center'
-    // Wrap texto si es largo
-    const maxW = cw - 120
-    const words = textoLogro.split(' '); let line = ''; const lines = []
-    for (const w of words) {
-      const test = line ? line + ' ' + w : w
-      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w }
-      else line = test
+    // Texto dinámico según situación del cliente
+    // Si tiene premio: "El Carlitos le regaló un café gratis a Juan"
+    // Si no ha llegado: "Juan está a N visitas de ganarse un café gratis en El Carlitos"
+    let textoLinea1 = ''
+    let textoLinea2 = ''
+    if (premioNombre) {
+      textoLinea1 = `${negocioNombre} le regaló`
+      textoLinea2 = `${premioNombre} a ${clienteNombre || 'un cliente'}`
+    } else if (sigNivelPremio && faltanVisitas > 0) {
+      textoLinea1 = `${clienteNombre || 'Cliente'} está a ${faltanVisitas} visita${faltanVisitas === 1 ? '' : 's'} de ganarse`
+      textoLinea2 = `${sigNivelPremio} en ${negocioNombre}`
+    } else {
+      textoLinea1 = `${clienteNombre || 'Cliente'} tiene`
+      textoLinea2 = `${totalVisitas} visitas en ${negocioNombre}`
     }
-    if (line) lines.push(line)
-    const lineH = 76; const startY = cy0 + 760
-    lines.forEach((l, i) => ctx.fillText(l, cx, startY + i * lineH))
-
-    // Negocio
-    const afterText = startY + lines.length * lineH + 20
-    ctx.fillStyle = '#64748b'; ctx.font = '44px Arial'
-    ctx.fillText(`en ${negocioNombre}`, cx, afterText)
+    ctx.fillStyle = '#0f172a'; ctx.textAlign = 'center'
+    // Función para dibujar texto con wrap
+    const drawWrapped = (texto, startYp, fontSize, color = '#0f172a') => {
+      ctx.font = `bold ${fontSize}px Arial`; ctx.fillStyle = color
+      const maxWt = cw - 120
+      const wds = texto.split(' '); let ln = ''; const lns = []
+      for (const w of wds) {
+        const test = ln ? ln + ' ' + w : w
+        if (ctx.measureText(test).width > maxWt && ln) { lns.push(ln); ln = w }
+        else ln = test
+      }
+      if (ln) lns.push(ln)
+      lns.forEach((l, i) => ctx.fillText(l, cx, startYp + i * (fontSize + 14)))
+      return lns.length * (fontSize + 14)
+    }
+    const h1 = drawWrapped(textoLinea1, cy0 + 730, 54, '#64748b')
+    drawWrapped(textoLinea2, cy0 + 730 + h1 + 10, 62, '#0f172a')
+    const afterText = cy0 + 730 + h1 + 100
 
     // Línea divisora
     ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1.5
@@ -878,6 +890,13 @@ export function initKiosko() {
         msg.textContent = 'No se encontró ese nombre. Intenta con el teléfono.'; btn.disabled = false; btn.textContent = 'Registrar mi visita →'; return
       }
       const nivelAnterior = getNivelActual(cliente.total_visitas, niveles)
+      // Anti-fraude: 1 visita por día
+      const hoyK = new Date().toISOString().split('T')[0]
+      const { data: visitaHoyK } = await supabase.from('visitas').select('id').eq('cliente_id', cliente.id).gte('fecha', hoyK + 'T00:00:00').lte('fecha', hoyK + 'T23:59:59').maybeSingle()
+      if (visitaHoyK) {
+        msg.innerHTML = `<div style="background:#fef3c7;border:1.5px solid #fde68a;border-radius:12px;padding:16px;text-align:center;color:#92400e"><strong>Ya tienes tu visita de hoy registrada.</strong><br><span style="font-size:13px">Vuelve mañana para seguir acumulando.</span></div>`
+        btn.disabled = false; btn.textContent = 'Registrar mi visita →'; return
+      }
       await supabase.from('visitas').insert({ cliente_id: cliente.id, negocio_id: negocio.id, puntos_sumados: 1 })
       const nv = cliente.total_visitas + 1
       await supabase.from('clientes').update({ puntos_actuales: nv, total_visitas: nv }).eq('id', cliente.id)
@@ -1149,7 +1168,7 @@ export async function paginaCliente(telefono) {
           <div style="position:absolute;bottom:-40px;left:-20px;width:120px;height:120px;background:rgba(255,255,255,0.04);border-radius:50%"></div>
 
           <div style="font-size:11px;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">${negocioNombre}</div>
-          <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;color:${DS.white};line-height:1.1">Hola, ${data.nombre?.split(' ')[0] || 'Cliente'}</div>
+          <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;color:${DS.white};line-height:1.1">\${(() => { const h = new Date().getHours(); const s = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches'; return s + ', ' })()}${data.nombre?.split(' ')[0] || 'Cliente'}</div>
           <div style="font-size:13px;color:rgba(255,255,255,0.55);margin-top:4px">Aquí está tu progreso</div>
         </div>
 
@@ -1175,16 +1194,16 @@ export async function paginaCliente(telefono) {
             <div style="font-size:11px;color:${DS.gray300};margin-top:2px">Las visitas nunca se pierden</div>
           </div>
 
-          <!-- Barra de progreso -->
+          <!-- Barra de progreso con hitos — solo si hay siguiente nivel -->
           ${sigNivel ? `
           <div style="margin-bottom:16px">
             <div style="display:flex;justify-content:flex-end;font-size:11px;color:${DS.gray500};margin-bottom:6px">
               <span>${data.total_visitas}/${sigNivel.visitas_minimas}</span>
             </div>
-            <div style="height:6px;background:${DS.gray100};border-radius:999px;overflow:hidden">
-              <div style="height:100%;width:${nivelProgPct}%;background:${nivelColor};border-radius:999px;transition:width 1s ease"></div>
+            <div style="position:relative;height:8px;background:${DS.gray100};border-radius:999px;overflow:visible;margin-bottom:18px">
+              <div style="height:100%;width:${nivelProgPct}%;background:${nivelColor};border-radius:999px;transition:width 1s ease;max-width:100%"></div>
             </div>
-            <div style="font-size:11px;color:${DS.gray500};margin-top:5px;text-align:right">${sigNivel.visitas_minimas - data.total_visitas} visita${sigNivel.visitas_minimas - data.total_visitas === 1 ? '' : 's'} para ${sigNivel.emoji} ${sigNivel.nombre}</div>
+            <div style="font-size:12px;color:${DS.gray500};text-align:right">${sigNivel.visitas_minimas - data.total_visitas} visita${sigNivel.visitas_minimas - data.total_visitas === 1 ? '' : 's'} para ${sigNivel.emoji} ${sigNivel.nombre}</div>
           </div>
           ` : ''}
 
@@ -1210,9 +1229,13 @@ export async function paginaCliente(telefono) {
             <button id="banner-cerrar" style="margin-top:10px;padding:8px 16px;border:none;border-radius:8px;background:#f5a623;color:white;font-family:'Sora',sans-serif;font-size:12px;font-weight:700;cursor:pointer">Entendido</button>
           </div>
 
-          <!-- Botón compartir siempre visible -->
+          <!-- Botón compartir — texto dinámico según situación -->
           <button id="btn-compartir-nivel" style="width:100%;margin-top:14px;padding:13px;border:none;border-radius:12px;background:linear-gradient(135deg,${DS.gold500},${DS.gold400});color:white;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(245,166,35,0.45);animation:sGlow 2.5s ease-in-out infinite">
-            Compartir mi progreso ✨
+            ${nivelActual.premio_bienvenida
+              ? 'Compartir mi progreso'
+              : sigNivel && sigNivel.premio_bienvenida
+                ? 'Estoy a ' + (sigNivel.visitas_minimas - data.total_visitas) + ' visita' + (sigNivel.visitas_minimas - data.total_visitas === 1 ? '' : 's') + ' de ganar ' + sigNivel.premio_bienvenida
+                : 'Compartir mi progreso'}
           </button>
 
         </div>
@@ -1243,7 +1266,9 @@ export async function initCliente(telefono) {
     const { data } = await supabase.from('clientes').select('*, negocios(nombre,color_principal,emoji_negocio)').eq('telefono', telefono).single()
     const { data: niveles } = await supabase.from('niveles').select('*').eq('negocio_id', data?.negocio_id).order('visitas_minimas', { ascending: true })
     const nivelActual = getNivelActual(data?.total_visitas || 0, niveles)
-    const datosCompartir = { negocioNombre: data?.negocios?.nombre || '', negocioEmoji: data?.negocios?.emoji_negocio || '☕', colorNegocio: data?.negocios?.color_principal || DS.green800, nivelNombre: nivelActual.nombre, nivelEmoji: nivelActual.emoji, totalVisitas: data?.total_visitas || 0, clienteNombre: data?.nombre?.split(' ')[0] || '', premioNombre: nivelActual.premio_bienvenida || '' }
+    // Premio: si ya tiene nivel con premio úsalo, si no usa el del siguiente nivel para motivar
+    const premioParaCompartir = nivelActual.premio_bienvenida || ''
+    const datosCompartir = { negocioNombre: data?.negocios?.nombre || '', negocioEmoji: data?.negocios?.emoji_negocio || '☕', colorNegocio: data?.negocios?.color_principal || DS.green800, nivelNombre: nivelActual.nombre, nivelEmoji: nivelActual.emoji, totalVisitas: data?.total_visitas || 0, clienteNombre: data?.nombre?.split(' ')[0] || '', premioNombre: premioParaCompartir, sigNivelNombre: sigNivel?.nombre || '', sigNivelPremio: sigNivel?.premio_bienvenida || '', faltanVisitas: sigNivel ? sigNivel.visitas_minimas - (data?.total_visitas || 0) : 0 }
 
     // Banner de premio ganado — se activa desde localStorage cuando el cajero registró subida
     const key = `sello_premio_${telefono}`
@@ -1554,12 +1579,6 @@ export async function paginaDueno() {
         <div class="s-card"><div class="s-section-label">Este mes vs mes anterior</div><div class="s-chart-wrap"><canvas id="chart-meses"></canvas></div></div>
         <div class="s-card"><div class="s-section-label">Clientes nuevos vs recurrentes</div><div class="s-chart-wrap donut"><canvas id="chart-dona"></canvas></div></div>
 
-        <!-- Clientes cerca de subir -->
-        <div class="s-card" id="card-cerca-nivel">
-          <div class="s-section-label">⚡ Cerca de subir de nivel</div>
-          <div id="lista-cerca-nivel"><p style="color:#aaa;font-size:13px;text-align:center;padding:8px 0">Calculando...</p></div>
-        </div>
-
         <!-- Personalización -->
         <div class="s-card">
           <div class="s-section-label">Personalización</div>
@@ -1595,17 +1614,19 @@ export async function paginaDueno() {
               <div class="s-field"><label class="s-label">Nombre del nivel</label><input type="text" id="nivel-nombre" class="s-input" placeholder="Ej: Bronce, VIP, Estrella..." /></div>
             </div>
             <div class="s-field"><label class="s-label">Visitas mínimas para este nivel</label><input type="number" id="nivel-visitas" class="s-input" placeholder="Ej: 0, 10, 25, 50..." min="0" /></div>
-            <div class="s-field"><label class="s-label">Premio al llegar a este nivel (opcional)</label><input type="text" id="nivel-premio" class="s-input" placeholder="ej: café gratis, corte gratis..." /><div style="font-size:11px;color:#64748b;margin-top:4px">Escribe solo el premio corto. Ej: <strong>café gratis</strong> — no: "10% de descuento en tu primera compra"</div></div>
+            <div class="s-field">
+  <label class="s-label">Premio al llegar a este nivel (opcional)</label>
+  <input type="text" id="nivel-premio" class="s-input" placeholder="ej: café gratis, 10% de descuento en su comida, corte gratis..." />
+  <div style="font-size:11px;color:#64748b;margin-top:6px;line-height:1.5">
+    Escribe el premio que recibirá el cliente. Ej: <strong>café gratis</strong>, <strong>10% de descuento en su comida</strong>, <strong>corte gratis</strong>.<br>
+    <span style="color:#94a3b8">Evita usar "tu" o "tu compra" — en la imagen que comparten tus clientes puede verse extraño.</span><br>
+    <span style="color:#0a5c47;font-weight:600">Recomendamos tener mínimo 3 niveles distintos para una mejor experiencia del cliente.</span>
+  </div>
+</div>
             <button id="btn-guardar-nivel" class="s-btn primary" style="margin-top:8px">Guardar nivel</button>
             <div id="msg-nivel" style="margin-top:10px"></div>
           </div>
           <div id="lista-niveles">${filasNiveles || `<p style="color:#aaa;font-size:13px;text-align:center;padding:16px 0">No hay niveles configurados. Agrega el primero con "+ Nuevo nivel"</p>`}</div>
-        </div>
-
-        <!-- Clientes cerca de nivel -->
-        <div class="s-card">
-          <div class="s-section-label">Clientes cerca de subir de nivel</div>
-          <div id="lista-cerca-nivel" style="margin-top:8px"><div style="font-size:13px;color:#94a3b8">Cargando...</div></div>
         </div>
 
         <!-- Exportar CSV -->
@@ -1761,34 +1782,7 @@ export async function initDueno(negocioId) {
     finally { btn.textContent = '⬇ Descargar clientes (.csv)'; btn.disabled = false }
   })
 
-  // Clientes cerca de subir de nivel
-  ;(async () => {
-    try {
-      const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
-      const { data: nivelesD } = await supabase.from('niveles').select('*').eq('negocio_id', negocio.id).order('visitas_minimas', { ascending: true })
-      const { data: clientesD } = await supabase.from('clientes').select('nombre,telefono,total_visitas').eq('negocio_id', negocio.id)
-      const el = document.getElementById('lista-cerca-nivel'); if (!el) return
-      if (!clientesD?.length || !nivelesD || nivelesD.length < 2) {
-        el.innerHTML = '<div style="font-size:13px;color:#94a3b8">Configura al menos 2 niveles para ver esta sección.</div>'; return
-      }
-      const cercanos = (clientesD||[]).filter(c => {
-        const sig = getSiguienteNivel(c.total_visitas, nivelesD)
-        if (!sig) return false
-        const faltan = sig.visitas_minimas - c.total_visitas
-        return faltan > 0 && faltan <= 3
-      }).sort((a,b) => {
-        const fA = getSiguienteNivel(a.total_visitas, nivelesD).visitas_minimas - a.total_visitas
-        const fB = getSiguienteNivel(b.total_visitas, nivelesD).visitas_minimas - b.total_visitas
-        return fA - fB
-      }).slice(0, 10)
-      if (!cercanos.length) { el.innerHTML = '<div style="font-size:13px;color:#94a3b8">Ningún cliente está a 3 visitas o menos de subir.</div>'; return }
-      el.innerHTML = cercanos.map(c => {
-        const sig = getSiguienteNivel(c.total_visitas, nivelesD)
-        const faltan = sig.visitas_minimas - c.total_visitas
-        return `<div class="s-row" style="padding:10px 0"><div><div style="font-weight:600;font-size:14px;color:#0f172a">${c.nombre}</div><div style="font-size:12px;color:#64748b">${c.total_visitas} visitas acumuladas</div></div><div style="text-align:right"><div style="font-size:13px;font-weight:700;color:#0a5c47">Le falta${faltan===1?'':'n'} ${faltan}</div><div style="font-size:11px;color:#94a3b8">para ${sig.emoji} ${sig.nombre}${sig.premio_bienvenida?' · '+sig.premio_bienvenida:''}</div></div></div>`
-      }).join('')
-    } catch(e) { const el=document.getElementById('lista-cerca-nivel'); if(el) el.innerHTML='' }
-  })()
+
 
   // Landing
   document.getElementById('btn-copiar-landing')?.addEventListener('click', () => {
