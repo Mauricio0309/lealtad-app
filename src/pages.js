@@ -1144,6 +1144,8 @@ export async function paginaCliente(telefono) {
       const avance = data.total_visitas - nivelActual.visitas_minimas
       nivelProgPct = rango > 0 ? Math.min(Math.round((avance / rango) * 100), 100) : 0
     }
+    const _h = new Date().getHours()
+    const saludo = _h < 12 ? 'Buenos días' : _h < 19 ? 'Buenas tardes' : 'Buenas noches'
     const esNivelInicial = nivelActual.visitas_minimas === 0
     const filasHistorial = (historial||[]).map(v => {
       const fecha = new Date(v.fecha).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -1168,7 +1170,7 @@ export async function paginaCliente(telefono) {
           <div style="position:absolute;bottom:-40px;left:-20px;width:120px;height:120px;background:rgba(255,255,255,0.04);border-radius:50%"></div>
 
           <div style="font-size:11px;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">${negocioNombre}</div>
-          <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;color:${DS.white};line-height:1.1">\${(() => { const h = new Date().getHours(); const s = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches'; return s + ', ' })()}${data.nombre?.split(' ')[0] || 'Cliente'}</div>
+          <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;color:${DS.white};line-height:1.1">${saludo}, ${data.nombre?.split(' ')[0] || 'Cliente'}</div>
           <div style="font-size:13px;color:rgba(255,255,255,0.55);margin-top:4px">Aquí está tu progreso</div>
         </div>
 
@@ -1178,12 +1180,8 @@ export async function paginaCliente(telefono) {
           <!-- Nivel actual -->
           ${tieneNiveles ? `
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <div style="display:flex;align-items:center;gap:8px">
-              <div style="background:${nivelColor}18;border-radius:10px;padding:8px 12px;font-family:'Sora',sans-serif;font-weight:700;font-size:13px;color:${nivelColor}">${nivelActual.emoji} ${nivelActual.nombre}</div>
-            </div>
-            ${sigNivel
-              ? `<div style="font-size:11px;color:${DS.gray500};text-align:right">Siguiente<br><strong style="color:${DS.gray700}">${sigNivel.emoji} ${sigNivel.nombre}</strong></div>`
-              : `<div style="font-size:11px;color:${DS.gold500};font-weight:700">💎 Nivel máximo</div>`}
+            <div style="background:${nivelColor}18;border-radius:10px;padding:8px 12px;font-family:'Sora',sans-serif;font-weight:700;font-size:13px;color:${nivelColor}">${nivelActual.emoji} ${nivelActual.nombre}</div>
+            ${!sigNivel ? `<div style="font-size:11px;color:${DS.gold500};font-weight:700">💎 Máximo</div>` : ''}
           </div>
           ` : `<div style="font-size:12px;color:${DS.gray500};text-align:center;padding:8px 0;margin-bottom:8px">Sin niveles configurados aún</div>`}
 
@@ -1229,13 +1227,9 @@ export async function paginaCliente(telefono) {
             <button id="banner-cerrar" style="margin-top:10px;padding:8px 16px;border:none;border-radius:8px;background:#f5a623;color:white;font-family:'Sora',sans-serif;font-size:12px;font-weight:700;cursor:pointer">Entendido</button>
           </div>
 
-          <!-- Botón compartir — texto dinámico según situación -->
-          <button id="btn-compartir-nivel" style="width:100%;margin-top:14px;padding:13px;border:none;border-radius:12px;background:linear-gradient(135deg,${DS.gold500},${DS.gold400});color:white;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(245,166,35,0.45);animation:sGlow 2.5s ease-in-out infinite">
-            ${nivelActual.premio_bienvenida
-              ? 'Compartir mi progreso'
-              : sigNivel && sigNivel.premio_bienvenida
-                ? 'Estoy a ' + (sigNivel.visitas_minimas - data.total_visitas) + ' visita' + (sigNivel.visitas_minimas - data.total_visitas === 1 ? '' : 's') + ' de ganar ' + sigNivel.premio_bienvenida
-                : 'Compartir mi progreso'}
+          <!-- Botón compartir — siempre verde, texto según situación -->
+          <button id="btn-compartir-nivel" style="width:100%;margin-top:14px;padding:13px;border:none;border-radius:12px;background:${DS.green800};color:white;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+            Compartir mi progreso
           </button>
 
         </div>
