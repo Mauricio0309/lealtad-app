@@ -20,16 +20,16 @@ const NIVELES_DEFAULT = [
 ]
 
 function getNivelActual(totalVisitas, niveles) {
-  const lista = [...(niveles && niveles.length > 0 ? niveles : NIVELES_DEFAULT)]
-    .sort((a, b) => a.visitas_minimas - b.visitas_minimas)
+  if (!niveles || niveles.length === 0) return NIVELES_DEFAULT[0]
+  const lista = [...niveles].sort((a, b) => a.visitas_minimas - b.visitas_minimas)
   let actual = lista[0]
   for (const n of lista) { if (totalVisitas >= n.visitas_minimas) actual = n }
   return actual
 }
 
 function getSiguienteNivel(totalVisitas, niveles) {
-  const lista = [...(niveles && niveles.length > 0 ? niveles : NIVELES_DEFAULT)]
-    .sort((a, b) => a.visitas_minimas - b.visitas_minimas)
+  if (!niveles || niveles.length === 0) return null
+  const lista = [...niveles].sort((a, b) => a.visitas_minimas - b.visitas_minimas)
   return lista.find(n => n.visitas_minimas > totalVisitas) || null
 }
 
@@ -528,15 +528,25 @@ async function compartirHistoria({ tipo, negocioNombre, negocioEmoji, nivelNombr
     ctx.fillText(negocioNombre, cx0 + 60, cy0 + 1130)
     ctx.textAlign = 'right'
     ctx.fillText(fecha, cx0 + cw - 60, cy0 + 1130)
-    canvas.toBlob(async (blob) => {
-      const file = new File([blob], 'sello-historia.png', { type: 'image/png' })
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        try { await navigator.share({ files: [file], title: tipo === 'premio' ? '¡Gané un premio!' : `¡Llegué a ${nivelNombre}!`, text: `Con Sello en ${negocioNombre} 🎉` }); resolve('shared') }
-        catch (e) { const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'sello-historia.png'; link.click(); URL.revokeObjectURL(url); resolve('downloaded') }
-      } else {
-        const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'sello-historia.png'; link.click(); URL.revokeObjectURL(url); resolve('downloaded')
-      }
-    }, 'image/png')
+    setTimeout(() => {
+      canvas.toBlob(async (blob) => {
+        if (!blob) { resolve('error'); return }
+        const file = new File([blob], 'sello-historia.png', { type: 'image/png' })
+        const url = URL.createObjectURL(blob)
+        try {
+          if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: tipo === 'premio' ? '¡Gané un premio!' : `¡Llegué a ${nivelNombre}!`, text: `Con Sello en ${negocioNombre} 🎉` })
+          } else {
+            const link = document.createElement('a'); link.href = url; link.download = 'sello-historia.png'; link.click()
+          }
+        } catch(e) {
+          // Fallback final — abrir imagen en nueva pestaña
+          window.open(url, '_blank')
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 3000)
+        resolve('done')
+      }, 'image/png')
+    }, 100)
   })
 }
 
@@ -1138,11 +1148,13 @@ export async function paginaCliente(telefono) {
     const nivelActual = getNivelActual(data.total_visitas, niveles)
     const sigNivel = getSiguienteNivel(data.total_visitas, niveles)
     const nivelColor = colorNivel(nivelActual)
-    let nivelProgPct = 100
+    let nivelProgPct = 0
     if (sigNivel) {
-      const rango = sigNivel.visitas_minimas - nivelActual.visitas_minimas
-      const avance = data.total_visitas - nivelActual.visitas_minimas
+      const rango = sigNivel.visitas_minimas - (nivelActual.visitas_minimas || 0)
+      const avance = data.total_visitas - (nivelActual.visitas_minimas || 0)
       nivelProgPct = rango > 0 ? Math.min(Math.round((avance / rango) * 100), 100) : 0
+    } else {
+      nivelProgPct = 100
     }
     const _h = new Date().getHours()
     const saludo = _h < 12 ? 'Buenos días' : _h < 19 ? 'Buenas tardes' : 'Buenas noches'
@@ -1198,8 +1210,8 @@ export async function paginaCliente(telefono) {
             <div style="display:flex;justify-content:flex-end;font-size:11px;color:${DS.gray500};margin-bottom:6px">
               <span>${data.total_visitas}/${sigNivel.visitas_minimas}</span>
             </div>
-            <div style="position:relative;height:8px;background:${DS.gray100};border-radius:999px;overflow:visible;margin-bottom:18px">
-              <div style="height:100%;width:${nivelProgPct}%;background:${nivelColor};border-radius:999px;transition:width 1s ease;max-width:100%"></div>
+            <div style="height:8px;background:${DS.gray100};border-radius:999px;overflow:hidden;margin-bottom:10px">
+              <div style="height:100%;width:${nivelProgPct}%;background:${nivelColor};border-radius:999px"></div>
             </div>
             <div style="font-size:12px;color:${DS.gray500};text-align:right">${sigNivel.visitas_minimas - data.total_visitas} visita${sigNivel.visitas_minimas - data.total_visitas === 1 ? '' : 's'} para ${sigNivel.emoji} ${sigNivel.nombre}</div>
           </div>
@@ -1283,11 +1295,14 @@ export async function initCliente(telefono) {
     // Botón compartir
     document.getElementById('btn-compartir-nivel')?.addEventListener('click', async () => {
       const btn = document.getElementById('btn-compartir-nivel')
+      if (!btn) return
       btn.disabled = true; btn.textContent = 'Generando...'
-      await compartirHistoria({ ...datosCompartir, tipo: 'nivel' })
+      try {
+        await compartirHistoria({ ...datosCompartir, tipo: 'nivel' })
+      } catch(err) { console.error('compartir:', err) }
       btn.disabled = false; btn.textContent = 'Compartir mi progreso'
     })
-  } catch (e) {}
+  } catch (e) { console.error('initCliente:', e) }
 }
 
 export async function paginaQRNegocio(negocioId) {
