@@ -1,0 +1,101 @@
+tipo,objeto,definicion
+0-tabla,canjes,rls=true filas_aprox=-1
+0-tabla,clientes,rls=true filas_aprox=10
+0-tabla,negocios,rls=true filas_aprox=-1
+0-tabla,niveles,rls=true filas_aprox=-1
+0-tabla,premios,rls=true filas_aprox=-1
+0-tabla,profiles,rls=true filas_aprox=-1
+0-tabla,visitas,rls=true filas_aprox=53
+1-columna,canjes.id,uuid not null default gen_random_uuid()
+1-columna,canjes.cliente_id,uuid
+1-columna,canjes.premio_id,uuid
+1-columna,canjes.fecha,timestamp without time zone default now()
+1-columna,clientes.id,uuid not null default gen_random_uuid()
+1-columna,clientes.telefono,text not null
+1-columna,clientes.nombre,text
+1-columna,clientes.negocio_id,uuid
+1-columna,clientes.puntos_actuales,integer default 0
+1-columna,clientes.total_visitas,integer default 0
+1-columna,clientes.fecha_registro,timestamp without time zone default now()
+1-columna,negocios.id,uuid not null default gen_random_uuid()
+1-columna,negocios.nombre,text not null
+1-columna,negocios.telefono,text
+1-columna,negocios.email,text not null
+1-columna,negocios.password,text not null
+1-columna,negocios.activo,boolean default true
+1-columna,negocios.fecha_creacion,timestamp without time zone default now()
+1-columna,negocios.password_hash,text
+1-columna,negocios.meta_puntos,integer default 10
+1-columna,negocios.color_principal,text default '#0a5c47'::text
+1-columna,negocios.emoji_negocio,text default '☕'::text
+1-columna,negocios.descripcion,text default ''::text
+1-columna,negocios.logo_url,text default ''::text
+1-columna,negocios.reset_token,text default ''::text
+1-columna,negocios.reset_expira,timestamp with time zone
+1-columna,niveles.id,uuid not null default gen_random_uuid()
+1-columna,niveles.negocio_id,uuid
+1-columna,niveles.nombre,text not null
+1-columna,niveles.emoji,text default '⭐'::text
+1-columna,niveles.visitas_minimas,integer not null default 0
+1-columna,niveles.premio_bienvenida,text default ''::text
+1-columna,niveles.orden,integer not null default 0
+1-columna,niveles.created_at,timestamp with time zone default now()
+1-columna,premios.id,uuid not null default gen_random_uuid()
+1-columna,premios.negocio_id,uuid
+1-columna,premios.nombre,text not null
+1-columna,premios.puntos_requeridos,integer not null
+1-columna,premios.activo,boolean default true
+1-columna,profiles.user_id,uuid not null
+1-columna,profiles.negocio_id,uuid not null
+1-columna,profiles.role,text not null
+1-columna,profiles.created_at,timestamp with time zone not null default now()
+1-columna,visitas.id,uuid not null default gen_random_uuid()
+1-columna,visitas.cliente_id,uuid
+1-columna,visitas.negocio_id,uuid
+1-columna,visitas.fecha,timestamp without time zone default now()
+1-columna,visitas.puntos_sumados,integer default 1
+2-restriccion,canjes.canjes_cliente_id_fkey,FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+2-restriccion,canjes.canjes_pkey,PRIMARY KEY (id)
+2-restriccion,canjes.canjes_premio_id_fkey,FOREIGN KEY (premio_id) REFERENCES premios(id)
+2-restriccion,clientes.clientes_negocio_id_fkey,FOREIGN KEY (negocio_id) REFERENCES negocios(id)
+2-restriccion,clientes.clientes_pkey,PRIMARY KEY (id)
+2-restriccion,negocios.negocios_email_key,UNIQUE (email)
+2-restriccion,negocios.negocios_pkey,PRIMARY KEY (id)
+2-restriccion,niveles.niveles_negocio_id_fkey,FOREIGN KEY (negocio_id) REFERENCES negocios(id) ON DELETE CASCADE
+2-restriccion,niveles.niveles_pkey,PRIMARY KEY (id)
+2-restriccion,premios.premios_negocio_id_fkey,FOREIGN KEY (negocio_id) REFERENCES negocios(id)
+2-restriccion,premios.premios_pkey,PRIMARY KEY (id)
+2-restriccion,profiles.profiles_negocio_id_fkey,FOREIGN KEY (negocio_id) REFERENCES negocios(id) ON DELETE CASCADE
+2-restriccion,profiles.profiles_pkey,PRIMARY KEY (user_id)
+2-restriccion,profiles.profiles_role_check,"CHECK ((role = ANY (ARRAY['owner'::text, 'mesero'::text])))"
+2-restriccion,profiles.profiles_user_id_fkey,FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+2-restriccion,visitas.visitas_cliente_id_fkey,FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+2-restriccion,visitas.visitas_negocio_id_fkey,FOREIGN KEY (negocio_id) REFERENCES negocios(id)
+2-restriccion,visitas.visitas_pkey,PRIMARY KEY (id)
+3-indice,canjes.canjes_pkey,CREATE UNIQUE INDEX canjes_pkey ON public.canjes USING btree (id)
+3-indice,clientes.clientes_negocio_telefono_uidx,"CREATE UNIQUE INDEX clientes_negocio_telefono_uidx ON public.clientes USING btree (negocio_id, telefono)"
+3-indice,clientes.clientes_pkey,CREATE UNIQUE INDEX clientes_pkey ON public.clientes USING btree (id)
+3-indice,negocios.negocios_email_key,CREATE UNIQUE INDEX negocios_email_key ON public.negocios USING btree (email)
+3-indice,negocios.negocios_pkey,CREATE UNIQUE INDEX negocios_pkey ON public.negocios USING btree (id)
+3-indice,niveles.niveles_pkey,CREATE UNIQUE INDEX niveles_pkey ON public.niveles USING btree (id)
+3-indice,premios.premios_pkey,CREATE UNIQUE INDEX premios_pkey ON public.premios USING btree (id)
+3-indice,profiles.profiles_pkey,CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (user_id)
+3-indice,visitas.visitas_pkey,CREATE UNIQUE INDEX visitas_pkey ON public.visitas USING btree (id)
+4-politica,clientes.clientes_select_member,"SELECT to authenticated using (user_has_business_role(negocio_id, ARRAY['owner'::text, 'mesero'::text])) check ()"
+4-politica,negocios.negocios_select_member,"SELECT to authenticated using (user_has_business_role(id, ARRAY['owner'::text, 'mesero'::text])) check ()"
+4-politica,negocios.negocios_update_owner,"UPDATE to authenticated using (user_has_business_role(id, ARRAY['owner'::text])) check (user_has_business_role(id, ARRAY['owner'::text]))"
+4-politica,niveles.niveles_manage_owner,"ALL to authenticated using (user_has_business_role(negocio_id, ARRAY['owner'::text])) check (user_has_business_role(negocio_id, ARRAY['owner'::text]))"
+4-politica,niveles.niveles_select_member,"SELECT to authenticated using (user_has_business_role(negocio_id, ARRAY['owner'::text, 'mesero'::text])) check ()"
+4-politica,premios.acceso publico premios,ALL to public using (true) check ()
+4-politica,profiles.profiles_select_self,SELECT to authenticated using ((user_id = auth.uid())) check ()
+4-politica,visitas.visitas_select_member,"SELECT to authenticated using (user_has_business_role(negocio_id, ARRAY['owner'::text, 'mesero'::text])) check ()"
+5-permiso-columna,clientes → authenticated (SELECT),"fecha_registro, id, negocio_id, nombre, puntos_actuales, telefono, total_visitas"
+5-permiso-columna,negocios → authenticated (SELECT),"activo, color_principal, descripcion, emoji_negocio, id, logo_url, meta_puntos, nombre"
+5-permiso-columna,negocios → authenticated (UPDATE),"color_principal, descripcion, emoji_negocio"
+5-permiso-columna,niveles → authenticated (INSERT),"created_at, emoji, id, negocio_id, nombre, orden, premio_bienvenida, visitas_minimas"
+5-permiso-columna,niveles → authenticated (SELECT),"created_at, emoji, id, negocio_id, nombre, orden, premio_bienvenida, visitas_minimas"
+5-permiso-columna,niveles → authenticated (UPDATE),"created_at, emoji, id, negocio_id, nombre, orden, premio_bienvenida, visitas_minimas"
+5-permiso-columna,premios → anon (INSERT),"activo, id, negocio_id, nombre, puntos_requeridos"
+5-permiso-columna,premios → anon (REFERENCES),"activo, id, negocio_id, nombre, puntos_requeridos"
+5-permiso-columna,premios → anon (SELECT),"activo, id, negocio_id, nombre, puntos_requeridos"
+5-permiso-columna,premios → anon (UPDATE),"activo, id, negocio_id, nombre, puntos_requeridos"
