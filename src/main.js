@@ -1,6 +1,6 @@
 import './style.css'
 import { getPage } from './router.js'
-import { isLoggedIn, getNegocioActual } from './auth.js'
+import { isLoggedIn, getNegocioActual, getPerfilActual } from './auth.js'
 import {
   paginaCajero, initCajero,
   paginaRegistro, initRegistro,
@@ -80,6 +80,11 @@ async function render() {
 
   // FIX: admin va antes del check de isLoggedIn
   if (page === 'admin') {
+    if (isLoggedIn()) {
+      const profile = await getPerfilActual()
+      window.location.hash = profile?.role === 'owner' ? '#/dueno' : '#/cajero'
+      return
+    }
     app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
     app.innerHTML = await paginaAdmin()
     initAdmin()
@@ -90,6 +95,23 @@ async function render() {
   if (!isLoggedIn()) {
     app.innerHTML = paginaLogin()
     initLogin()
+    return
+  }
+
+  const profile = await getPerfilActual()
+  if (!profile || !['owner', 'mesero'].includes(profile.role)) {
+    app.innerHTML = paginaLogin()
+    initLogin()
+    return
+  }
+
+  if (profile.role === 'mesero' && !['cajero', 'registro'].includes(page)) {
+    window.location.hash = '#/cajero'
+    return
+  }
+
+  if (profile.role === 'owner' && !['onboarding', 'bienvenida', 'kiosko', 'dueno', 'cajero', 'registro'].includes(page)) {
+    window.location.hash = '#/bienvenida'
     return
   }
 

@@ -36,6 +36,20 @@ export async function login(email, password) {
   return profile.negocios
 }
 
+export async function getPerfilActual() {
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) return null
+
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('user_id, role, negocio_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (error || !profile) return null
+  return profile
+}
+
 export async function logout() {
   await supabase.auth.signOut().catch(() => {})
   localStorage.removeItem('negocio')

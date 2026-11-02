@@ -585,10 +585,12 @@ export function initLogin() {
     if (!email || !password) { msg.innerHTML = `<p class="s-error">Llena todos los campos</p>`; return }
     btn.disabled = true; btn.textContent = 'Verificando...'; msg.innerHTML = ''
     try {
-      const { login } = await import('./auth.js')
+      const { login, getPerfilActual } = await import('./auth.js')
       const negocio = await login(email, password)
       if (!negocio) { msg.innerHTML = `<p class="s-error">Correo o contraseña incorrectos</p>`; return }
       if (negocio.activo === false) { msg.innerHTML = `<p class="s-error">Esta cuenta está desactivada. Contacta al administrador.</p>`; const { logout } = await import('./auth.js'); logout(); return }
+      const perfil = await getPerfilActual()
+      if (perfil?.role === 'mesero') { window.location.hash = '#/cajero'; window.dispatchEvent(new Event('hashchange')); return }
       window.location.hash = onboardingVisto() ? '#/bienvenida' : '#/onboarding'
       window.dispatchEvent(new Event('hashchange'))
     } catch (e) { msg.innerHTML = errMsg('servidor') }
