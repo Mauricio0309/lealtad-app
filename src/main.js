@@ -4,7 +4,6 @@ import { isLoggedIn, getNegocioActual, getPerfilActual } from './auth.js'
 import {
   paginaCajero, initCajero,
   paginaRegistro, initRegistro,
-  paginaAdmin, initAdmin,
   paginaCliente, initCliente,
   paginaLogin, initLogin,
   paginaQRNegocio, initQRNegocio,
@@ -34,9 +33,11 @@ async function render() {
   // ── Páginas públicas ──
   if (page === 'cliente') {
     app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
-    const telefono = hash.split('/')[2] || ''
-    app.innerHTML = await paginaCliente(telefono)
-    await initCliente(telefono)
+    const parts = hash.split('/')
+    const negocioId = parts[2] || ''
+    const telefono = decodeURIComponent(parts[3] || '')
+    app.innerHTML = await paginaCliente(negocioId, telefono)
+    await initCliente(negocioId, telefono)
     return
   }
 
@@ -59,7 +60,7 @@ async function render() {
   if (page === 'registro-cliente') {
     const parts = hash.split('/')
     const negocioId = parts[2] || ''
-    const telefono = parts[3] || ''
+    const telefono = decodeURIComponent(parts[3] || '')
     app.innerHTML = paginaRegistroCliente(negocioId, telefono)
     initRegistroCliente(negocioId, telefono)
     return
@@ -80,14 +81,13 @@ async function render() {
 
   // FIX: admin va antes del check de isLoggedIn
   if (page === 'admin') {
-    if (isLoggedIn()) {
-      const profile = await getPerfilActual()
-      window.location.hash = profile?.role === 'owner' ? '#/dueno' : '#/cajero'
+    if (!isLoggedIn()) {
+      app.innerHTML = paginaLogin()
+      initLogin()
       return
     }
-    app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
-    app.innerHTML = await paginaAdmin()
-    initAdmin()
+    const profile = await getPerfilActual()
+    window.location.hash = profile?.role === 'owner' ? '#/dueno' : '#/cajero'
     return
   }
 

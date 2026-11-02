@@ -17,9 +17,6 @@ export async function login(email, password) {
       negocios:negocio_id (
         id,
         nombre,
-        email,
-        password_hash,
-        password,
         activo,
         meta_puntos,
         color_principal,
