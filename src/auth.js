@@ -1,20 +1,43 @@
 import { supabase } from './supabase.js'
 
 export async function login(email, password) {
-  const { data, error } = await supabase
-    .from('negocios')
-    .select('*')
-    .eq('email', email)
-    .eq('password_hash', password)
-    .single()
+  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
 
-  if (error || !data) return null
+  if (authError || !authData?.user) return null
 
-  localStorage.setItem('negocio', JSON.stringify(data))
-  return data
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select(`
+      user_id,
+      role,
+      negocio_id,
+      negocios:negocio_id (
+        id,
+        nombre,
+        email,
+        password_hash,
+        password,
+        activo,
+        meta_puntos,
+        color_principal,
+        emoji_negocio,
+        descripcion
+      )
+    `)
+    .eq('user_id', authData.user.id)
+    .maybeSingle()
+
+  if (profileError || !profile || !profile.negocios) return null
+
+  localStorage.setItem('negocio', JSON.stringify(profile.negocios))
+  return profile.negocios
 }
 
-export function logout() {
+export async function logout() {
+  await supabase.auth.signOut().catch(() => {})
   localStorage.removeItem('negocio')
   window.location.hash = '#/login'
   window.dispatchEvent(new Event('hashchange'))
