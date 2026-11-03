@@ -29,6 +29,12 @@ La configuración (programa, personal, personalización, exportar) pasa a una pe
 - Inactivo = su última visita fue hace más de 21 días.
 - Todo lo calcula el servidor con funciones solo para el dueño. El navegador nunca recibe el teléfono completo en el resumen.
 
+## Bandera "Revisar" por mesero (umbrales iniciales, a ajustar con el piloto)
+
+- 5 o más códigos esta semana y menos de la mitad reclamados.
+- 5 o más capturas a mano y más capturas que códigos reclamados.
+- Se bloqueó por códigos de canje incorrectos en los últimos 7 días. (El número de bloqueos que se muestra es el total histórico: la Fase 3 no guarda la fecha de cada uno.)
+
 ## Base de datos
 
 - `negocios.ticket_promedio` y `negocios.costo_premio` (opcionales) y `profiles.nombre`.
