@@ -51,7 +51,7 @@ function inyectarEstilos() {
   const s = document.createElement('style')
   s.id = 'sello-styles'
   s.textContent = `
-    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Inter', sans-serif; background: ${DS.gray100}; color: ${DS.gray900}; -webkit-font-smoothing: antialiased; }
 
@@ -238,6 +238,52 @@ function inyectarEstilos() {
     .cj-qr-tiempo-lbl { font-size: 12px; color: ${DS.gray500}; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 8px; }
     .cj-qr-tiempo { font-family: 'Sora', sans-serif; font-size: 40px; font-weight: 800; color: ${DS.gray900}; font-variant-numeric: tabular-nums; line-height: 1.1; }
     .cj-qr-botones { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 10px; }
+
+    .cl-root { min-height: 100vh; background: ${DS.white}; color: ${DS.gray900}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+    .cl-root.gris { background: #F5F6F8; }
+    .cl-wrap { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; padding: calc(16px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom)); }
+    .cl-marca { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 16px; font-weight: 700; color: ${DS.gray900}; }
+    .cl-marca-icono { width: 32px; height: 32px; border-radius: 50%; background: var(--negocio-color, #2B4ACB); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .cl-cuerpo { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 32px 0 24px; }
+    .cl-cuerpo.arriba { justify-content: flex-start; padding-top: 24px; }
+    .cl-acciones { display: flex; flex-direction: column; }
+    .cl-cargando { text-align: center; font-size: 16px; color: ${DS.gray500}; }
+    .cl-titulo { font-size: 40px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; color: ${DS.gray900}; }
+    .cl-sub { font-size: 18px; line-height: 1.4; color: ${DS.gray500}; margin-top: 10px; }
+    .cl-digitos { font-weight: 700; color: ${DS.gray900}; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+    .cl-campo { margin-top: 20px; }
+    .cl-label { display: block; font-size: 15px; font-weight: 600; color: ${DS.gray700}; margin-bottom: 8px; }
+    .cl-input-wrap { display: flex; align-items: center; height: 60px; padding: 0 16px; border: 2px solid ${DS.gray300}; border-radius: 16px; background: ${DS.white}; transition: border-color 0.15s; }
+    .cl-input-wrap:focus-within { border-color: var(--negocio-color, #2B4ACB); }
+    .cl-input-wrap.error { border-color: #dc2626; }
+    .cl-prefijo { font-size: 22px; font-weight: 600; color: ${DS.gray500}; padding-right: 12px; margin-right: 12px; border-right: 1.5px solid ${DS.gray100}; }
+    .cl-input { flex: 1; min-width: 0; height: 100%; border: none; outline: none; background: transparent; font-family: inherit; font-size: 22px; color: ${DS.gray900}; }
+    .cl-input::placeholder { color: ${DS.gray300}; }
+    .cl-error-campo { color: #dc2626; font-size: 15px; margin-top: 6px; }
+    .cl-aviso { margin-bottom: 14px; border-radius: 16px; padding: 14px 16px; font-size: 16px; line-height: 1.4; background: #fef2f2; color: #b91c1c; }
+    .cl-btn { width: 100%; height: 62px; border: none; border-radius: 20px; background: var(--negocio-color, #2B4ACB); color: ${DS.white}; font-family: inherit; font-size: 20px; font-weight: 800; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform 0.1s, opacity 0.15s; }
+    .cl-btn:active { transform: scale(0.98); }
+    .cl-btn:disabled { opacity: 0.6; cursor: wait; }
+    .cl-btn.secundario { background: ${DS.gray100}; color: ${DS.gray900}; }
+    .cl-cuerpo .cl-btn { margin-top: 28px; }
+    .cl-enlace { width: 100%; min-height: 48px; margin-top: 8px; background: none; border: none; font-family: inherit; font-size: 17px; font-weight: 600; color: ${DS.gray500}; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+    .cl-privacidad { font-size: 14px; line-height: 1.5; color: ${DS.gray500}; text-align: center; margin-top: 16px; }
+    .cl-privacidad button { background: none; border: none; font: inherit; color: ${DS.gray700}; text-decoration: underline; padding: 12px 4px; margin: -12px -4px; cursor: pointer; }
+    .cl-estado-icono { width: 72px; height: 72px; border-radius: 50%; background: ${DS.gray100}; display: flex; align-items: center; justify-content: center; font-size: 34px; margin-bottom: 24px; }
+    .cl-exito-icono { width: 72px; height: 72px; border-radius: 50%; background: var(--negocio-color, #2B4ACB); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; animation: sPopIn 0.35s cubic-bezier(0.34,1.56,0.64,1); }
+    .cl-listo { margin-top: 20px; border-radius: 20px; padding: 18px; background: ${DS.gold100}; border: 2px solid #fde68a; color: #78350f; font-size: 18px; font-weight: 800; line-height: 1.35; text-align: center; }
+    .cl-tarjeta { background: ${DS.white}; border-radius: 24px; padding: 24px 20px; margin-top: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 8px 24px rgba(0,0,0,0.04); }
+    .cl-progreso { display: flex; align-items: baseline; justify-content: center; gap: 8px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .cl-progreso-num { font-size: 64px; line-height: 1; color: var(--negocio-color, #2B4ACB); }
+    .cl-progreso-meta { font-size: 32px; color: ${DS.gray300}; }
+    .cl-progreso-lbl { text-align: center; font-size: 15px; color: ${DS.gray500}; margin-top: 6px; }
+    .cl-sellos { display: grid; gap: 10px; justify-items: center; margin-top: 22px; }
+    .cl-sello { width: 100%; max-width: 52px; aspect-ratio: 1; border-radius: 50%; border: 2px dashed ${DS.gray300}; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+    .cl-sello.lleno { border: none; background: var(--negocio-color, #2B4ACB); }
+    .cl-premio { background: ${DS.white}; border-radius: 24px; padding: 20px; margin-top: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .cl-premio-lbl { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: ${DS.gray500}; }
+    .cl-premio-nombre { font-size: 22px; font-weight: 800; line-height: 1.25; margin-top: 6px; color: ${DS.gray900}; }
+    .cl-premio-falta { font-size: 16px; color: ${DS.gray500}; margin-top: 4px; }
 
     @keyframes sFadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes sPopIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
@@ -1425,32 +1471,34 @@ export function paginaRegistroCliente(negocioId, telefono) {
   `
 }
 
+function abrirAvisoPrivacidadCliente() {
+  const modal = document.createElement('div')
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:flex-end;justify-content:center;z-index:9999;animation:sFadeIn 0.2s ease'
+  modal.innerHTML = `
+    <div style="background:white;border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-family:'Sora',sans-serif;font-size:16px;font-weight:800;color:#0f172a">Aviso de Privacidad</div>
+        <button id="cerrar-privacidad" style="background:#f1f5f9;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;color:#64748b">Cerrar</button>
+      </div>
+      <div style="font-size:13px;color:#334155;line-height:1.7">
+        <p style="font-weight:600;color:#0f172a;margin-bottom:6px">¿Qué datos guardamos?</p>
+        <p style="margin-bottom:12px">Solo tu nombre y número de teléfono. Nada más.</p>
+        <p style="font-weight:600;color:#0f172a;margin-bottom:6px">¿Para qué se usan?</p>
+        <p style="margin-bottom:12px">Únicamente para identificarte en el programa de lealtad y registrar tus visitas. No se venden ni se comparten con terceros.</p>
+        <p style="font-weight:600;color:#0f172a;margin-bottom:6px">¿Puedo eliminar mis datos?</p>
+        <p style="margin-bottom:12px">Sí. Solicítalo directamente en el negocio donde te registraste.</p>
+        <p style="font-size:11px;color:#94a3b8;margin-top:16px">En cumplimiento con la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP) de México.</p>
+      </div>
+    </div>
+  `
+  document.body.appendChild(modal)
+  modal.querySelector('#cerrar-privacidad')?.addEventListener('click', () => modal.remove())
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
+}
+
 export function initRegistroCliente(negocioId, telefono) {
   inyectarEstilos()
-  document.getElementById('link-privacidad')?.addEventListener('click', () => {
-    const modal = document.createElement('div')
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:flex-end;justify-content:center;z-index:9999;animation:sFadeIn 0.2s ease'
-    modal.innerHTML = `
-      <div style="background:white;border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <div style="font-family:'Sora',sans-serif;font-size:16px;font-weight:800;color:#0f172a">Aviso de Privacidad</div>
-          <button id="cerrar-privacidad" style="background:#f1f5f9;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;color:#64748b">Cerrar</button>
-        </div>
-        <div style="font-size:13px;color:#334155;line-height:1.7">
-          <p style="font-weight:600;color:#0f172a;margin-bottom:6px">¿Qué datos guardamos?</p>
-          <p style="margin-bottom:12px">Solo tu nombre y número de teléfono. Nada más.</p>
-          <p style="font-weight:600;color:#0f172a;margin-bottom:6px">¿Para qué se usan?</p>
-          <p style="margin-bottom:12px">Únicamente para identificarte en el programa de lealtad y registrar tus visitas. No se venden ni se comparten con terceros.</p>
-          <p style="font-weight:600;color:#0f172a;margin-bottom:6px">¿Puedo eliminar mis datos?</p>
-          <p style="margin-bottom:12px">Sí. Solicítalo directamente en el negocio donde te registraste.</p>
-          <p style="font-size:11px;color:#94a3b8;margin-top:16px">En cumplimiento con la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP) de México.</p>
-        </div>
-      </div>
-    `
-    document.body.appendChild(modal)
-    modal.querySelector('#cerrar-privacidad')?.addEventListener('click', () => modal.remove())
-    modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
-  })
+  document.getElementById('link-privacidad')?.addEventListener('click', abrirAvisoPrivacidadCliente)
   document.getElementById('btn-registrar-cliente').addEventListener('click', async () => {
     const nombre = document.getElementById('nombre-cliente').value.trim()
     const msg = document.getElementById('msg-registro'); const btn = document.getElementById('btn-registrar-cliente')
@@ -1468,6 +1516,326 @@ export function initRegistroCliente(negocioId, telefono) {
       navigate('cliente', `${negocioId}/${encodeURIComponent(telefono)}`)
     } catch (e) { msg.innerHTML = errMsg('registrarte'); btn.disabled = false; btn.textContent = 'Registrarme →' }
   })
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// CLIENTE: reclamar el punto (#/c/<negocio>/<codigo>) y tarjeta (#/tarjeta/<negocio>)
+// ═══════════════════════════════════════════════════════════
+const AZUL_RESPALDO = '#2B4ACB'
+
+// Igual que en el cajero: cada pantalla del cliente abre una "sesión" y las
+// respuestas que llegan tarde de una sesión anterior se ignoran.
+let clienteSesion = 0
+
+function esc(texto) {
+  return String(texto ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]))
+}
+
+// El token que recuerda al cliente vive en su teléfono, uno por negocio.
+// localStorage puede fallar (modo privado, datos bloqueados): todo va en try/catch.
+const claveToken = negocioId => `sello_token_${negocioId}`
+function leerToken(negocioId) { try { return localStorage.getItem(claveToken(negocioId)) } catch (e) { return null } }
+function guardarToken(negocioId, token) { try { localStorage.setItem(claveToken(negocioId), token) } catch (e) {} }
+function borrarToken(negocioId) { try { localStorage.removeItem(claveToken(negocioId)) } catch (e) {} }
+
+function sinInternet(error) {
+  return navigator.onLine === false || /Failed to fetch|NetworkError|Load failed/i.test(error?.message || '')
+}
+
+function palomitaSVG(size = 18, color = '#ffffff') {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+}
+
+function pantallaCliente({ negocio = null, cuerpo, acciones = '', gris = false, arriba = false }) {
+  return `
+    <div class="cl-root${gris ? ' gris' : ''}">
+      <div class="cl-wrap">
+        <div class="cl-marca"><span class="cl-marca-icono">${palomitaSVG(18)}</span><span>${esc(negocio?.nombre || 'Sello')}</span></div>
+        <div class="cl-cuerpo${arriba ? ' arriba' : ''}">${cuerpo}</div>
+        ${acciones ? `<div class="cl-acciones">${acciones}</div>` : ''}
+      </div>
+    </div>
+  `
+}
+
+function pantallaEstadoCliente({ negocio = null, icono, titulo, sub = '', acciones = '' }) {
+  return pantallaCliente({
+    negocio,
+    cuerpo: `<div class="cl-estado-icono" aria-hidden="true">${icono}</div><h1 class="cl-titulo">${titulo}</h1>${sub ? `<p class="cl-sub">${sub}</p>` : ''}`,
+    acciones,
+  })
+}
+
+const cargandoCliente = (gris = false) => pantallaCliente({ cuerpo: '<p class="cl-cargando">Cargando...</p>', gris })
+
+// Tarjeta con los datos de reclamar_codigo o de tarjeta_por_token.
+// Con exito = true arriba va "¡Ganaste 1 punto!" en lugar de "Hola, Ana".
+function tarjetaClienteHTML(negocio, t, exito = false) {
+  const meta = Math.max(1, Number(t.meta) || 10)
+  const puntos = Math.max(0, Number(t.puntos) || 0)
+  const faltan = Math.max(0, meta - puntos)
+  const sellos = meta <= 30
+    ? Array.from({ length: meta }, (_, i) => {
+        const lleno = i < puntos
+        const contenido = i === meta - 1 ? '🎁' : lleno ? palomitaSVG(18) : ''
+        return `<span class="cl-sello${lleno ? ' lleno' : ''}">${contenido}</span>`
+      }).join('')
+    : ''
+  const cabecera = exito
+    ? `<div class="cl-exito-icono">${palomitaSVG(40)}</div>
+       <h1 class="cl-titulo">¡Ganaste 1 punto!</h1>
+       <p class="cl-sub">${esc(t.nombre)}, ya llevas ${puntos} de ${meta}.</p>`
+    : `<h1 class="cl-titulo">Hola, ${esc(t.nombre)}</h1>
+       <p class="cl-sub">Tu tarjeta en ${esc(negocio?.nombre || 'este negocio')}</p>`
+  return pantallaCliente({
+    negocio, gris: true, arriba: true,
+    cuerpo: `
+      ${cabecera}
+      ${t.premio_listo ? `<div class="cl-listo">🎉 ¡Ya completaste tu meta!<br>Pídele tu premio al mesero</div>` : ''}
+      <div class="cl-tarjeta">
+        <div class="cl-progreso" aria-label="${puntos} de ${meta} puntos"><span class="cl-progreso-num">${puntos}</span><span class="cl-progreso-meta">/ ${meta}</span></div>
+        <div class="cl-progreso-lbl">puntos</div>
+        ${sellos ? `<div class="cl-sellos" style="grid-template-columns:repeat(${Math.min(meta, 5)},1fr)">${sellos}</div>` : ''}
+      </div>
+      <div class="cl-premio">
+        <div class="cl-premio-lbl">TU PREMIO</div>
+        <div class="cl-premio-nombre">${esc(t.premio || 'Pregúntale al mesero por tu premio')}</div>
+        <div class="cl-premio-falta">${t.premio_listo ? '¡Ya es tuyo!' : `Te faltan ${faltan} visita${faltan === 1 ? '' : 's'}`}</div>
+      </div>
+      <p class="cl-privacidad"><button type="button" id="cl-privacidad">Aviso de privacidad</button></p>
+    `,
+  })
+}
+
+export function paginaReclamar() {
+  inyectarEstilos()
+  return `<div id="cl-app">${cargandoCliente()}</div>`
+}
+
+export async function initReclamar(negocioId, codigo) {
+  inyectarEstilos()
+  aplicarColorNegocio(AZUL_RESPALDO)
+  const sesion = ++clienteSesion
+  const $ = id => document.getElementById(id)
+  const vigente = () => sesion === clienteSesion && !!$('cl-app')
+  const pintar = html => { if (vigente()) $('cl-app').innerHTML = html }
+  let negocio = null
+  let enCurso = false
+
+  const ESTADOS = {
+    usado: { icono: '🧾', titulo: 'Este código ya se usó', sub: 'Si aún no sumaste, pídele uno nuevo al mesero.' },
+    caducado: { icono: '⏱️', titulo: 'Este código ya no sirve', sub: 'Pídele uno nuevo al mesero.' },
+    cancelado: { icono: '⏱️', titulo: 'Este código ya no sirve', sub: 'Pídele uno nuevo al mesero.' },
+    invalido: { icono: '🔍', titulo: 'No encontramos este código', sub: 'Pídele uno nuevo al mesero.' },
+  }
+
+  // Pantalla final sin nada que hacer; si el teléfono ya tiene tarjeta, ofrece verla.
+  function mostrarEstado(estado) {
+    const conTarjeta = !!leerToken(negocioId)
+    pintar(pantallaEstadoCliente({
+      negocio, ...estado,
+      acciones: conTarjeta ? `<button class="cl-btn secundario" id="cl-ver-tarjeta">Ver mi tarjeta</button>` : '',
+    }))
+    $('cl-ver-tarjeta')?.addEventListener('click', () => navigate('tarjeta', negocioId))
+  }
+
+  function mostrarReintentar(titulo) {
+    pintar(pantallaEstadoCliente({
+      negocio, icono: '📶', titulo, sub: 'Revisa tu señal e intenta de nuevo.',
+      acciones: `<button class="cl-btn" id="cl-reintentar">Reintentar</button>`,
+    }))
+    $('cl-reintentar')?.addEventListener('click', cargar)
+  }
+
+  const avisar = texto => { const el = $('cl-aviso'); if (el) el.innerHTML = texto ? `<div class="cl-aviso" role="alert">${texto}</div>` : '' }
+
+  function errorCampo(campo, texto) {
+    const wrap = $(`cl-${campo}-wrap`); const el = $(`cl-${campo}-error`)
+    if (!wrap || !el) return
+    wrap.classList.toggle('error', !!texto)
+    el.textContent = texto || ''
+    el.hidden = !texto
+  }
+
+  function mostrarConfirmacion(cliente) {
+    pintar(pantallaCliente({
+      negocio,
+      cuerpo: `<h1 class="cl-titulo">¿Eres ${esc(cliente.nombre)}?</h1>
+        <p class="cl-sub">Tu número termina en <span class="cl-digitos">···${esc(cliente.ultimos4)}</span></p>`,
+      acciones: `<div id="cl-aviso"></div>
+        <button class="cl-btn" id="cl-sumar">Sí, sumar mi punto</button>
+        <button class="cl-enlace" id="cl-no-soy">No soy yo</button>`,
+    }))
+    $('cl-sumar')?.addEventListener('click', () => reclamar({ p_token: leerToken(negocioId) }, $('cl-sumar'), 'confirmacion'))
+    $('cl-no-soy')?.addEventListener('click', mostrarFormulario)
+  }
+
+  function mostrarFormulario() {
+    pintar(pantallaCliente({
+      negocio, arriba: true,
+      cuerpo: `
+        <h1 class="cl-titulo">Suma tu punto</h1>
+        <p class="cl-sub">Solo la primera vez.</p>
+        <div class="cl-campo">
+          <label class="cl-label" for="cl-tel">Tu número de WhatsApp</label>
+          <div class="cl-input-wrap" id="cl-tel-wrap"><span class="cl-prefijo">+52</span><input class="cl-input" id="cl-tel" type="tel" inputmode="numeric" autocomplete="tel-national" enterkeyhint="next" placeholder="10 dígitos" /></div>
+          <p class="cl-error-campo" id="cl-tel-error" role="alert" hidden></p>
+        </div>
+        <div class="cl-campo">
+          <label class="cl-label" for="cl-nombre">Tu primer nombre</label>
+          <div class="cl-input-wrap" id="cl-nombre-wrap"><input class="cl-input" id="cl-nombre" type="text" autocomplete="given-name" autocapitalize="words" enterkeyhint="done" maxlength="30" placeholder="Ana" /></div>
+          <p class="cl-error-campo" id="cl-nombre-error" role="alert" hidden></p>
+        </div>
+        <div style="margin-top:24px" id="cl-aviso"></div>
+        <button class="cl-btn" id="cl-guardar" style="margin-top:0">Guardar mi punto</button>
+        <p class="cl-privacidad">Guardamos tu número solo para llevar tus puntos. <button type="button" id="cl-privacidad">Aviso de privacidad</button></p>
+      `,
+    }))
+    const tel = $('cl-tel'); const nombre = $('cl-nombre'); const btn = $('cl-guardar')
+    if (!tel) return
+    tel.addEventListener('input', () => { tel.value = tel.value.replace(/\D/g, ''); errorCampo('tel', '') })
+    nombre.addEventListener('input', () => errorCampo('nombre', ''))
+    tel.addEventListener('keydown', e => { if (e.key === 'Enter') nombre.focus() })
+    nombre.addEventListener('keydown', e => { if (e.key === 'Enter') guardar() })
+    btn.addEventListener('click', guardar)
+    $('cl-privacidad')?.addEventListener('click', abrirAvisoPrivacidadCliente)
+
+    function guardar() {
+      // Si pegaron el número con lada (52… o 521…), se queda con los 10 dígitos.
+      let digitos = tel.value.replace(/\D/g, '')
+      if (digitos.length === 12 && digitos.startsWith('52')) digitos = digitos.slice(2)
+      else if (digitos.length === 13 && digitos.startsWith('521')) digitos = digitos.slice(3)
+      const nom = nombre.value.trim()
+      let ok = true
+      if (digitos.length !== 10) { errorCampo('tel', 'Escribe los 10 dígitos de tu número.'); ok = false }
+      if (!nom) { errorCampo('nombre', 'Escribe tu primer nombre.'); ok = false }
+      if (!ok) return
+      reclamar({ p_telefono: digitos, p_nombre: nom }, btn, 'formulario')
+    }
+  }
+
+  function mostrarExito(data) {
+    const id = data.negocio_id || negocioId
+    // La URL pasa a ser la de la tarjeta: si recarga o vuelve después, ve su tarjeta
+    // en vez de un código ya usado.
+    try { history.replaceState(null, '', `#/tarjeta/${id}`) } catch (e) {}
+    pintar(tarjetaClienteHTML(negocio, data, true))
+    $('cl-privacidad')?.addEventListener('click', abrirAvisoPrivacidadCliente)
+  }
+
+  function manejarError(e, desde) {
+    const m = e?.message || ''
+    if (sinInternet(e)) return avisar('Necesitas internet para sumar tu punto.')
+    if (m.includes('CODIGO_USADO')) return mostrarEstado(ESTADOS.usado)
+    if (m.includes('CODIGO_CADUCADO') || m.includes('CODIGO_CANCELADO')) return mostrarEstado(ESTADOS.caducado)
+    if (m.includes('CODIGO_INVALIDO') || m.includes('NEGOCIO_INACTIVO')) return mostrarEstado(ESTADOS.invalido)
+    if (m.includes('YA_SUMO_HOY')) return mostrarEstado({ icono: '🙌', titulo: 'Ya sumaste hoy', sub: '¡Vuelve mañana!' })
+    if (m.includes('NUMERO_EXCLUIDO')) {
+      if (desde === 'formulario') return avisar('Este número no puede sumar puntos aquí.')
+      return mostrarEstado({ icono: '🚫', titulo: 'Este número no puede sumar puntos aquí' })
+    }
+    // Con token, el servidor responde TELEFONO_INVALIDO si el token ya no sirve
+    // (no encontró al cliente y no venía teléfono): se pide el número.
+    if (desde === 'confirmacion' && /TOKEN_INVALIDO|TELEFONO_INVALIDO/.test(m)) {
+      borrarToken(negocioId)
+      return mostrarFormulario()
+    }
+    if (m.includes('TELEFONO_INVALIDO')) return errorCampo('tel', 'Revisa tu número: deben ser 10 dígitos.')
+    if (m.includes('NOMBRE_INVALIDO')) return errorCampo('nombre', 'Escribe solo tu primer nombre, con letras.')
+    console.error('Error al reclamar el código:', e)
+    avisar('Algo salió mal. Intenta de nuevo.')
+  }
+
+  async function reclamar(params, btn, desde) {
+    if (enCurso || !btn) return
+    enCurso = true; btn.disabled = true; avisar('')
+    const texto = btn.textContent; btn.textContent = 'Sumando...'
+    try {
+      const { data, error } = await supabase.rpc('reclamar_codigo', {
+        p_codigo: codigo, p_token: null, p_telefono: null, p_nombre: null, ...params,
+      })
+      if (!vigente()) return
+      if (error) throw error
+      guardarToken(data.negocio_id || negocioId, data.token)
+      mostrarExito(data)
+    } catch (e) {
+      if (vigente()) manejarError(e, desde)
+    } finally {
+      enCurso = false
+      if (btn.isConnected) { btn.disabled = false; btn.textContent = texto }
+    }
+  }
+
+  async function cargar() {
+    pintar(cargandoCliente())
+    try {
+      const { data, error } = await supabase.rpc('ver_codigo', { p_codigo: codigo, p_token: leerToken(negocioId) })
+      if (!vigente()) return
+      if (error) throw error
+      negocio = data?.negocio || null
+      aplicarColorNegocio(negocio?.color_principal || AZUL_RESPALDO)
+      if (data?.estado !== 'valido') return mostrarEstado(ESTADOS[data?.estado] || ESTADOS.invalido)
+      // NUNCA se suma solo por el token: siempre un toque de confirmación.
+      if (data.cliente) mostrarConfirmacion(data.cliente)
+      else mostrarFormulario()
+    } catch (e) {
+      if (!vigente()) return
+      console.error('Error al ver el código:', e)
+      mostrarReintentar(sinInternet(e) ? 'Necesitas internet para sumar tu punto' : 'No pudimos abrir tu código')
+    }
+  }
+
+  cargar()
+}
+
+export function paginaTarjeta() {
+  inyectarEstilos()
+  return `<div id="cl-app">${cargandoCliente(true)}</div>`
+}
+
+export async function initTarjeta(negocioId) {
+  inyectarEstilos()
+  aplicarColorNegocio(AZUL_RESPALDO)
+  const sesion = ++clienteSesion
+  const $ = id => document.getElementById(id)
+  const vigente = () => sesion === clienteSesion && !!$('cl-app')
+  const pintar = html => { if (vigente()) $('cl-app').innerHTML = html }
+
+  const sinTarjeta = () => pintar(pantallaEstadoCliente({
+    icono: '📷', titulo: 'Escanea el código al pagar', sub: 'para ver tu tarjeta.',
+  }))
+
+  async function cargar() {
+    const token = leerToken(negocioId)
+    if (!token) return sinTarjeta()
+    pintar(cargandoCliente(true))
+    try {
+      const { data, error } = await supabase.rpc('tarjeta_por_token', { p_token: token })
+      if (!vigente()) return
+      if (error) throw error
+      // El token guardado para este negocio debe ser de una tarjeta de este negocio.
+      if (data?.negocio?.id && data.negocio.id !== negocioId) throw new Error('TOKEN_INVALIDO')
+      aplicarColorNegocio(data.negocio?.color_principal || AZUL_RESPALDO)
+      pintar(tarjetaClienteHTML(data.negocio, data))
+      $('cl-privacidad')?.addEventListener('click', abrirAvisoPrivacidadCliente)
+    } catch (e) {
+      if (!vigente()) return
+      const m = e?.message || ''
+      if (m.includes('TOKEN_INVALIDO')) { borrarToken(negocioId); return sinTarjeta() }
+      if (m.includes('NEGOCIO_INACTIVO')) return sinTarjeta()
+      console.error('Error al cargar la tarjeta:', e)
+      pintar(pantallaEstadoCliente({
+        icono: '📶',
+        titulo: sinInternet(e) ? 'Necesitas internet para ver tu tarjeta' : 'No pudimos abrir tu tarjeta',
+        sub: 'Revisa tu señal e intenta de nuevo.',
+        acciones: `<button class="cl-btn" id="cl-reintentar">Reintentar</button>`,
+      }))
+      $('cl-reintentar')?.addEventListener('click', cargar)
+    }
+  }
+
+  cargar()
 }
 
 

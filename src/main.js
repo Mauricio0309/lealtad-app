@@ -14,6 +14,8 @@ import {
   paginaKiosko, initKiosko,
   paginaLanding, initLanding,
   paginaPrivacidad, initPrivacidad,
+  paginaReclamar, initReclamar,
+  paginaTarjeta, initTarjeta,
 } from './pages.js'
 
 if ('serviceWorker' in navigator) {
@@ -31,6 +33,21 @@ async function render() {
   app.innerHTML = ''
 
   // ── Páginas públicas ──
+  // El QR del mesero abre #/c/<negocio_id>/<codigo>.
+  if (page === 'reclamar') {
+    const parts = hash.split('/')
+    app.innerHTML = paginaReclamar()
+    initReclamar(parts[2] || '', parts[3] || '')
+    return
+  }
+
+  // Tarjeta del cliente: se abre con el token guardado en su teléfono.
+  if (page === 'tarjeta') {
+    app.innerHTML = paginaTarjeta()
+    initTarjeta(hash.split('/')[2] || '')
+    return
+  }
+
   if (page === 'cliente') {
     app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
     const parts = hash.split('/')
