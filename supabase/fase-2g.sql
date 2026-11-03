@@ -204,10 +204,11 @@ grant execute on function public.agregar_numero_excluido(text) to authenticated;
 grant execute on function public.quitar_numero_excluido(uuid) to authenticated;
 
 
--- ═══ 5. Avisar qué otras funciones usan las que se van a borrar ═══
+-- ═══ 5. Detenerse si otra función usa las que se van a borrar ═══
 -- Postgres no registra estas dependencias dentro de funciones plpgsql/sql:
 -- el borrado no falla, pero la función que las usa truena al llamarse.
--- Se espera ver get_kiosk_progress (usa public_get_customer_card).
+-- get_kiosk_progress (usa public_get_customer_card) también se borra abajo,
+-- por eso no cuenta. Si aparece cualquier otra, no se aplica nada.
 do $$
 declare
   r record;
@@ -219,9 +220,10 @@ begin
     where ns.nspname = 'public'
       and p.prosrc ~ '(record_visit_temporary|public_register_customer|public_customer_exists|public_get_customer_card)'
       and p.proname not in ('record_visit_temporary', 'public_register_customer',
-                            'public_customer_exists', 'public_get_customer_card')
+                            'public_customer_exists', 'public_get_customer_card',
+                            'get_kiosk_progress')
   loop
-    raise notice 'La función % usa una función que se borra en este archivo.', r.proname;
+    raise exception 'La función % usa una función que se borra en este archivo. Revísala antes de seguir.', r.proname;
   end loop;
 end;
 $$;
@@ -238,10 +240,10 @@ drop function if exists public.public_register_customer(uuid, text, text);
 drop function if exists public.public_customer_exists(uuid, text);
 drop function if exists public.public_get_customer_card(uuid, text);
 
--- PENDIENTE DE DECIDIR: get_kiosk_progress llama a public_get_customer_card.
--- Con el borrado de arriba deja de funcionar (la pantalla #/kiosko del dueño
--- mostrará "Sin conexión"). Si se decide quitar el kiosko, descomentar:
--- drop function if exists public.get_kiosk_progress(text);
+-- get_kiosk_progress llamaba a public_get_customer_card y buscaba clientes por
+-- teléfono sin límite de intentos. La pantalla #/kiosko se quitó de la app
+-- (decisión del 2G); el "Modo mostrador" queda para después (ver CLAUDE.md).
+drop function if exists public.get_kiosk_progress(text);
 
 
 -- ═══ 7. Comprobaciones finales ═══
@@ -250,7 +252,8 @@ begin
   if to_regprocedure('public.public_get_customer_card(uuid, text)') is not null
      or to_regprocedure('public.public_customer_exists(uuid, text)') is not null
      or to_regprocedure('public.public_register_customer(uuid, text, text)') is not null
-     or to_regprocedure('public.record_visit_temporary(uuid)') is not null then
+     or to_regprocedure('public.record_visit_temporary(uuid)') is not null
+     or to_regprocedure('public.get_kiosk_progress(text)') is not null then
     raise exception 'Quedó una función vieja sin borrar.';
   end if;
   if has_function_privilege('anon', 'public.guardar_programa(integer, text, integer)', 'execute')

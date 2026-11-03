@@ -190,14 +190,6 @@ function inyectarEstilos() {
     .onb-btn-primary { padding: 16px; border-radius: 12px; border: none; background: ${DS.white}; color: ${DS.green800}; font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; }
     .onb-btn-skip { background: none; border: none; color: rgba(255,255,255,0.4); font-size: 13px; cursor: pointer; font-family: 'Inter', sans-serif; padding: 8px; }
 
-    .kiosko-root { min-height: 100vh; background: linear-gradient(145deg, ${DS.green900}, var(--negocio-color, ${DS.green800})); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; font-family: 'Sora', sans-serif; color: ${DS.white}; text-align: center; }
-    .kiosko-titulo { font-size: 18px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
-    .kiosko-nombre { font-size: 36px; font-weight: 800; margin-bottom: 48px; }
-    .kiosko-input { width: 100%; max-width: 320px; padding: 20px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2); border-radius: 16px; color: ${DS.white}; font-family: 'Sora', sans-serif; font-size: 28px; font-weight: 700; text-align: center; outline: none; margin-bottom: 16px; transition: border-color 0.15s; }
-    .kiosko-input:focus { border-color: ${DS.green400}; }
-    .kiosko-input::placeholder { color: rgba(255,255,255,0.2); font-size: 18px; font-weight: 400; }
-    .kiosko-btn { width: 100%; max-width: 320px; padding: 20px; background: linear-gradient(135deg, ${DS.green600}, ${DS.green700}); border: none; border-radius: 16px; color: ${DS.white}; font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 700; cursor: pointer; }
-    .kiosko-salir { position: fixed; top: 16px; right: 16px; background: rgba(255,255,255,0.1); border: none; color: rgba(255,255,255,0.4); padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; }
 
     .landing-root { min-height: 100vh; background: ${DS.gray50}; }
     .landing-hero { background: linear-gradient(145deg, ${DS.green900}, var(--negocio-color, ${DS.green800})); padding: 60px 24px 80px; text-align: center; position: relative; }
@@ -378,7 +370,6 @@ function navBarDueno(active = 'panel') {
     <nav class="s-nav">
       <button class="s-nav-btn ${active === 'panel' ? 'active' : ''}" id="snav-panel"><span class="s-nav-icon">📊</span>Mi Panel</button>
       <button class="s-nav-btn" id="snav-cajero-d"><span class="s-nav-icon">🧾</span>Cajero</button>
-      <button class="s-nav-btn" id="snav-kiosko-d"><span class="s-nav-icon">🖥️</span>Kiosko</button>
       <button class="s-nav-btn" id="snav-salir"><span class="s-nav-icon">🚪</span>Salir</button>
     </nav>
     <div style="text-align:center;padding:4px 0 8px;border-top:1px solid rgba(255,255,255,0.08)">
@@ -395,7 +386,6 @@ function initNavCajero() {
 function initNavDueno() {
   document.getElementById('snav-panel')?.addEventListener('click', () => navigate('dueno'))
   document.getElementById('snav-cajero-d')?.addEventListener('click', () => navigate('cajero'))
-  document.getElementById('snav-kiosko-d')?.addEventListener('click', () => navigate('kiosko'))
   document.getElementById('snav-salir')?.addEventListener('click', async () => { const { logout } = await import('./auth.js'); logout() })
   document.getElementById('snav-privacidad-dueno')?.addEventListener('click', () => {
     const modal = document.createElement('div')
@@ -633,7 +623,6 @@ export async function paginaBienvenida() {
         <div class="sbv-btns">
           <button class="sbv-btn primary" id="sbv-cajero"><span class="sbv-btn-icon">🧾</span><div><div>Panel Cajero</div><span class="sbv-btn-sub">Registrar visitas de clientes</span></div></button>
           <button class="sbv-btn secondary" id="sbv-panel"><span class="sbv-btn-icon">📊</span><div><div>Mi Panel</div><span class="sbv-btn-sub">Estadísticas, niveles y más</span></div></button>
-          <button class="sbv-btn secondary" id="sbv-kiosko"><span class="sbv-btn-icon">🖥️</span><div><div>Modo Kiosko</div><span class="sbv-btn-sub">Pantalla completa para el mostrador</span></div></button>
         </div>
         <button class="sbv-salir" id="sbv-salir">Cerrar sesión</button>
       </div>
@@ -645,7 +634,6 @@ export function initBienvenida() {
   inyectarEstilos()
   document.getElementById('sbv-cajero')?.addEventListener('click', () => navigate('cajero'))
   document.getElementById('sbv-panel')?.addEventListener('click', () => navigate('dueno'))
-  document.getElementById('sbv-kiosko')?.addEventListener('click', () => navigate('kiosko'))
   document.getElementById('sbv-salir')?.addEventListener('click', async () => { const { logout } = await import('./auth.js'); logout() })
 }
 
@@ -1070,47 +1058,6 @@ export async function initCajero() {
     const { data: nd } = await supabase.from('negocios').select('color_principal').eq('id', negocio.id).single()
     if (vigente() && nd?.color_principal) aplicarColorNegocio(nd.color_principal)
   } catch (e) {}
-}
-
-export async function paginaKiosko() {
-  inyectarEstilos()
-  try {
-    const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
-    if (!negocio) { navigate('login'); return '<div></div>' }
-    if (negocio.color_principal) aplicarColorNegocio(negocio.color_principal)
-    return `
-      <div class="kiosko-root">
-        <button class="kiosko-salir" id="kiosko-salir">✕ Salir</button>
-        ${logoSVG(48, 'rgba(255,255,255,0.4)')}
-        <div class="kiosko-titulo" style="margin-top:16px">Bienvenido a</div>
-        <div class="kiosko-nombre">${negocio.nombre}</div>
-        <input type="tel" id="kiosko-tel" class="kiosko-input" placeholder="Tu teléfono" />
-        <button class="kiosko-btn" id="kiosko-entrar">Consultar progreso</button>
-        <div id="kiosko-msg" style="margin-top:20px;font-size:14px;color:rgba(255,255,255,0.5)"></div>
-      </div>
-    `
-  } catch (e) { return `<div class="kiosko-root">${errMsg()}</div>` }
-}
-
-export function initKiosko() {
-  inyectarEstilos()
-  document.getElementById('kiosko-salir')?.addEventListener('click', () => navigate('bienvenida'))
-  const consultarProgreso = async () => {
-    const telefono = document.getElementById('kiosko-tel').value.trim()
-    if (!telefono) { document.getElementById('kiosko-msg').textContent = 'Escribe tu teléfono'; return }
-    const msg = document.getElementById('kiosko-msg'); const btn = document.getElementById('kiosko-entrar')
-    btn.disabled = true; btn.textContent = 'Consultando...'; msg.textContent = ''
-    try {
-      const { data, error } = await supabase.rpc('get_kiosk_progress', { p_phone: telefono })
-      if (error) throw error
-      if (!data) { msg.textContent = 'No encontramos progreso con ese teléfono.'; return }
-      msg.textContent = `Progreso: ${data.total_visits} visitas${data.next_level ? ` · ${data.next_level.visitas_minimas - data.total_visits} para ${data.next_level.nombre}` : ''}`
-      document.getElementById('kiosko-tel').value = ''
-    } catch (e) { msg.textContent = 'Sin conexión. Intenta de nuevo.' }
-    finally { btn.disabled = false; btn.textContent = 'Consultar progreso' }
-  }
-  document.getElementById('kiosko-entrar')?.addEventListener('click', consultarProgreso)
-  document.getElementById('kiosko-tel')?.addEventListener('keydown', e => { if (e.key === 'Enter') consultarProgreso() })
 }
 
 // QR fijo del mostrador (#/negocio/<id>): solo para CONSULTAR. Si el teléfono

@@ -8,7 +8,6 @@ import {
   paginaDueno, initDueno,
   paginaBienvenida, initBienvenida,
   paginaOnboarding, initOnboarding,
-  paginaKiosko, initKiosko,
   paginaLanding, initLanding,
   paginaPrivacidad, initPrivacidad,
   paginaReclamar, initReclamar,
@@ -127,7 +126,7 @@ async function render() {
     return
   }
 
-  if (profile.role === 'owner' && !['onboarding', 'bienvenida', 'kiosko', 'dueno', 'cajero'].includes(page)) {
+  if (profile.role === 'owner' && !['onboarding', 'bienvenida', 'dueno', 'cajero'].includes(page)) {
     window.location.hash = '#/bienvenida'
     return
   }
@@ -143,13 +142,6 @@ async function render() {
     app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
     app.innerHTML = await paginaBienvenida()
     initBienvenida()
-    return
-  }
-
-  if (page === 'kiosko') {
-    app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
-    app.innerHTML = await paginaKiosko()
-    initKiosko()
     return
   }
 
