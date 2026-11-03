@@ -51,3 +51,9 @@ Tres pasos: elegir premio y meta, dar de alta a los meseros, hacer una visita de
 - Pantalla para que el dueño dé de alta meseros y les ponga nombre (hoy `profiles.nombre` se llena a mano).
 - `max_manuales_dia` en "Programa".
 - Página pública (`#/landing`) sin niveles.
+
+## Rediseño visual del dueño
+
+- Login, bienvenida, panel y ajustes con estilo sobrio (estilos en `inyectarEstilosDueno`, todo dentro de `.ow`; mesero y cliente sin cambios).
+- "Tarjeta de tus clientes": por ahora solo el color, con vista previa. Logo y mensaje de agradecimiento esperan `supabase/fase-4b-tarjeta.sql` (sin ejecutar).
+- Aviso de privacidad del dueño: una línea en el login con enlace a `#/terminos`.

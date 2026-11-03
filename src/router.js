@@ -5,6 +5,7 @@ export function getPage() {
   if (hash.startsWith('#/negocio/')) return 'negocio'
   if (hash.startsWith('#/landing/')) return 'landing'
   if (hash.startsWith('#/onboarding')) return 'onboarding'
+  if (hash === '#/terminos') return 'terminos'
   if (hash === '#/admin') return 'admin'
   if (hash === '#/cajero') return 'cajero'
   if (hash === '#/login') return 'login'

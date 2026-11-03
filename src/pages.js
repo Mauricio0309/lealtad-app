@@ -112,19 +112,6 @@ function inyectarEstilos() {
     .sq-btn:active { transform: scale(0.98); }
     .sq-btn:disabled { opacity: 0.6; }
 
-    .sbv-root { min-height: 100vh; background: linear-gradient(145deg, ${DS.green800} 0%, ${DS.green900} 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; font-family: 'Sora', sans-serif; color: ${DS.white}; text-align: center; }
-    .sbv-logo { margin-bottom: 8px; }
-    .sbv-app { font-size: 13px; color: ${DS.green400}; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 24px; }
-    .sbv-bienvenido { font-size: 15px; color: rgba(255,255,255,0.5); margin-bottom: 6px; }
-    .sbv-nombre { font-size: 32px; font-weight: 800; margin-bottom: 48px; line-height: 1.1; }
-    .sbv-btns { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 320px; }
-    .sbv-btn { padding: 18px 20px; border-radius: 14px; border: none; font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 14px; transition: transform 0.1s, opacity 0.15s; text-align: left; }
-    .sbv-btn:active { transform: scale(0.98); }
-    .sbv-btn.primary { background: ${DS.white}; color: ${DS.green800}; box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
-    .sbv-btn.secondary { background: rgba(255,255,255,0.1); color: ${DS.white}; border: 1px solid rgba(255,255,255,0.2); }
-    .sbv-btn-icon { font-size: 26px; flex-shrink: 0; }
-    .sbv-btn-sub { font-size: 12px; font-weight: 400; opacity: 0.6; display: block; margin-top: 2px; }
-    .sbv-salir { margin-top: 28px; background: none; border: none; color: rgba(255,255,255,0.3); font-size: 13px; cursor: pointer; font-family: 'Inter', sans-serif; }
 
     .s-toast-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 9999; animation: sFadeIn 0.2s ease; }
     .s-toast-box { background: ${DS.white}; border-radius: 24px; padding: 36px 28px; text-align: center; max-width: 300px; width: 90%; animation: sPopIn 0.35s cubic-bezier(0.34,1.56,0.64,1); }
@@ -146,12 +133,6 @@ function inyectarEstilos() {
     .s-row-sub { font-size: 12px; color: ${DS.gray500}; margin-top: 2px; }
     .s-row-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
-    .s-login-root { min-height: 100vh; background: linear-gradient(145deg, ${DS.green800} 0%, ${DS.green900} 100%); display: flex; align-items: center; justify-content: center; padding: 24px; }
-    .s-login-card { background: ${DS.white}; border-radius: 24px; padding: 32px 28px; width: 100%; max-width: 380px; box-shadow: 0 24px 60px rgba(0,0,0,0.3); }
-    .s-login-logo { text-align: center; margin-bottom: 28px; }
-    .s-login-app { font-family: 'Sora', sans-serif; font-size: 28px; font-weight: 800; color: ${DS.green800}; letter-spacing: -0.02em; }
-    .s-login-app span { color: ${DS.gold500}; }
-    .s-login-sub { font-size: 14px; color: ${DS.gray500}; margin-top: 4px; }
 
     .sc-search-area { padding: 16px 16px 8px; display: flex; flex-direction: column; gap: 8px; }
     .sc-search-row { display: flex; gap: 8px; }
@@ -161,16 +142,6 @@ function inyectarEstilos() {
     .s-chart-wrap { position: relative; height: 180px; margin-top: 8px; }
     .s-chart-wrap.donut { height: 200px; }
 
-    .onb-root { min-height: 100vh; background: linear-gradient(145deg, ${DS.green800} 0%, ${DS.green900} 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; font-family: 'Sora', sans-serif; color: ${DS.white}; text-align: center; }
-    .onb-step-dots { display: flex; gap: 8px; margin-bottom: 40px; }
-    .onb-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.3); transition: all 0.3s; }
-    .onb-dot.active { background: ${DS.green400}; width: 24px; border-radius: 4px; }
-    .onb-icon { font-size: 64px; margin-bottom: 24px; }
-    .onb-titulo { font-size: 26px; font-weight: 800; margin-bottom: 12px; line-height: 1.2; }
-    .onb-desc { font-size: 15px; color: rgba(255,255,255,0.6); line-height: 1.6; margin-bottom: 48px; max-width: 300px; }
-    .onb-btns { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 300px; }
-    .onb-btn-primary { padding: 16px; border-radius: 12px; border: none; background: ${DS.white}; color: ${DS.green800}; font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; }
-    .onb-btn-skip { background: none; border: none; color: rgba(255,255,255,0.4); font-size: 13px; cursor: pointer; font-family: 'Inter', sans-serif; padding: 8px; }
 
 
     .landing-root { min-height: 100vh; background: ${DS.gray50}; }
@@ -204,70 +175,6 @@ function inyectarEstilos() {
     .cj-qr-tiempo-lbl { font-size: 12px; color: ${DS.gray500}; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 8px; }
     .cj-qr-tiempo { font-family: 'Sora', sans-serif; font-size: 40px; font-weight: 800; color: ${DS.gray900}; font-variant-numeric: tabular-nums; line-height: 1.1; }
     .cj-qr-botones { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 10px; }
-    .dn-ayuda { font-size: 12px; color: ${DS.gray500}; margin-top: 6px; line-height: 1.5; }
-    .dn-plantillas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-    .dn-chip { min-height: 36px; padding: 6px 12px; border: 1.5px solid ${DS.gray300}; border-radius: 999px; background: ${DS.white}; color: ${DS.gray700}; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; }
-    .dn-chip:active { background: ${DS.gray100}; }
-    .dn-agregar { display: flex; gap: 8px; }
-    .dn-agregar .s-input { flex: 1; min-width: 0; }
-    .dn-agregar .s-btn { width: auto; padding: 0 20px; }
-    .dn-quitar { min-height: 40px; padding: 8px 14px; border: none; border-radius: 10px; background: #fee2e2; color: #dc2626; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .dn-quitar:disabled { opacity: 0.6; }
-    .dn-tabs { display: flex; gap: 4px; margin: 14px 16px; padding: 4px; background: ${DS.white}; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-    .dn-tab { flex: 1; min-height: 44px; border: none; border-radius: 10px; background: none; font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; color: ${DS.gray500}; cursor: pointer; }
-    .dn-tab[aria-selected="true"] { background: var(--negocio-color, ${DS.green800}); color: ${DS.white}; }
-    [role="tabpanel"][hidden] { display: none; }
-    .dn-hero { background: var(--negocio-color, ${DS.green800}); color: ${DS.white}; border-radius: 20px; padding: 22px 20px; margin: 0 16px 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
-    .dn-hero-lbl { font-size: 16px; font-weight: 600; opacity: 0.9; }
-    .dn-hero-num { font-family: 'Sora', sans-serif; font-size: 48px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; margin-top: 2px; }
-    .dn-hero-sub { font-size: 19px; font-weight: 700; margin-top: 6px; line-height: 1.3; }
-    .dn-hero-nota { font-size: 14px; font-weight: 500; opacity: 0.8; }
-    .dn-hero-invita { display: block; margin-top: 12px; padding: 8px 0; background: none; border: none; color: ${DS.white}; opacity: 0.85; font-family: 'Inter', sans-serif; font-size: 14px; text-align: left; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-    .dn-cifras { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 16px 14px; }
-    .dn-cifras.dos { grid-template-columns: repeat(2, 1fr); }
-    .dn-cifra { background: ${DS.white}; border-radius: 16px; padding: 14px 10px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-    .dn-cifra-num { font-family: 'Sora', sans-serif; font-size: 30px; font-weight: 800; line-height: 1.1; color: ${DS.gray900}; font-variant-numeric: tabular-nums; }
-    .dn-cifra-de { font-size: 16px; font-weight: 700; color: ${DS.gray500}; }
-    .dn-cifra-lbl { font-size: 12px; line-height: 1.3; color: ${DS.gray500}; margin-top: 4px; }
-    .dn-cambio { font-size: 12px; font-weight: 700; margin-top: 6px; }
-    .dn-cambio.sube { color: ${DS.green700}; }
-    .dn-cambio.baja { color: #dc2626; }
-    .dn-cambio.igual { color: ${DS.gray500}; }
-    .dn-fila-btn { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: calc(100% - 32px); margin: 0 16px 14px; padding: 16px; background: ${DS.white}; border: none; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); font-family: 'Inter', sans-serif; text-align: left; cursor: pointer; color: ${DS.gray900}; }
-    .dn-fila-btn:disabled { cursor: default; }
-    .dn-fila-btn:not(:disabled):active { transform: scale(0.99); }
-    .dn-fila-titulo { display: block; font-size: 16px; font-weight: 700; }
-    .dn-fila-sub { display: block; font-size: 13px; color: ${DS.gray500}; margin-top: 2px; }
-    .dn-fila-der { display: flex; align-items: center; gap: 8px; }
-    .dn-fila-num { font-family: 'Sora', sans-serif; font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; }
-    .dn-fila-flecha { font-size: 28px; color: ${DS.gray300}; line-height: 1; }
-    .dn-mesero { padding: 12px 0; border-bottom: 1px solid ${DS.gray100}; }
-    .dn-mesero:last-child { border-bottom: none; padding-bottom: 0; }
-    .dn-mesero:first-of-type { padding-top: 0; }
-    .dn-mesero-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .dn-tu { font-weight: 500; color: ${DS.gray500}; }
-    .dn-revisar { flex-shrink: 0; padding: 3px 10px; border-radius: 999px; background: #fee2e2; color: #b91c1c; font-size: 12px; font-weight: 700; }
-    .dn-motivo { font-size: 13px; color: #b91c1c; margin-top: 4px; }
-    .dn-vacio { text-align: left; }
-    .dn-vacio-titulo { font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 800; line-height: 1.2; color: ${DS.gray900}; }
-    .dn-vacio-sub { font-size: 15px; color: ${DS.gray500}; margin: 8px 0 14px; }
-    .dn-pasos { list-style: none; display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
-    .dn-pasos li { display: flex; gap: 12px; font-size: 14px; line-height: 1.45; color: ${DS.gray700}; }
-    .dn-pasos strong { color: ${DS.gray900}; font-size: 15px; }
-    .dn-paso-icono { font-size: 24px; line-height: 1.2; flex-shrink: 0; }
-    .dn-opcional { font-weight: 400; color: ${DS.gray500}; }
-    .dn-pesos { position: relative; }
-    .dn-pesos span { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: ${DS.gray500}; font-size: 15px; }
-    .dn-pesos .s-input { padding-left: 28px; }
-    .dn-hoja-fondo { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.55); display: flex; align-items: flex-end; justify-content: center; animation: sFadeIn 0.2s ease; }
-    .dn-hoja { width: 100%; max-width: 480px; max-height: 80vh; overflow-y: auto; background: ${DS.white}; border-radius: 24px 24px 0 0; padding: 20px 20px calc(28px + env(safe-area-inset-bottom)); }
-    .dn-hoja-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
-    .dn-hoja-titulo { font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 800; color: ${DS.gray900}; }
-    .dn-hoja-sub { font-size: 13px; color: ${DS.gray500}; margin-top: 2px; }
-    .dn-hoja-cerrar { flex-shrink: 0; min-height: 40px; padding: 8px 14px; border: none; border-radius: 10px; background: ${DS.gray100}; color: ${DS.gray700}; font-size: 14px; font-weight: 600; cursor: pointer; }
-    .dn-esq { background: linear-gradient(90deg, #e9edf2 25%, #f4f6f9 50%, #e9edf2 75%); background-size: 200% 100%; animation: dnBrillo 1.3s ease-in-out infinite; }
-    @keyframes dnBrillo { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-    @media (prefers-reduced-motion: reduce) { .dn-esq { animation: none; } }
     .cj-exito { position: fixed; inset: 0; z-index: 300; background: ${DS.green600}; color: ${DS.white}; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: calc(24px + env(safe-area-inset-top)) 24px calc(20px + env(safe-area-inset-bottom)); text-align: center; font-family: 'Sora', sans-serif; animation: sFadeIn 0.2s ease; }
     .cj-exito[hidden] { display: none; }
     .cj-exito.premio { background: linear-gradient(160deg, ${DS.gold400}, ${DS.gold500}); color: #422006; }
@@ -386,6 +293,166 @@ function inyectarEstilos() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// ESTILOS DEL DUEÑO (login, bienvenida, panel, ajustes, términos)
+// Herramienta de negocio sobria: fondo claro, texto gris oscuro, tarjetas
+// planas con borde fino y UN acento (el color del negocio) solo en botones
+// principales y en la pestaña elegida. Sin emojis ni animaciones de fiesta.
+// Todo va dentro de .ow para no cambiar las pantallas del mesero ni del cliente.
+// ═══════════════════════════════════════════════════════════
+function inyectarEstilosDueno() {
+  inyectarEstilos()
+  if (document.getElementById('sello-styles-dueno')) return
+  const s = document.createElement('style')
+  s.id = 'sello-styles-dueno'
+  s.textContent = `
+    .ow, .ow-hoja-fondo {
+      --ow-fondo: #f6f7f9; --ow-superficie: #ffffff; --ow-borde: #e4e7ec;
+      --ow-texto: #1d2129; --ow-texto-2: #5f6673; --ow-texto-3: #8a919c;
+      --ow-acento: var(--negocio-color, #1d2129); --ow-ok: #1a7f4b; --ow-mal: #b42318;
+      color: var(--ow-texto); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 15px; line-height: 1.45; -webkit-font-smoothing: antialiased;
+    }
+    .ow { min-height: 100vh; background: var(--ow-fondo); }
+    .ow *:focus-visible { outline: 2px solid var(--ow-acento); outline-offset: 2px; }
+
+    .ow-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: calc(14px + env(safe-area-inset-top)) 16px 14px; background: var(--ow-superficie); border-bottom: 1px solid var(--ow-borde); }
+    .ow-marca { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; color: var(--ow-texto); }
+    .ow-cab-negocio { font-size: 14px; color: var(--ow-texto-2); max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ow-cuerpo { max-width: 640px; margin: 0 auto; padding: 8px 16px calc(88px + env(safe-area-inset-bottom)); }
+
+    .ow-tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--ow-borde); margin-bottom: 16px; }
+    .ow-tab { position: relative; min-height: 44px; padding: 10px 0; background: none; border: none; font: inherit; font-size: 15px; font-weight: 600; color: var(--ow-texto-3); cursor: pointer; }
+    .ow-tab[aria-selected="true"] { color: var(--ow-texto); }
+    .ow-tab[aria-selected="true"]::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--ow-acento); }
+    .ow [role="tabpanel"][hidden] { display: none; }
+
+    .ow-tarjeta { background: var(--ow-superficie); border: 1px solid var(--ow-borde); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+    .ow-titulo-sec { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+    .ow-h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.25; }
+    .ow-h2 { font-size: 18px; font-weight: 600; line-height: 1.3; }
+    .ow-sub { font-size: 14px; color: var(--ow-texto-2); margin-top: 4px; }
+    .ow-nota { color: var(--ow-texto-3); font-weight: 400; }
+    .ow-ayuda { font-size: 13px; color: var(--ow-texto-2); margin-top: 6px; }
+
+    .ow-principal-lbl { font-size: 14px; color: var(--ow-texto-2); }
+    .ow-principal-num { font-size: 40px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; margin: 2px 0; }
+    .ow-principal-sub { font-size: 16px; }
+
+    .ow-cifras { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--ow-superficie); border: 1px solid var(--ow-borde); border-radius: 12px; margin-bottom: 12px; }
+    .ow-cifras.dos { grid-template-columns: repeat(2, 1fr); }
+    .ow-cifra { min-width: 0; padding: 14px 12px; border-left: 1px solid var(--ow-borde); }
+    .ow-cifra:first-child { border-left: none; }
+    .ow-cifra-num { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+    .ow-cifra-de { font-size: 13px; font-weight: 500; color: var(--ow-texto-3); letter-spacing: 0; }
+    .ow-cifra-lbl { font-size: 12px; line-height: 1.3; color: var(--ow-texto-2); margin-top: 4px; }
+    .ow-cambio { font-size: 12px; margin-top: 4px; color: var(--ow-texto-3); font-variant-numeric: tabular-nums; }
+    .ow-cambio.sube { color: var(--ow-ok); }
+    .ow-cambio.baja { color: var(--ow-mal); }
+
+    .ow-fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; margin-bottom: 12px; padding: 14px 16px; background: var(--ow-superficie); border: 1px solid var(--ow-borde); border-radius: 12px; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+    .ow-fila:disabled { cursor: default; }
+    .ow-fila:not(:disabled):hover { border-color: #cfd4dc; }
+    .ow-fila-titulo { display: block; font-weight: 600; }
+    .ow-fila-sub { display: block; font-size: 13px; color: var(--ow-texto-2); }
+    .ow-fila-der { display: flex; align-items: baseline; gap: 10px; flex-shrink: 0; }
+    .ow-fila-num { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .ow-fila-ver { font-size: 14px; font-weight: 500; color: var(--ow-texto-2); }
+
+    .ow-tabla-wrap { overflow-x: auto; }
+    .ow-tabla { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+    .ow-tabla th { padding: 0 0 8px 12px; border-bottom: 1px solid var(--ow-borde); font-size: 12px; font-weight: 600; color: var(--ow-texto-2); text-align: right; white-space: nowrap; }
+    .ow-tabla td { padding: 10px 0 10px 12px; border-bottom: 1px solid var(--ow-borde); text-align: right; vertical-align: top; }
+    .ow-tabla th:first-child, .ow-tabla td:first-child { padding-left: 0; text-align: left; }
+    .ow-tabla tbody tr:last-child td { border-bottom: none; padding-bottom: 0; }
+    .ow-persona { font-weight: 600; }
+    .ow-revisar { display: block; margin-top: 2px; font-size: 12px; font-weight: 500; color: var(--ow-mal); }
+
+    .ow-vacio { font-size: 14px; color: var(--ow-texto-2); }
+    .ow-pasos { list-style: none; display: flex; flex-direction: column; gap: 14px; margin: 16px 0; }
+    .ow-pasos li { display: flex; gap: 12px; }
+    .ow-paso-num { flex-shrink: 0; width: 24px; height: 24px; border: 1px solid var(--ow-borde); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--ow-texto-2); }
+    .ow-paso-titulo { font-weight: 600; }
+    .ow-paso-desc { display: block; font-size: 14px; color: var(--ow-texto-2); }
+
+    .ow-btn { display: inline-flex; align-items: center; justify-content: center; width: 100%; min-height: 44px; padding: 10px 16px; border: 1px solid transparent; border-radius: 10px; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .ow-btn.primario { background: var(--ow-acento); color: #ffffff; }
+    .ow-btn.secundario { background: var(--ow-superficie); color: var(--ow-texto); border-color: var(--ow-borde); }
+    .ow-btn.secundario:hover { background: #f9fafb; }
+    .ow-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .ow-btn.chico { width: auto; min-height: 36px; padding: 6px 12px; font-size: 14px; }
+    .ow-btn + .ow-btn { margin-top: 8px; }
+    .ow-botones { display: flex; gap: 8px; }
+    .ow-botones .ow-btn + .ow-btn { margin-top: 0; }
+    .ow-enlace { display: inline-block; min-height: 40px; padding: 8px 0; background: none; border: none; font: inherit; font-size: 14px; color: var(--ow-texto-2); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; text-align: left; }
+
+    .ow-campo { margin-bottom: 16px; }
+    .ow-label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+    .ow-input { width: 100%; height: 44px; padding: 0 12px; border: 1px solid var(--ow-borde); border-radius: 10px; background: #ffffff; font: inherit; font-size: 16px; color: var(--ow-texto); outline: none; }
+    .ow-input:focus { border-color: #9aa1ac; box-shadow: 0 0 0 3px rgba(29,33,41,0.08); }
+    .ow-input::placeholder { color: #b3b9c2; }
+    .ow-pesos { position: relative; }
+    .ow-pesos span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ow-texto-3); }
+    .ow-pesos .ow-input { padding-left: 26px; }
+    .ow-clave { position: relative; }
+    .ow-clave .ow-input { padding-right: 84px; }
+    .ow-clave button { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); min-height: 32px; padding: 4px 10px; background: none; border: none; font: inherit; font-size: 13px; font-weight: 500; color: var(--ow-texto-2); cursor: pointer; }
+    .ow-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .ow-chip { min-height: 32px; padding: 4px 10px; border: 1px solid var(--ow-borde); border-radius: 8px; background: #ffffff; font: inherit; font-size: 13px; color: var(--ow-texto-2); cursor: pointer; }
+    .ow-chip:hover { border-color: #cfd4dc; }
+    .ow-agregar { display: flex; gap: 8px; }
+    .ow-agregar .ow-input { flex: 1; min-width: 0; }
+    .ow-agregar .ow-btn { width: auto; }
+    .ow-lista-fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--ow-borde); }
+    .ow-lista-fila:last-child { border-bottom: none; }
+    .ow-url { padding: 10px 12px; border: 1px solid var(--ow-borde); border-radius: 10px; background: var(--ow-fondo); font-size: 13px; color: var(--ow-texto-2); word-break: break-all; margin-bottom: 12px; }
+
+    .ow-msg-ok { margin-top: 10px; font-size: 14px; color: var(--ow-ok); }
+    .ow-msg-error { margin-top: 10px; font-size: 14px; color: var(--ow-mal); }
+    .ow .s-error { margin-top: 10px; font-size: 14px; color: var(--ow-mal); }
+    .ow .s-success { display: block; margin-top: 10px; padding: 0; background: none; font-size: 14px; font-weight: 500; color: var(--ow-ok); }
+
+    .ow-colores { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+    .ow-color { width: 36px; height: 36px; padding: 0; border: 2px solid #ffffff; border-radius: 50%; box-shadow: 0 0 0 1px var(--ow-borde); cursor: pointer; }
+    .ow-color[aria-checked="true"] { box-shadow: 0 0 0 2px var(--ow-texto); }
+    .ow-vista { padding: 16px; border: 1px solid var(--ow-borde); border-radius: 12px; background: #f5f6f8; margin-bottom: 16px; }
+    .ow-vista-marca { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+    .ow-vista-punto { width: 20px; height: 20px; border-radius: 50%; background: var(--vista-color); flex-shrink: 0; }
+    .ow-vista-saludo { font-size: 18px; font-weight: 700; margin-top: 12px; }
+    .ow-vista-tarjeta { margin-top: 10px; padding: 16px; border-radius: 12px; background: #ffffff; text-align: center; }
+    .ow-vista-num { font-size: 34px; font-weight: 800; color: var(--vista-color); font-variant-numeric: tabular-nums; }
+    .ow-vista-meta { font-size: 18px; font-weight: 700; color: #cbd5e1; }
+    .ow-vista-sellos { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; justify-items: center; margin-top: 12px; }
+    .ow-vista-sello { width: 100%; max-width: 30px; aspect-ratio: 1; border: 1.5px dashed #cbd5e1; border-radius: 50%; }
+    .ow-vista-sello.lleno { border: none; background: var(--vista-color); }
+    .ow-vista-premio { margin-top: 10px; padding: 12px 16px; border-radius: 12px; background: #ffffff; font-size: 14px; font-weight: 600; }
+    .ow-vista-premio span { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: var(--ow-texto-3); }
+
+    .ow-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 100; display: flex; background: var(--ow-superficie); border-top: 1px solid var(--ow-borde); padding-bottom: env(safe-area-inset-bottom); }
+    .ow-nav button { flex: 1; min-height: 52px; background: none; border: none; font: inherit; font-size: 14px; font-weight: 600; color: var(--ow-texto-3); cursor: pointer; }
+    .ow-nav button[aria-current="page"] { color: var(--ow-texto); }
+
+    .ow-hoja-fondo { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: flex-end; justify-content: center; background: rgba(15,18,24,0.4); }
+    .ow-hoja { width: 100%; max-width: 560px; max-height: 80vh; overflow-y: auto; padding: 16px 16px calc(24px + env(safe-area-inset-bottom)); background: #ffffff; border-radius: 12px 12px 0 0; }
+    .ow-hoja-cab { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+    @media (min-width: 600px) { .ow-hoja-fondo { align-items: center; } .ow-hoja { border-radius: 12px; } }
+
+    .ow-esq { background: #eceef2; border-radius: 12px; animation: owPulso 1.6s ease-in-out infinite; }
+    @keyframes owPulso { 50% { opacity: 0.55; } }
+    @media (prefers-reduced-motion: reduce) { .ow-esq { animation: none; } }
+
+    .ow-centro { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 16px; }
+    .ow-caja { width: 100%; max-width: 380px; padding: 28px 24px; background: var(--ow-superficie); border: 1px solid var(--ow-borde); border-radius: 12px; }
+    .ow-caja .ow-marca { margin-bottom: 20px; }
+    .ow-legal { max-width: 380px; margin-top: 16px; font-size: 13px; color: var(--ow-texto-3); text-align: center; }
+    .ow-legal a { color: var(--ow-texto-2); text-underline-offset: 3px; }
+    .ow-paso-de { font-size: 13px; color: var(--ow-texto-3); margin-bottom: 8px; }
+    .ow-texto-legal h2 { font-size: 15px; font-weight: 600; margin: 20px 0 6px; }
+    .ow-texto-legal p { font-size: 14px; color: var(--ow-texto-2); }
+  `
+  document.head.appendChild(s)
+}
+
+// ═══════════════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════════════
 function logoSVG(size = 36, color = '#ffffff') {
@@ -404,8 +471,9 @@ function topbarBrand() {
   </div>`
 }
 
+// Contraseña con botón de texto "Mostrar / Ocultar" (login).
 function pwField(id, placeholder = '••••••') {
-  return `<div class="s-pw-wrap"><input type="password" id="${id}" placeholder="${placeholder}" class="s-input" /><button type="button" class="s-pw-eye" onclick="var i=document.getElementById('${id}');if(i.type==='password'){i.type='text';this.textContent='🙈';}else{i.type='password';this.textContent='👁';}">👁</button></div>`
+  return `<div class="ow-clave"><input type="password" id="${id}" placeholder="${placeholder}" class="ow-input" autocomplete="current-password" /><button type="button" aria-label="Mostrar contraseña" onclick="var i=document.getElementById('${id}');var v=i.type==='password';i.type=v?'text':'password';this.textContent=v?'Ocultar':'Mostrar';this.setAttribute('aria-label',v?'Ocultar contraseña':'Mostrar contraseña')">Mostrar</button></div>`
 }
 
 function errMsg(donde = '') {
@@ -444,16 +512,14 @@ function navBarCajero() {
   `
 }
 
+// Barra inferior del dueño: solo texto, sin íconos. Va dentro de .ow.
 function navBarDueno(active = 'panel') {
   return `
-    <nav class="s-nav">
-      <button class="s-nav-btn ${active === 'panel' ? 'active' : ''}" id="snav-panel"><span class="s-nav-icon">📊</span>Mi Panel</button>
-      <button class="s-nav-btn" id="snav-cajero-d"><span class="s-nav-icon">🧾</span>Cajero</button>
-      <button class="s-nav-btn" id="snav-salir"><span class="s-nav-icon">🚪</span>Salir</button>
+    <nav class="ow-nav" aria-label="Secciones">
+      <button id="snav-panel"${active === 'panel' ? ' aria-current="page"' : ''}>Mi panel</button>
+      <button id="snav-cajero-d">Cajero</button>
+      <button id="snav-salir">Salir</button>
     </nav>
-    <div style="text-align:center;padding:4px 0 8px;border-top:1px solid rgba(255,255,255,0.08)">
-      <button id="snav-privacidad-dueno" style="background:none;border:none;color:rgba(255,255,255,0.3);font-size:10px;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:underline">Aviso de privacidad</button>
-    </div>
   `
 }
 
@@ -466,28 +532,6 @@ function initNavDueno() {
   document.getElementById('snav-panel')?.addEventListener('click', () => navigate('dueno'))
   document.getElementById('snav-cajero-d')?.addEventListener('click', () => navigate('cajero'))
   document.getElementById('snav-salir')?.addEventListener('click', async () => { const { logout } = await import('./auth.js'); logout() })
-  document.getElementById('snav-privacidad-dueno')?.addEventListener('click', () => {
-    const modal = document.createElement('div')
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:flex-end;justify-content:center;z-index:9999'
-    modal.innerHTML = `<div style="background:white;border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <div style="font-family:'Sora',sans-serif;font-size:16px;font-weight:800;color:#0f172a">Aviso de Privacidad — Dueños</div>
-        <button id="cerrar-priv-dueno" style="background:#f1f5f9;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;color:#64748b">Cerrar</button>
-      </div>
-      <div style="font-size:13px;color:#334155;line-height:1.7">
-        <p style="font-weight:600;color:#0f172a;margin-bottom:6px">¿Qué datos guardamos de tu negocio?</p>
-        <p style="margin-bottom:12px">Nombre del negocio, correo electrónico y contraseña (encriptada). No guardamos datos bancarios.</p>
-        <p style="font-weight:600;color:#0f172a;margin-bottom:6px">¿Qué datos guardamos de tus clientes?</p>
-        <p style="margin-bottom:12px">Solo nombre y teléfono de los clientes que se registran en tu programa. Tú eres responsable de informarles que sus datos se guardan.</p>
-        <p style="font-weight:600;color:#0f172a;margin-bottom:6px">¿Se comparten los datos?</p>
-        <p style="margin-bottom:12px">No. Los datos de tu negocio y clientes son privados y no se venden ni comparten con terceros.</p>
-        <p style="font-size:11px;color:#94a3b8;margin-top:16px">En cumplimiento con la LFPDPPP de México.</p>
-      </div>
-    </div>`
-    document.body.appendChild(modal)
-    modal.querySelector('#cerrar-priv-dueno')?.addEventListener('click', () => modal.remove())
-    modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
-  })
 }
 
 function onboardingVisto() { return localStorage.getItem('sello_onboarding') === 'done' }
@@ -496,9 +540,9 @@ function marcarOnboardingVisto() { localStorage.setItem('sello_onboarding', 'don
 // Bienvenida del dueño en 3 pasos. También se muestran en el panel mientras
 // el negocio no tiene clientes.
 const PASOS_ONBOARDING = [
-  { icon: '🎁', titulo: 'Elige tu premio y tu meta', desc: 'Por ejemplo: un café gratis a las 10 visitas. Lo cambias cuando quieras en Mi Panel → Ajustes.' },
-  { icon: '👥', titulo: 'Da de alta a tus meseros', desc: 'Cada mesero entra a Sello desde su celular con su propia cuenta. Agrega sus números en Ajustes → Personal para que no ganen puntos.' },
-  { icon: '🧾', titulo: 'Haz una visita de prueba', desc: 'Toca "Cobré una cuenta", escanea el QR con tu celular y suma tu primer punto. Así verás lo mismo que tus clientes.' },
+  { titulo: 'Elige tu premio y tu meta', desc: 'Por ejemplo: un café gratis a las 10 visitas. Lo cambias cuando quieras en Mi panel → Ajustes.' },
+  { titulo: 'Da de alta a tus meseros', desc: 'Cada mesero entra a Sello desde su celular con su propia cuenta. Agrega sus números en Ajustes → Personal para que no ganen puntos.' },
+  { titulo: 'Haz una visita de prueba', desc: 'Toca "Cobré una cuenta", escanea el QR con tu celular y suma tu primer punto. Así verás lo mismo que tus clientes.' },
 ]
 
 // ── Pantalla de celebración al subir de nivel ─────────────
@@ -506,21 +550,24 @@ const PASOS_ONBOARDING = [
 // PÁGINAS
 // ═══════════════════════════════════════════════════════════
 
+// Entrada para dueños y meseros. La línea legal lleva a #/terminos.
 export function paginaLogin() {
-  inyectarEstilos()
+  inyectarEstilosDueno()
   return `
-    <div class="s-login-root">
-      <div class="s-login-card">
-        <div class="s-login-logo">${logoSVG(48, DS.green800)}<div class="s-login-app">Sell<span>o</span></div><div class="s-login-sub">Programa de lealtad digital</div></div>
-        <div class="s-field"><label class="s-label">Correo electrónico</label><input type="email" id="email" class="s-input" placeholder="tu@correo.com" /></div>
-        <div class="s-field"><label class="s-label">Contraseña</label>${pwField('password')}</div>
-        <button class="s-btn primary" id="btn-login" style="margin-top:8px">Entrar</button>
-        <div id="msg" style="margin-top:10px"></div>
-        <button id="btn-olvide" style="background:none;border:none;color:${DS.gray500};font-size:13px;cursor:pointer;margin-top:14px;width:100%;text-align:center;font-family:'Inter',sans-serif;">¿Olvidaste tu contraseña?</button>
-        <div id="msg-reset" style="margin-top:8px"></div>
-        <div style="text-align:center;margin-top:12px">
-          <button id="btn-privacidad-dueno" style="background:none;border:none;color:${DS.gray300};font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:underline">Aviso de privacidad</button>
+    <div class="ow">
+      <div class="ow-centro">
+        <div class="ow-caja">
+          <div class="ow-marca">Sello</div>
+          <h1 class="ow-h1">Entra a tu cuenta</h1>
+          <p class="ow-sub" style="margin-bottom:20px">Para dueños y meseros.</p>
+          <div class="ow-campo"><label class="ow-label" for="email">Correo</label><input type="email" id="email" class="ow-input" placeholder="tu@correo.com" autocomplete="email" /></div>
+          <div class="ow-campo"><label class="ow-label" for="password">Contraseña</label>${pwField('password')}</div>
+          <button class="ow-btn primario" id="btn-login">Entrar</button>
+          <div id="msg"></div>
+          <button class="ow-enlace" id="btn-olvide" style="margin-top:8px">¿Olvidaste tu contraseña?</button>
+          <div id="msg-reset"></div>
         </div>
+        <p class="ow-legal">Al usar tu cuenta aceptas los <a href="#/terminos">Términos y el Aviso de privacidad</a>.</p>
       </div>
     </div>
   `
@@ -569,7 +616,6 @@ export function initLogin() {
   }
   document.getElementById('btn-login').addEventListener('click', doLogin)
   document.getElementById('password')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin() })
-  document.getElementById('btn-privacidad-dueno')?.addEventListener('click', () => navigate('privacidad', 'dueno'))
 
   // Recuperar contraseña
   document.getElementById('btn-olvide')?.addEventListener('click', async () => {
@@ -588,52 +634,56 @@ export function initLogin() {
 }
 
 export function paginaOnboarding(paso = 0) {
-  inyectarEstilos()
-  const p = PASOS_ONBOARDING[paso]; const esUltimo = paso === PASOS_ONBOARDING.length - 1
+  inyectarEstilosDueno()
+  const i = Math.min(Math.max(0, Number(paso) || 0), PASOS_ONBOARDING.length - 1)
+  const p = PASOS_ONBOARDING[i]; const esUltimo = i === PASOS_ONBOARDING.length - 1
   return `
-    <div class="onb-root">
-      <div class="onb-step-dots">${PASOS_ONBOARDING.map((_, i) => `<div class="onb-dot ${i===paso?'active':''}"></div>`).join('')}</div>
-      <div class="onb-icon">${p.icon}</div>
-      <div class="onb-titulo">${p.titulo}</div>
-      <div class="onb-desc">${p.desc}</div>
-      <div class="onb-btns">
-        <button class="onb-btn-primary" id="onb-siguiente">${esUltimo ? '¡Empezar ahora!' : 'Siguiente →'}</button>
-        ${!esUltimo ? `<button class="onb-btn-skip" id="onb-skip">Saltar</button>` : ''}
+    <div class="ow">
+      <div class="ow-centro">
+        <div class="ow-caja">
+          <div class="ow-marca">Sello</div>
+          <div class="ow-paso-de">Paso ${i + 1} de ${PASOS_ONBOARDING.length}</div>
+          <h1 class="ow-h1">${p.titulo}</h1>
+          <p class="ow-sub" style="margin-bottom:24px">${p.desc}</p>
+          <button class="ow-btn primario" id="onb-siguiente">${esUltimo ? 'Empezar' : 'Siguiente'}</button>
+          ${!esUltimo ? `<button class="ow-btn secundario" id="onb-skip">Saltar</button>` : ''}
+        </div>
       </div>
     </div>
   `
 }
 
 export function initOnboarding(paso = 0) {
-  inyectarEstilos()
-  const esUltimo = paso === PASOS_ONBOARDING.length - 1
+  inyectarEstilosDueno()
+  const esUltimo = paso >= PASOS_ONBOARDING.length - 1
   document.getElementById('onb-siguiente')?.addEventListener('click', () => { if (esUltimo) { marcarOnboardingVisto(); navigate('bienvenida') } else navigate('onboarding', paso + 1) })
   document.getElementById('onb-skip')?.addEventListener('click', () => { marcarOnboardingVisto(); navigate('bienvenida') })
 }
 
 export async function paginaBienvenida() {
-  inyectarEstilos()
+  inyectarEstilosDueno()
   try {
     const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
     if (!negocio) { window.location.hash = '#/login'; window.dispatchEvent(new Event('hashchange')); return '<div></div>' }
     return `
-      <div class="sbv-root">
-        <div class="sbv-logo">${logoSVG(56, DS.white)}</div>
-        <div class="sbv-app">Sello</div>
-        <div class="sbv-bienvenido">Bienvenido de vuelta</div>
-        <h1 class="sbv-nombre">${negocio.nombre}</h1>
-        <div class="sbv-btns">
-          <button class="sbv-btn primary" id="sbv-cajero"><span class="sbv-btn-icon">🧾</span><div><div>Cajero</div><span class="sbv-btn-sub">Cobrar, dar puntos y canjear premios</span></div></button>
-          <button class="sbv-btn secondary" id="sbv-panel"><span class="sbv-btn-icon">📊</span><div><div>Mi Panel</div><span class="sbv-btn-sub">Tus números y ajustes</span></div></button>
+      <div class="ow">
+        <div class="ow-centro">
+          <div class="ow-caja">
+            <div class="ow-marca">Sello</div>
+            <h1 class="ow-h1">${esc(negocio.nombre)}</h1>
+            <p class="ow-sub" style="margin-bottom:24px">¿Qué quieres hacer?</p>
+            <button class="ow-btn primario" id="sbv-cajero">Cobrar en caja</button>
+            <button class="ow-btn secundario" id="sbv-panel">Ver mi panel</button>
+            <button class="ow-enlace" id="sbv-salir" style="margin-top:12px">Cerrar sesión</button>
+          </div>
         </div>
-        <button class="sbv-salir" id="sbv-salir">Cerrar sesión</button>
       </div>
     `
-  } catch (e) { return `<div class="s-login-root"><div class="s-login-card">${errMsg()}</div></div>` }
+  } catch (e) { return `<div class="ow"><div class="ow-centro"><div class="ow-caja">${errMsg()}</div></div></div>` }
 }
 
 export function initBienvenida() {
-  inyectarEstilos()
+  inyectarEstilosDueno()
   document.getElementById('sbv-cajero')?.addEventListener('click', () => navigate('cajero'))
   document.getElementById('sbv-panel')?.addEventListener('click', () => navigate('dueno'))
   document.getElementById('sbv-salir')?.addEventListener('click', async () => { const { logout } = await import('./auth.js'); logout() })
@@ -2062,6 +2112,49 @@ export function initPrivacidad() {
   document.getElementById('btn-privacidad-back')?.addEventListener('click', () => window.history.back())
 }
 
+
+// ── TÉRMINOS Y AVISO DE PRIVACIDAD (dueños) ─────────────────
+// Página corta para el negocio. El aviso del cliente es otro y no cambia.
+export function paginaTerminos() {
+  inyectarEstilosDueno()
+  return `
+    <div class="ow">
+      <header class="ow-cab">
+        <span class="ow-marca">Sello</span>
+        <button class="ow-btn secundario chico" id="btn-terminos-volver">Volver</button>
+      </header>
+      <main class="ow-cuerpo" style="padding-bottom:40px">
+        <div class="ow-tarjeta ow-texto-legal" style="margin-top:8px">
+          <h1 class="ow-h1">Términos y Aviso de privacidad</h1>
+          <p class="ow-sub">Para negocios que usan Sello.</p>
+
+          <h2>Los datos de tus clientes son de tu negocio</h2>
+          <p>Tu negocio es el responsable de los datos de sus clientes (primer nombre, teléfono y visitas) y de avisarles que se guardan. Sello los guarda y los procesa por ti, solo para llevar tu programa de lealtad.</p>
+
+          <h2>Lo que hace Sello con ellos</h2>
+          <p>Nada más. No los vende, no los comparte y no los usa para otros fines. Solo tú ves los datos de tus clientes.</p>
+
+          <h2>Si un cliente pide ver, corregir o borrar sus datos</h2>
+          <p>Avísale a Sello y lo hacemos por ti.</p>
+
+          <h2>Tu cuenta</h2>
+          <p>Guardamos el nombre de tu negocio y tu correo. Tu contraseña se guarda cifrada.</p>
+
+          <p style="margin-top:20px;font-size:13px">Conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (México).</p>
+        </div>
+      </main>
+    </div>
+  `
+}
+
+export function initTerminos() {
+  inyectarEstilosDueno()
+  document.getElementById('btn-terminos-volver')?.addEventListener('click', () => {
+    if (window.history.length > 1) window.history.back()
+    else navigate('login')
+  })
+}
+
 export async function paginaLanding(negocioId) {
   inyectarEstilos()
   try {
@@ -2115,7 +2208,9 @@ export function initLanding(negocioId) {
 // Pestaña "Resumen": en 3 segundos, si Sello le está trayendo clientes de
 // vuelta. Todo lo calcula el servidor (resumen_dueno, resumen_meseros,
 // clientes_inactivos); el navegador solo pinta.
-// Pestaña "Ajustes": programa, personal, personalización y exportar.
+// Pestaña "Ajustes": programa, tarjeta de los clientes, personal, exportar
+// y página pública.
+// Estilos: inyectarEstilosDueno (todo dentro de .ow).
 // ═══════════════════════════════════════════════════════════
 const PLANTILLAS_PREMIO = [
   'Un café gratis', 'Un postre gratis', 'Un corte gratis', 'Un taco gratis',
@@ -2125,6 +2220,20 @@ const PLANTILLAS_PREMIO = [
 // Límites del ticket promedio y del costo del premio (los mismos que revisa el servidor).
 const TICKET_MAX = 100000
 const COSTO_MAX = 100000
+
+// Paleta corta y sobria para la tarjeta del cliente. Todos tienen buen
+// contraste con texto blanco (botones de la tarjeta).
+const COLORES_TARJETA = [
+  { nombre: 'Grafito', valor: '#1f2937' },
+  { nombre: 'Verde', valor: '#0a5c47' },
+  { nombre: 'Verde azulado', valor: '#0f766e' },
+  { nombre: 'Azul', valor: '#1d4ed8' },
+  { nombre: 'Índigo', valor: '#4338ca' },
+  { nombre: 'Vino', valor: '#9f1239' },
+  { nombre: 'Terracota', valor: '#9a3412' },
+  { nombre: 'Café', valor: '#78350f' },
+]
+const esColorHex = c => /^#[0-9a-f]{6}$/i.test(String(c || ''))
 
 // "+529981234567" → "998 123 4567"
 function telefonoLegible(e164) {
@@ -2141,6 +2250,9 @@ function leerPesos(texto) {
   if (!t) return null
   return /^\d+(\.\d{1,2})?$/.test(t) ? Number(t) : NaN
 }
+
+const avisoOk = texto => `<p class="ow-msg-ok" role="status">${texto}</p>`
+const avisoError = texto => `<p class="ow-msg-error" role="alert">${texto}</p>`
 
 function mensajeDueno(error) {
   const m = error?.message || ''
@@ -2162,25 +2274,15 @@ function leerPestanaDueno() { try { return sessionStorage.getItem(CLAVE_PESTANA_
 function guardarPestanaDueno(p) { try { sessionStorage.setItem(CLAVE_PESTANA_DUENO, p) } catch (e) {} }
 
 // Esqueletos de carga: la forma del panel aparece al instante, nunca en blanco.
-function esqueletoResumen() {
-  return `
-    <div class="dn-esq" style="height:150px;margin:0 16px 14px;border-radius:20px"></div>
-    <div class="dn-cifras">${'<div class="dn-esq" style="height:96px;border-radius:16px"></div>'.repeat(3)}</div>
-    <div class="dn-esq" style="height:64px;margin:0 16px 14px;border-radius:16px"></div>
-    <div class="dn-cifras dos">${'<div class="dn-esq" style="height:96px;border-radius:16px"></div>'.repeat(2)}</div>
-    <div class="dn-esq" style="height:140px;margin:0 16px 14px;border-radius:16px"></div>`
-}
-function esqueletoAjustes() {
-  return `<div class="dn-esq" style="height:320px;margin:0 16px 14px;border-radius:16px"></div>
-    <div class="dn-esq" style="height:180px;margin:0 16px 14px;border-radius:16px"></div>`
-}
+const bloqueEsq = alto => `<div class="ow-esq" style="height:${alto}px;margin-bottom:12px"></div>`
+const esqueletoResumen = () => [124, 88, 60, 88, 150].map(bloqueEsq).join('')
+const esqueletoAjustes = () => [360, 300, 160].map(bloqueEsq).join('')
 
 // Tarjeta de error con "Reintentar" (nunca pantalla en blanco).
 function errorPanelHTML(texto, idBoton) {
-  return `<div class="s-card" style="text-align:center">
-    <div style="font-size:34px;margin-bottom:8px" aria-hidden="true">📶</div>
-    <p style="font-size:15px;color:${DS.gray700};margin-bottom:14px">${texto}</p>
-    <button class="s-btn primary" id="${idBoton}">Reintentar</button>
+  return `<div class="ow-tarjeta">
+    <p style="margin-bottom:12px">${texto}</p>
+    <button class="ow-btn secundario" id="${idBoton}">Reintentar</button>
   </div>`
 }
 
@@ -2188,197 +2290,226 @@ function errorPanelHTML(texto, idBoton) {
 function cambioSemanaHTML(actual, anterior) {
   const dif = (Number(actual) || 0) - (Number(anterior) || 0)
   if (!actual && !anterior) return ''
-  if (dif > 0) return `<div class="dn-cambio sube">▲ ${formatoNumero(dif)} vs. la anterior</div>`
-  if (dif < 0) return `<div class="dn-cambio baja">▼ ${formatoNumero(-dif)} vs. la anterior</div>`
-  return `<div class="dn-cambio igual">Igual que la anterior</div>`
+  if (dif > 0) return `<div class="ow-cambio sube">▲ ${formatoNumero(dif)} vs. la anterior</div>`
+  if (dif < 0) return `<div class="ow-cambio baja">▼ ${formatoNumero(-dif)} vs. la anterior</div>`
+  return `<div class="ow-cambio">Igual que la anterior</div>`
 }
 
-function heroResumenHTML(r) {
+function principalHTML(r) {
   const n = Number(r.visitas_repetidas_semana) || 0
-  const veces = n === 1 ? '1 vez' : `${formatoNumero(n)} veces`
   if (r.negocio?.ticket_promedio != null) {
-    return `<div class="dn-hero">
-      <div class="dn-hero-lbl">Esta semana tus clientes volvieron</div>
-      <div class="dn-hero-num">${veces}</div>
-      <div class="dn-hero-sub">≈ ${formatoPesos(r.ventas_estimadas)} en ventas <span class="dn-hero-nota">(estimado)</span></div>
-    </div>`
+    return `<section class="ow-tarjeta">
+      <div class="ow-principal-lbl">Esta semana tus clientes volvieron</div>
+      <div class="ow-principal-num">${n === 1 ? '1 vez' : `${formatoNumero(n)} veces`}</div>
+      <div class="ow-principal-sub">≈ ${formatoPesos(r.ventas_estimadas)} en ventas <span class="ow-nota">(estimado)</span></div>
+    </section>`
   }
-  return `<div class="dn-hero">
-    <div class="dn-hero-num">${formatoNumero(n)}</div>
-    <div class="dn-hero-sub">${n === 1 ? 'visita de un cliente que regresó' : 'visitas de clientes que regresaron'} esta semana</div>
-    <button type="button" class="dn-hero-invita" id="dn-invita-ticket">¿Cuánto gasta un cliente? Dínoslo y te decimos cuánto vendiste →</button>
-  </div>`
+  return `<section class="ow-tarjeta">
+    <div class="ow-principal-num">${formatoNumero(n)}</div>
+    <div class="ow-principal-lbl">${n === 1 ? 'visita de un cliente que regresó' : 'visitas de clientes que regresaron'} esta semana</div>
+    <button type="button" class="ow-enlace" id="dn-invita-ticket">Agrega cuánto gasta un cliente para ver tus ventas estimadas</button>
+  </section>`
 }
 
 // Negocio nuevo: en vez de ceros, qué hacer para empezar.
 function vacioResumenHTML() {
-  return `<div class="s-card dn-vacio">
-    <div class="dn-vacio-titulo">Aquí verás si Sello te trae clientes de vuelta</div>
-    <p class="dn-vacio-sub">Aún no tienes clientes. Empieza así:</p>
-    <ol class="dn-pasos">
-      ${PASOS_ONBOARDING.map(p => `<li><span class="dn-paso-icono" aria-hidden="true">${p.icon}</span><span><strong>${p.titulo}</strong><br>${p.desc}</span></li>`).join('')}
+  return `<section class="ow-tarjeta">
+    <h2 class="ow-h2">Aquí verás si Sello te trae clientes de vuelta</h2>
+    <p class="ow-sub">Aún no tienes clientes. Empieza así:</p>
+    <ol class="ow-pasos">
+      ${PASOS_ONBOARDING.map((p, i) => `<li><span class="ow-paso-num">${i + 1}</span><span><span class="ow-paso-titulo">${p.titulo}</span><span class="ow-paso-desc">${p.desc}</span></span></li>`).join('')}
     </ol>
-    <button class="s-btn primary" id="dn-ir-cajero">Ir al cajero</button>
-  </div>`
+    <button class="ow-btn primario" id="dn-ir-cajero">Ir al cajero</button>
+  </section>`
 }
 
 function meserosHTML(meseros) {
   const lista = meseros || []
-  const filas = lista.map(m => {
-    const partes = [
-      `${formatoNumero(m.generados)} ${m.generados === 1 ? 'código' : 'códigos'}`,
-      `${formatoNumero(m.reclamados)} ${m.reclamados === 1 ? 'usado' : 'usados'}`,
-      `${formatoNumero(m.manuales)} a mano`,
-    ]
-    if (m.bloqueos_canje > 0) partes.push(`${formatoNumero(m.bloqueos_canje)} ${m.bloqueos_canje === 1 ? 'bloqueo' : 'bloqueos'} al canjear (total)`)
-    return `<div class="dn-mesero">
-      <div class="dn-mesero-top">
-        <span class="s-row-title">${esc(m.nombre)}${m.rol === 'owner' ? ' <span class="dn-tu">(tú)</span>' : ''}</span>
-        ${m.revisar ? '<span class="dn-revisar">Revisar</span>' : ''}
-      </div>
-      <div class="s-row-sub">${partes.join(' · ')}</div>
-      ${m.revisar && m.motivo ? `<div class="dn-motivo">${esc(m.motivo)}</div>` : ''}
-    </div>`
-  }).join('')
-  return `<div class="s-card">
-    <div class="s-section-label">Tu equipo esta semana</div>
-    ${filas || `<p class="cj-vacio">Cuando tu equipo cobre con "Cobré una cuenta", aquí verás a cada mesero.</p>`}
-  </div>`
+  if (lista.length === 0) {
+    return `<section class="ow-tarjeta">
+      <h2 class="ow-titulo-sec">Tu equipo esta semana</h2>
+      <p class="ow-vacio">Cuando tu equipo cobre con "Cobré una cuenta", aquí verás a cada mesero.</p>
+    </section>`
+  }
+  const filas = lista.map(m => `<tr>
+      <td><span class="ow-persona">${esc(m.nombre)}</span>${m.rol === 'owner' ? ' <span class="ow-nota">(tú)</span>' : ''}
+        ${m.revisar ? `<span class="ow-revisar">Revisar${m.motivo ? `: ${esc(m.motivo)}` : ''}</span>` : ''}</td>
+      <td>${formatoNumero(m.generados)}</td>
+      <td>${formatoNumero(m.reclamados)}</td>
+      <td>${formatoNumero(m.manuales)}</td>
+      <td>${formatoNumero(m.bloqueos_canje)}</td>
+    </tr>`).join('')
+  return `<section class="ow-tarjeta">
+    <h2 class="ow-titulo-sec">Tu equipo esta semana</h2>
+    <div class="ow-tabla-wrap">
+      <table class="ow-tabla">
+        <thead><tr>
+          <th scope="col">Persona</th><th scope="col">Códigos</th><th scope="col">Usados</th>
+          <th scope="col">A mano</th><th scope="col">Bloqueos</th>
+        </tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+    </div>
+    <p class="ow-ayuda" style="margin-top:12px">Bloqueos: veces que escribió mal el código de canje (total, no solo esta semana).</p>
+  </section>`
 }
 
 function resumenHTML(r, meseros) {
   if (!(Number(r.clientes_registrados) > 0)) return vacioResumenHTML()
   const deCada10 = Math.round((Number(r.porcentaje_regresan) || 0) / 10)
   const entregados = Number(r.premios_entregados_semana) || 0
+  const inactivos = Number(r.inactivos) || 0
   return `
-    ${heroResumenHTML(r)}
-    <div class="dn-cifras">
-      <div class="dn-cifra"><div class="dn-cifra-num">${formatoNumero(r.clientes_registrados)}</div><div class="dn-cifra-lbl">clientes registrados</div></div>
-      <div class="dn-cifra"><div class="dn-cifra-num">${formatoNumero(r.visitas_semana)}</div><div class="dn-cifra-lbl">visitas esta semana</div>${cambioSemanaHTML(r.visitas_semana, r.visitas_semana_anterior)}</div>
-      <div class="dn-cifra"><div class="dn-cifra-num">${deCada10}<span class="dn-cifra-de"> de 10</span></div><div class="dn-cifra-lbl">regresaron al menos una vez</div></div>
+    ${principalHTML(r)}
+    <div class="ow-cifras">
+      <div class="ow-cifra"><div class="ow-cifra-num">${formatoNumero(r.clientes_registrados)}</div><div class="ow-cifra-lbl">Clientes registrados</div></div>
+      <div class="ow-cifra"><div class="ow-cifra-num">${formatoNumero(r.visitas_semana)}</div><div class="ow-cifra-lbl">Visitas esta semana</div>${cambioSemanaHTML(r.visitas_semana, r.visitas_semana_anterior)}</div>
+      <div class="ow-cifra"><div class="ow-cifra-num">${deCada10}<span class="ow-cifra-de"> de cada 10</span></div><div class="ow-cifra-lbl">Regresaron</div></div>
     </div>
-    <button type="button" class="dn-fila-btn" id="dn-ver-inactivos"${r.inactivos > 0 ? '' : ' disabled'}>
-      <span><span class="dn-fila-titulo">Dejaron de venir</span><span class="dn-fila-sub">más de 21 días sin venir</span></span>
-      <span class="dn-fila-der"><span class="dn-fila-num">${formatoNumero(r.inactivos)}</span>${r.inactivos > 0 ? '<span class="dn-fila-flecha" aria-hidden="true">›</span>' : ''}</span>
+    <button type="button" class="ow-fila" id="dn-ver-inactivos"${inactivos > 0 ? '' : ' disabled'}>
+      <span><span class="ow-fila-titulo">Dejaron de venir</span><span class="ow-fila-sub">Más de 21 días sin venir</span></span>
+      <span class="ow-fila-der"><span class="ow-fila-num">${formatoNumero(inactivos)}</span>${inactivos > 0 ? '<span class="ow-fila-ver">Ver</span>' : ''}</span>
     </button>
-    <div class="dn-cifras dos">
-      <div class="dn-cifra"><div class="dn-cifra-num">${formatoNumero(entregados)}</div><div class="dn-cifra-lbl">premios entregados esta semana</div>${r.costo_premios_semana != null && entregados > 0 ? `<div class="dn-cambio igual">≈ ${formatoPesos(r.costo_premios_semana)} de costo</div>` : ''}</div>
-      <div class="dn-cifra"><div class="dn-cifra-num">${formatoNumero(r.premios_listos)}</div><div class="dn-cifra-lbl">listos para canjear</div></div>
+    <div class="ow-cifras dos">
+      <div class="ow-cifra"><div class="ow-cifra-num">${formatoNumero(entregados)}</div><div class="ow-cifra-lbl">Premios entregados esta semana</div>${r.costo_premios_semana != null && entregados > 0 ? `<div class="ow-cambio">≈ ${formatoPesos(r.costo_premios_semana)} de costo</div>` : ''}</div>
+      <div class="ow-cifra"><div class="ow-cifra-num">${formatoNumero(r.premios_listos)}</div><div class="ow-cifra-lbl">Listos para canjear</div></div>
     </div>
     ${meserosHTML(meseros)}`
 }
 
 // Hoja con la lista de quienes dejaron de venir (primer nombre y ···4821).
 async function abrirInactivos() {
+  inyectarEstilosDueno()
   const hoja = document.createElement('div')
-  hoja.className = 'dn-hoja-fondo'
-  hoja.innerHTML = `<div class="dn-hoja" role="dialog" aria-label="Dejaron de venir">
-    <div class="dn-hoja-cab">
-      <div><div class="dn-hoja-titulo">Dejaron de venir</div><div class="dn-hoja-sub">Más de 21 días sin venir. Los más recientes primero.</div></div>
-      <button class="dn-hoja-cerrar" id="dn-hoja-cerrar">Cerrar</button>
+  hoja.className = 'ow-hoja-fondo'
+  hoja.innerHTML = `<div class="ow-hoja" role="dialog" aria-modal="true" aria-labelledby="dn-hoja-titulo">
+    <div class="ow-hoja-cab">
+      <div><h2 class="ow-h2" id="dn-hoja-titulo">Dejaron de venir</h2><p class="ow-sub">Más de 21 días sin venir. Los más recientes primero.</p></div>
+      <button class="ow-btn secundario chico" id="dn-hoja-cerrar">Cerrar</button>
     </div>
-    <div id="dn-hoja-lista">${'<div class="dn-esq" style="height:52px;border-radius:12px;margin-bottom:10px"></div>'.repeat(4)}</div>
+    <div id="dn-hoja-lista">${[52, 52, 52, 52].map(bloqueEsq).join('')}</div>
   </div>`
   document.body.appendChild(hoja)
-  const cerrar = () => hoja.remove()
+  const cerrar = () => { hoja.remove(); document.removeEventListener('keydown', alTeclear) }
+  const alTeclear = e => { if (e.key === 'Escape') cerrar() }
+  document.addEventListener('keydown', alTeclear)
   hoja.querySelector('#dn-hoja-cerrar').addEventListener('click', cerrar)
   hoja.addEventListener('click', e => { if (e.target === hoja) cerrar() })
   const lista = hoja.querySelector('#dn-hoja-lista')
   try {
     const { data, error } = await supabase.rpc('clientes_inactivos')
     if (error) throw error
-    const clientes = data?.clientes || []
     if (!hoja.isConnected) return
+    const clientes = data?.clientes || []
     lista.innerHTML = clientes.length === 0
-      ? `<p class="cj-vacio">¡Nadie! Todos tus clientes vinieron en las últimas 3 semanas.</p>`
-      : clientes.map(c => `<div class="s-row">
-          <div><div class="s-row-title">${esc(c.nombre)} <span style="color:${DS.gray500};font-variant-numeric:tabular-nums">···${esc(c.ultimos4)}</span></div>
-          <div class="s-row-sub">Vino por última vez hace ${formatoNumero(c.dias)} días</div></div>
-          <div class="s-row-sub" style="text-align:right">${formatoNumero(c.visitas)} ${c.visitas === 1 ? 'visita' : 'visitas'}</div>
+      ? `<p class="ow-vacio">Nadie. Todos tus clientes vinieron en las últimas 3 semanas.</p>`
+      : clientes.map(c => `<div class="ow-lista-fila">
+          <div><div><span class="ow-persona">${esc(c.nombre)}</span> <span class="ow-nota" style="font-variant-numeric:tabular-nums">···${esc(c.ultimos4)}</span></div>
+          <div class="ow-ayuda" style="margin-top:2px">Última visita hace ${formatoNumero(c.dias)} días</div></div>
+          <div class="ow-nota" style="white-space:nowrap">${formatoNumero(c.visitas)} ${c.visitas === 1 ? 'visita' : 'visitas'}</div>
         </div>`).join('')
   } catch (e) {
     console.error('Error al cargar los clientes inactivos:', e)
-    if (hoja.isConnected) lista.innerHTML = `<p class="cj-vacio">${mensajeDueno(e)}</p>`
+    if (hoja.isConnected) lista.innerHTML = `<p class="ow-vacio">${mensajeDueno(e)}</p>`
   }
 }
 
 // ── Ajustes ──
+// Vista previa de la tarjeta del cliente (mismo acomodo que su pantalla).
+function vistaTarjetaHTML(nd) {
+  const meta = Math.max(1, Number(nd.meta_puntos) || 10)
+  const puntos = Math.min(meta - 1, Math.max(1, Math.round(meta * 0.4)))
+  const sellos = meta <= 10
+    ? `<div class="ow-vista-sellos">${Array.from({ length: meta }, (_, i) => `<span class="ow-vista-sello${i < puntos ? ' lleno' : ''}"></span>`).join('')}</div>`
+    : ''
+  return `
+    <div class="ow-vista-marca"><span class="ow-vista-punto"></span>${esc(nd.nombre || 'Tu negocio')}</div>
+    <div class="ow-vista-saludo">Buenas tardes, Ana</div>
+    <div class="ow-vista-tarjeta">
+      <div><span class="ow-vista-num">${puntos}</span><span class="ow-vista-meta"> / ${meta}</span></div>
+      ${sellos}
+    </div>
+    <div class="ow-vista-premio"><span>TU PREMIO</span>${esc(nd.premio || 'Tu premio')}</div>`
+}
+
 function ajustesHTML(nd, negocioId) {
   const landingUrl = `${window.location.origin}/#/landing/${negocioId}`
   const pesos = v => v == null ? '' : String(Number(v))
+  const actual = esColorHex(nd.color_principal) ? nd.color_principal.toLowerCase() : COLORES_TARJETA[1].valor
+  // Si el color guardado no está en la paleta, se ofrece como "Tu color actual".
+  const colores = COLORES_TARJETA.some(c => c.valor === actual)
+    ? COLORES_TARJETA
+    : [{ nombre: 'Tu color actual', valor: actual }, ...COLORES_TARJETA]
   return `
-    <div class="s-card">
-      <div class="s-section-label">Programa</div>
-      <div class="s-field">
-        <label class="s-label" for="prog-meta">Visitas para ganar el premio</label>
-        <input type="number" inputmode="numeric" id="prog-meta" class="s-input" min="1" max="100" value="${nd.meta_puntos ?? 10}" />
+    <section class="ow-tarjeta">
+      <h2 class="ow-titulo-sec">Programa</h2>
+      <div class="ow-campo">
+        <label class="ow-label" for="prog-meta">Visitas para ganar el premio</label>
+        <input type="number" inputmode="numeric" id="prog-meta" class="ow-input" min="1" max="100" value="${nd.meta_puntos ?? 10}" />
       </div>
-      <div class="s-field">
-        <label class="s-label" for="prog-premio">Premio</label>
-        <input type="text" id="prog-premio" class="s-input" maxlength="80" value="${esc(nd.premio || '')}" placeholder="Ej: Un café gratis" />
-        <div class="dn-plantillas">${PLANTILLAS_PREMIO.map(p => `<button type="button" class="dn-chip" data-premio="${esc(p)}">${esc(p)}</button>`).join('')}</div>
+      <div class="ow-campo">
+        <label class="ow-label" for="prog-premio">Premio</label>
+        <input type="text" id="prog-premio" class="ow-input" maxlength="80" value="${esc(nd.premio || '')}" placeholder="Ej: Un café gratis" />
+        <div class="ow-chips">${PLANTILLAS_PREMIO.map(p => `<button type="button" class="ow-chip" data-premio="${esc(p)}">${esc(p)}</button>`).join('')}</div>
       </div>
-      <div class="s-field">
-        <label class="s-label" for="prog-ticket">¿Cuánto gasta en promedio un cliente? <span class="dn-opcional">(opcional)</span></label>
-        <div class="dn-pesos"><span>$</span><input type="text" inputmode="decimal" id="prog-ticket" class="s-input" value="${pesos(nd.ticket_promedio)}" placeholder="Ej: 120" autocomplete="off" /></div>
-        <div class="dn-ayuda">Con esto calculamos cuánto te dejan los clientes que regresan.</div>
+      <div class="ow-campo">
+        <label class="ow-label" for="prog-ticket">¿Cuánto gasta en promedio un cliente? <span class="ow-nota">(opcional)</span></label>
+        <div class="ow-pesos"><span>$</span><input type="text" inputmode="decimal" id="prog-ticket" class="ow-input" value="${pesos(nd.ticket_promedio)}" placeholder="Ej: 120" autocomplete="off" /></div>
+        <p class="ow-ayuda">Con esto calculamos cuánto te dejan los clientes que regresan.</p>
       </div>
-      <div class="s-field">
-        <label class="s-label" for="prog-costo">¿Cuánto te cuesta el premio? <span class="dn-opcional">(opcional)</span></label>
-        <div class="dn-pesos"><span>$</span><input type="text" inputmode="decimal" id="prog-costo" class="s-input" value="${pesos(nd.costo_premio)}" placeholder="Ej: 25" autocomplete="off" /></div>
+      <div class="ow-campo">
+        <label class="ow-label" for="prog-costo">¿Cuánto te cuesta el premio? <span class="ow-nota">(opcional)</span></label>
+        <div class="ow-pesos"><span>$</span><input type="text" inputmode="decimal" id="prog-costo" class="ow-input" value="${pesos(nd.costo_premio)}" placeholder="Ej: 25" autocomplete="off" /></div>
       </div>
-      <div class="s-field">
-        <label class="s-label" for="prog-max">Códigos activos por mesero</label>
-        <input type="number" inputmode="numeric" id="prog-max" class="s-input" min="1" max="50" value="${nd.max_codigos_activos ?? 3}" />
-        <div class="dn-ayuda">Cuántos QR puede tener abiertos un mesero a la vez. Súbelo si hay mucha gente.</div>
+      <div class="ow-campo">
+        <label class="ow-label" for="prog-max">Códigos activos por mesero</label>
+        <input type="number" inputmode="numeric" id="prog-max" class="ow-input" min="1" max="50" value="${nd.max_codigos_activos ?? 3}" />
+        <p class="ow-ayuda">Cuántos QR puede tener abiertos un mesero a la vez. Súbelo si hay mucha gente.</p>
       </div>
-      <button id="btn-guardar-programa" class="s-btn primary">Guardar programa</button>
+      <button id="btn-guardar-programa" class="ow-btn primario">Guardar programa</button>
       <div id="msg-programa"></div>
-    </div>
+    </section>
 
-    <div class="s-card">
-      <div class="s-section-label">Personal (no ganan puntos)</div>
-      <div class="dn-ayuda" style="margin:0 0 12px">Agrega el número de cada persona de tu equipo. Esos números no suman puntos.</div>
-      <div class="dn-agregar">
-        <input type="tel" inputmode="numeric" id="excl-tel" class="s-input" placeholder="10 dígitos" autocomplete="off" />
-        <button id="btn-agregar-excl" class="s-btn primary">Agregar</button>
+    <section class="ow-tarjeta">
+      <h2 class="ow-titulo-sec">Tarjeta de tus clientes</h2>
+      <div class="ow-label" id="lbl-color-tarjeta">Color</div>
+      <div class="ow-colores" role="radiogroup" aria-labelledby="lbl-color-tarjeta">
+        ${colores.map(c => `<button type="button" class="ow-color" role="radio" aria-checked="${c.valor === actual}" aria-label="${esc(c.nombre)}" title="${esc(c.nombre)}" data-color="${c.valor}" style="background:${c.valor}"></button>`).join('')}
+      </div>
+      <div class="ow-label">Vista previa</div>
+      <div class="ow-vista" id="vista-tarjeta" style="--vista-color:${actual}">${vistaTarjetaHTML(nd)}</div>
+      <button id="btn-guardar-tarjeta" class="ow-btn primario">Guardar</button>
+      <div id="msg-tarjeta"></div>
+    </section>
+
+    <section class="ow-tarjeta">
+      <h2 class="ow-titulo-sec">Personal (no ganan puntos)</h2>
+      <p class="ow-ayuda" style="margin:-6px 0 12px">Agrega el número de cada persona de tu equipo. Esos números no suman puntos.</p>
+      <div class="ow-agregar">
+        <input type="tel" inputmode="numeric" id="excl-tel" class="ow-input" placeholder="10 dígitos" autocomplete="off" aria-label="Número de 10 dígitos" />
+        <button id="btn-agregar-excl" class="ow-btn secundario">Agregar</button>
       </div>
       <div id="msg-excl"></div>
-      <div id="lista-excl" style="margin-top:8px"><p class="cj-vacio">Cargando...</p></div>
-    </div>
+      <div id="lista-excl" style="margin-top:8px"><p class="ow-vacio">Cargando...</p></div>
+    </section>
 
-    <div class="s-card">
-      <div class="s-section-label">Personalización</div>
-      <div class="s-field"><label class="s-label" for="input-emoji">Emoji del negocio</label><input type="text" id="input-emoji" class="s-input" value="${esc(nd.emoji_negocio || '☕')}" placeholder="☕" style="font-size:24px;text-align:center" /></div>
-      <div class="s-field">
-        <label class="s-label" for="input-color">Color principal</label>
-        <div style="display:flex;gap:10px;align-items:center">
-          <input type="color" id="input-color" value="${esc(nd.color_principal || DS.green800)}" style="width:48px;height:48px;border:none;border-radius:10px;cursor:pointer;padding:2px" />
-          <span style="font-size:13px;color:${DS.gray500}">Lo ven tus clientes cuando escanean el QR</span>
-        </div>
+    <section class="ow-tarjeta">
+      <h2 class="ow-titulo-sec">Exportar datos</h2>
+      <p class="ow-ayuda" style="margin:-6px 0 12px">Descarga la lista de tus clientes para abrirla en Excel.</p>
+      <button id="btn-exportar-csv" class="ow-btn secundario">Descargar clientes (.csv)</button>
+      <div id="msg-exportar"></div>
+    </section>
+
+    <section class="ow-tarjeta">
+      <h2 class="ow-titulo-sec">Tu página pública</h2>
+      <p class="ow-ayuda" style="margin:-6px 0 12px">Compártela en Instagram o WhatsApp.</p>
+      <div class="ow-url">${esc(landingUrl)}</div>
+      <div class="ow-botones">
+        <button id="btn-copiar-landing" class="ow-btn secundario">Copiar link</button>
+        <button id="btn-ver-landing" class="ow-btn secundario">Ver página</button>
       </div>
-      <div class="s-field"><label class="s-label" for="input-descripcion">Descripción corta</label><input type="text" id="input-descripcion" class="s-input" value="${esc(nd.descripcion || '')}" placeholder="Ej: El mejor café de Chetumal" /></div>
-      <button id="btn-guardar-personalizacion" class="s-btn primary" style="margin-top:4px">Guardar personalización</button>
-      <div id="msg-personalizacion" style="margin-top:10px"></div>
-    </div>
-
-    <div class="s-card">
-      <div class="s-section-label">Exportar datos</div>
-      <p style="font-size:13px;color:${DS.gray500};margin-bottom:14px">Descarga la lista de tus clientes para abrirla en Excel.</p>
-      <button id="btn-exportar-csv" class="s-btn ghost">⬇ Descargar clientes (.csv)</button>
-      <div id="msg-exportar" style="margin-top:10px"></div>
-    </div>
-
-    <div class="s-card">
-      <div class="s-section-label">Tu página pública</div>
-      <p style="font-size:13px;color:${DS.gray500};margin-bottom:12px">Compártela en Instagram o WhatsApp.</p>
-      <div style="background:${DS.gray50};border-radius:10px;padding:12px 14px;font-size:12px;color:${DS.gray700};word-break:break-all;margin-bottom:12px;border:1px solid ${DS.gray100}">${esc(landingUrl)}</div>
-      <div style="display:flex;gap:8px">
-        <button id="btn-copiar-landing" class="s-btn ghost" style="flex:1">📋 Copiar link</button>
-        <button id="btn-ver-landing" class="s-btn primary" style="flex:1">👁 Ver página</button>
-      </div>
-      <div id="msg-landing" style="margin-top:8px"></div>
-    </div>`
+      <div id="msg-landing"></div>
+    </section>`
 }
 
 // Sección "Programa": se guarda con la RPC guardar_programa (2G, ampliada en Fase 4).
@@ -2386,7 +2517,7 @@ function initProgramaDueno(alGuardar) {
   const $ = id => document.getElementById(id)
   const btn = $('btn-guardar-programa'); const msg = $('msg-programa')
   if (!btn) return
-  document.querySelectorAll('.dn-chip').forEach(chip => {
+  document.querySelectorAll('.ow-chip[data-premio]').forEach(chip => {
     chip.addEventListener('click', () => { $('prog-premio').value = chip.dataset.premio; $('prog-premio').focus() })
   })
   btn.addEventListener('click', async () => {
@@ -2402,7 +2533,7 @@ function initProgramaDueno(alGuardar) {
     else if (ticket !== null && !(ticket >= 1 && ticket <= TICKET_MAX)) error = 'TICKET_INVALIDO'
     else if (costo !== null && !(costo >= 0 && costo <= COSTO_MAX)) error = 'COSTO_INVALIDO'
     else if (!(max >= 1 && max <= 50)) error = 'MAX_CODIGOS_INVALIDO'
-    if (error) { msg.innerHTML = `<p class="s-error">${mensajeDueno({ message: error })}</p>`; return }
+    if (error) { msg.innerHTML = avisoError(mensajeDueno({ message: error })); return }
     btn.disabled = true; btn.textContent = 'Guardando...'; msg.innerHTML = ''
     try {
       const { error: e } = await supabase.rpc('guardar_programa', {
@@ -2410,14 +2541,61 @@ function initProgramaDueno(alGuardar) {
         p_ticket_promedio: ticket, p_costo_premio: costo,
       })
       if (e) throw e
-      msg.innerHTML = `<div class="s-success">✓ Programa guardado</div>`
+      msg.innerHTML = avisoOk('Programa guardado')
       setTimeout(() => { if (msg.isConnected) msg.innerHTML = '' }, 2500)
-      alGuardar?.()
+      alGuardar?.({ meta, premio })
     } catch (e) {
       console.error('Error al guardar el programa:', e)
-      msg.innerHTML = `<p class="s-error">${mensajeDueno(e)}</p>`
+      msg.innerHTML = avisoError(mensajeDueno(e))
     } finally {
       btn.disabled = false; btn.textContent = 'Guardar programa'
+    }
+  })
+}
+
+// Sección "Tarjeta de tus clientes": por ahora solo el color (el logo y el
+// mensaje de agradecimiento necesitan supabase/fase-4b-tarjeta.sql).
+// El ícono del sello y la animación no se eligen: quedan los de siempre.
+function initTarjetaDueno(negocioId) {
+  const $ = id => document.getElementById(id)
+  const btn = $('btn-guardar-tarjeta'); const msg = $('msg-tarjeta'); const vista = $('vista-tarjeta')
+  if (!btn) return
+  const opciones = [...document.querySelectorAll('.ow-color')]
+  let elegido = opciones.find(o => o.getAttribute('aria-checked') === 'true')?.dataset.color || COLORES_TARJETA[1].valor
+
+  function elegir(boton, enfocar = false) {
+    opciones.forEach(o => { o.setAttribute('aria-checked', String(o === boton)); o.tabIndex = o === boton ? 0 : -1 })
+    elegido = boton.dataset.color
+    vista.style.setProperty('--vista-color', elegido)
+    msg.innerHTML = ''
+    if (enfocar) boton.focus()
+  }
+  opciones.forEach(o => { o.tabIndex = o.getAttribute('aria-checked') === 'true' ? 0 : -1 })
+  opciones.forEach((o, i) => {
+    o.addEventListener('click', () => elegir(o))
+    // Flechas para moverse entre colores (grupo de opciones accesible).
+    o.addEventListener('keydown', e => {
+      const paso = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
+      if (!paso) return
+      e.preventDefault()
+      elegir(opciones[(i + paso + opciones.length) % opciones.length], true)
+    })
+  })
+
+  btn.addEventListener('click', async () => {
+    if (!esColorHex(elegido)) return
+    btn.disabled = true; btn.textContent = 'Guardando...'; msg.innerHTML = ''
+    try {
+      const { error } = await supabase.from('negocios').update({ color_principal: elegido }).eq('id', negocioId)
+      if (error) throw error
+      aplicarColorNegocio(elegido)
+      msg.innerHTML = avisoOk('Tarjeta guardada')
+      setTimeout(() => { if (msg.isConnected) msg.innerHTML = '' }, 2500)
+    } catch (e) {
+      console.error('Error al guardar la tarjeta:', e)
+      msg.innerHTML = avisoError(mensajeDueno(e))
+    } finally {
+      btn.disabled = false; btn.textContent = 'Guardar'
     }
   })
 }
@@ -2429,15 +2607,15 @@ function initPersonalDueno(negocioId) {
   const lista = $('lista-excl'); const tel = $('excl-tel'); const btn = $('btn-agregar-excl'); const msg = $('msg-excl')
   if (!lista) return
   let numeros = []
-  const avisar = (texto, ok = false) => { msg.innerHTML = texto ? (ok ? `<div class="s-success">${texto}</div>` : `<p class="s-error">${texto}</p>`) : '' }
+  const avisar = (texto, ok = false) => { msg.innerHTML = texto ? (ok ? avisoOk(texto) : avisoError(texto)) : '' }
 
   function pintar() {
     lista.innerHTML = numeros.length === 0
-      ? `<p class="cj-vacio">Aún no agregas números</p>`
+      ? `<p class="ow-vacio">Aún no agregas números.</p>`
       : numeros.map(n => `
-        <div class="s-row">
-          <div class="s-row-title" style="font-variant-numeric:tabular-nums">${telefonoLegible(n.telefono)}</div>
-          <button class="dn-quitar" data-id="${esc(n.id)}">Quitar</button>
+        <div class="ow-lista-fila">
+          <span style="font-variant-numeric:tabular-nums">${telefonoLegible(n.telefono)}</span>
+          <button class="ow-btn secundario chico" data-quitar="${esc(n.id)}">Quitar</button>
         </div>`).join('')
   }
 
@@ -2450,7 +2628,7 @@ function initPersonalDueno(negocioId) {
       pintar()
     } catch (e) {
       console.error('Error al cargar el personal:', e)
-      lista.innerHTML = `<p class="cj-vacio">${mensajeDueno(e)}</p>`
+      lista.innerHTML = `<p class="ow-vacio">${mensajeDueno(e)}</p>`
     }
   }
 
@@ -2464,7 +2642,7 @@ function initPersonalDueno(negocioId) {
       if (error) throw error
       if (!numeros.some(n => n.id === data.id)) numeros.push(data)
       pintar(); tel.value = ''
-      avisar(data.ya_existia ? 'Ese número ya estaba en la lista.' : '✓ Número agregado', true)
+      avisar(data.ya_existia ? 'Ese número ya estaba en la lista.' : 'Número agregado', true)
     } catch (e) {
       console.error('Error al agregar el número:', e)
       avisar(mensajeDueno(e))
@@ -2475,11 +2653,11 @@ function initPersonalDueno(negocioId) {
 
   async function quitar(boton) {
     if (boton.disabled) return
-    boton.disabled = true; boton.textContent = '...'; avisar('')
+    boton.disabled = true; boton.textContent = 'Quitando...'; avisar('')
     try {
-      const { error } = await supabase.rpc('quitar_numero_excluido', { p_id: boton.dataset.id })
+      const { error } = await supabase.rpc('quitar_numero_excluido', { p_id: boton.dataset.quitar })
       if (error && !error.message?.includes('NO_ENCONTRADO')) throw error
-      numeros = numeros.filter(n => n.id !== boton.dataset.id)
+      numeros = numeros.filter(n => n.id !== boton.dataset.quitar)
       pintar()
     } catch (e) {
       console.error('Error al quitar el número:', e)
@@ -2491,7 +2669,7 @@ function initPersonalDueno(negocioId) {
   tel.addEventListener('input', () => { tel.value = tel.value.replace(/\D/g, '') })
   tel.addEventListener('keydown', e => { if (e.key === 'Enter') agregar() })
   btn.addEventListener('click', agregar)
-  lista.addEventListener('click', e => { const b = e.target.closest('.dn-quitar'); if (b) quitar(b) })
+  lista.addEventListener('click', e => { const b = e.target.closest('[data-quitar]'); if (b) quitar(b) })
   cargar()
 }
 
@@ -2521,22 +2699,6 @@ function exportarCSV(clientes, negocioNombre) {
 function initAjustesExtra(negocioId, nombreNegocio) {
   const $ = id => document.getElementById(id)
 
-  $('btn-guardar-personalizacion')?.addEventListener('click', async () => {
-    const emoji = $('input-emoji').value.trim()
-    const color = $('input-color').value
-    const descripcion = $('input-descripcion').value.trim()
-    const msg = $('msg-personalizacion'); const btn = $('btn-guardar-personalizacion')
-    btn.disabled = true; btn.textContent = 'Guardando...'
-    try {
-      const { error } = await supabase.from('negocios').update({ emoji_negocio: emoji, color_principal: color, descripcion }).eq('id', negocioId)
-      if (error) throw error
-      aplicarColorNegocio(color)
-      msg.innerHTML = `<div class="s-success">✓ Personalización guardada</div>`
-      setTimeout(() => { if (msg.isConnected) msg.innerHTML = '' }, 2500)
-    } catch (e) { msg.innerHTML = errMsg('guardar') }
-    finally { btn.disabled = false; btn.textContent = 'Guardar personalización' }
-  })
-
   $('btn-exportar-csv')?.addEventListener('click', async () => {
     const btn = $('btn-exportar-csv'); const msg = $('msg-exportar')
     btn.textContent = 'Preparando...'; btn.disabled = true
@@ -2546,20 +2708,20 @@ function initAjustesExtra(negocioId, nombreNegocio) {
         .eq('negocio_id', negocioId).order('fecha_registro', { ascending: true })
       if (error) throw error
       exportarCSV(clientes, nombreNegocio)
-      msg.innerHTML = `<div class="s-success">✓ Archivo descargado</div>`
+      msg.innerHTML = avisoOk('Archivo descargado')
       setTimeout(() => { if (msg.isConnected) msg.innerHTML = '' }, 3000)
-    } catch (e) { msg.innerHTML = errMsg('descargar') }
-    finally { btn.textContent = '⬇ Descargar clientes (.csv)'; btn.disabled = false }
+    } catch (e) { msg.innerHTML = avisoError(mensajeDueno(e)) }
+    finally { btn.textContent = 'Descargar clientes (.csv)'; btn.disabled = false }
   })
 
   $('btn-copiar-landing')?.addEventListener('click', () => {
     const url = `${window.location.origin}/#/landing/${negocioId}`
+    const msg = $('msg-landing')
     navigator.clipboard.writeText(url).then(() => {
-      const msg = $('msg-landing')
       if (!msg) return
-      msg.innerHTML = `<div class="s-success">✓ Link copiado</div>`
+      msg.innerHTML = avisoOk('Link copiado')
       setTimeout(() => { if (msg.isConnected) msg.innerHTML = '' }, 2000)
-    }).catch(() => {})
+    }).catch(() => { if (msg) msg.innerHTML = avisoError('No se pudo copiar. Selecciona el link y cópialo a mano.') })
   })
   $('btn-ver-landing')?.addEventListener('click', () => navigate('landing', negocioId))
 }
@@ -2569,26 +2731,28 @@ function initAjustesExtra(negocioId, nombreNegocio) {
 let duenoSesion = 0
 
 export async function paginaDueno() {
-  inyectarEstilos()
+  inyectarEstilosDueno()
   const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
   if (!negocio) { window.location.hash = '#/login'; window.dispatchEvent(new Event('hashchange')); return '<div></div>' }
   const pestana = leerPestanaDueno()
   return `
-    <div id="dn-root" style="padding-bottom:88px">
-      <div class="sello-topbar">${topbarBrand()}<span style="font-size:13px;color:rgba(255,255,255,0.6)">${esc(String(negocio.nombre || '').substring(0, 20))}</span></div>
-      <div class="dn-tabs" role="tablist">
-        <button class="dn-tab" role="tab" data-pestana="resumen" aria-selected="${pestana === 'resumen'}">Resumen</button>
-        <button class="dn-tab" role="tab" data-pestana="ajustes" aria-selected="${pestana === 'ajustes'}">Ajustes</button>
-      </div>
-      <div id="dn-resumen" role="tabpanel"${pestana === 'resumen' ? '' : ' hidden'}>${esqueletoResumen()}</div>
-      <div id="dn-ajustes" role="tabpanel"${pestana === 'ajustes' ? '' : ' hidden'}>${esqueletoAjustes()}</div>
+    <div class="ow" id="dn-root">
+      <header class="ow-cab"><span class="ow-marca">Sello</span><span class="ow-cab-negocio">${esc(negocio.nombre || '')}</span></header>
+      <main class="ow-cuerpo">
+        <div class="ow-tabs" role="tablist" aria-label="Mi panel">
+          <button class="ow-tab" role="tab" id="tab-resumen" aria-controls="dn-resumen" data-pestana="resumen" aria-selected="${pestana === 'resumen'}">Resumen</button>
+          <button class="ow-tab" role="tab" id="tab-ajustes" aria-controls="dn-ajustes" data-pestana="ajustes" aria-selected="${pestana === 'ajustes'}">Ajustes</button>
+        </div>
+        <div id="dn-resumen" role="tabpanel" aria-labelledby="tab-resumen"${pestana === 'resumen' ? '' : ' hidden'}>${esqueletoResumen()}</div>
+        <div id="dn-ajustes" role="tabpanel" aria-labelledby="tab-ajustes"${pestana === 'ajustes' ? '' : ' hidden'}>${esqueletoAjustes()}</div>
+      </main>
+      ${navBarDueno('panel')}
     </div>
-    ${navBarDueno('panel')}
   `
 }
 
 export async function initDueno(negocioId) {
-  inyectarEstilos(); initNavDueno()
+  inyectarEstilosDueno(); initNavDueno()
   const sesion = ++duenoSesion
   const $ = id => document.getElementById(id)
   const vigente = () => sesion === duenoSesion && !!$('dn-root')
@@ -2602,7 +2766,7 @@ export async function initDueno(negocioId) {
 
   function mostrarPestana(p) {
     guardarPestanaDueno(p)
-    document.querySelectorAll('.dn-tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.pestana === p)))
+    document.querySelectorAll('.ow-tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.pestana === p)))
     $('dn-resumen').hidden = p !== 'resumen'
     $('dn-ajustes').hidden = p !== 'ajustes'
     if (p === 'resumen' && estado.resumenViejo) cargarResumen()
@@ -2651,7 +2815,7 @@ export async function initDueno(negocioId) {
     $('dn-ajustes').innerHTML = esqueletoAjustes()
     try {
       const { data: nd, error } = await supabase.from('negocios')
-        .select('id,nombre,activo,meta_puntos,color_principal,emoji_negocio,descripcion,premio,max_codigos_activos,ticket_promedio,costo_premio')
+        .select('id,nombre,activo,meta_puntos,color_principal,premio,max_codigos_activos,ticket_promedio,costo_premio')
         .eq('id', negocioId).single()
       if (!vigente()) return
       if (error) throw error
@@ -2660,8 +2824,13 @@ export async function initDueno(negocioId) {
       aplicarColorNegocio(nd.color_principal)
       $('dn-ajustes').innerHTML = ajustesHTML(nd, negocioId)
       estado.ajustesCargados = true
-      // Si cambia el ticket o el costo, el resumen se recalcula al volver a él.
-      initProgramaDueno(() => { estado.resumenViejo = true })
+      // Si cambian ticket, costo o premio, el resumen y la vista previa se ponen al día.
+      initProgramaDueno(({ meta, premio }) => {
+        estado.resumenViejo = true
+        const vista = $('vista-tarjeta')
+        if (vista) vista.innerHTML = vistaTarjetaHTML({ ...nd, meta_puntos: meta, premio })
+      })
+      initTarjetaDueno(negocioId)
       initPersonalDueno(negocioId)
       initAjustesExtra(negocioId, estado.nombre)
     } catch (e) {
@@ -2674,7 +2843,7 @@ export async function initDueno(negocioId) {
     }
   }
 
-  document.querySelectorAll('.dn-tab').forEach(b => b.addEventListener('click', () => mostrarPestana(b.dataset.pestana)))
+  document.querySelectorAll('.ow-tab').forEach(b => b.addEventListener('click', () => mostrarPestana(b.dataset.pestana)))
 
   // Al volver a la app después de un rato, los números se actualizan solos.
   const alVolver = () => {
@@ -2684,7 +2853,7 @@ export async function initDueno(negocioId) {
   }
   document.addEventListener('visibilitychange', alVolver)
 
-  // El color del negocio se aplica desde el principio (lo trae Ajustes).
+  // Ajustes se carga desde el principio: trae el color del negocio (el acento).
   cargarResumen()
   cargarAjustes()
 }

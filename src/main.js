@@ -10,6 +10,7 @@ import {
   paginaOnboarding, initOnboarding,
   paginaLanding, initLanding,
   paginaPrivacidad, initPrivacidad,
+  paginaTerminos, initTerminos,
   paginaReclamar, initReclamar,
   paginaTarjeta, initTarjeta,
 } from './pages.js'
@@ -86,6 +87,13 @@ async function render() {
     const tipo = hash.split('/')[2] || 'cliente'
     app.innerHTML = paginaPrivacidad(tipo)
     initPrivacidad()
+    return
+  }
+
+  // Términos y aviso de privacidad para negocios (pública, se abre desde el login).
+  if (page === 'terminos') {
+    app.innerHTML = paginaTerminos()
+    initTerminos()
     return
   }
 
