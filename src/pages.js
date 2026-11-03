@@ -238,6 +238,18 @@ function inyectarEstilos() {
     .cj-qr-tiempo-lbl { font-size: 12px; color: ${DS.gray500}; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 8px; }
     .cj-qr-tiempo { font-family: 'Sora', sans-serif; font-size: 40px; font-weight: 800; color: ${DS.gray900}; font-variant-numeric: tabular-nums; line-height: 1.1; }
     .cj-qr-botones { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 10px; }
+    .cj-exito { position: fixed; inset: 0; z-index: 300; background: ${DS.green600}; color: ${DS.white}; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: calc(24px + env(safe-area-inset-top)) 24px calc(20px + env(safe-area-inset-bottom)); text-align: center; font-family: 'Sora', sans-serif; animation: sFadeIn 0.2s ease; }
+    .cj-exito[hidden] { display: none; }
+    .cj-exito.premio { background: linear-gradient(160deg, ${DS.gold400}, ${DS.gold500}); color: #422006; }
+    .cj-exito-centro { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+    .cj-exito-icono { width: 112px; height: 112px; border-radius: 50%; background: rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; font-size: 64px; line-height: 1; margin-bottom: 12px; animation: sPopIn 0.35s cubic-bezier(0.34,1.56,0.64,1); }
+    .cj-exito-titulo { font-size: 36px; font-weight: 800; line-height: 1.1; }
+    .cj-exito-quien { font-size: 28px; font-weight: 800; line-height: 1.2; }
+    .cj-exito-texto { font-size: 20px; font-weight: 600; opacity: 0.9; }
+    .cj-exito-puntos { font-size: 56px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; margin-top: 8px; }
+    .cj-exito-listo { width: 100%; max-width: 420px; height: 72px; border: none; border-radius: 20px; background: ${DS.white}; color: ${DS.green800}; font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 800; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    .cj-exito-listo:active { transform: scale(0.98); }
+    .cj-exito.premio .cj-exito-listo { color: #78350f; }
 
     .cl-root { min-height: 100vh; background: ${DS.white}; color: ${DS.gray900}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
     .cl-root.gris { background: #F5F6F8; }
@@ -376,7 +388,7 @@ function navBarDueno(active = 'panel') {
 
 function initNavCajero() {
   document.getElementById('snav-cajero')?.addEventListener('click', () => navigate('cajero'))
-  document.getElementById('snav-salir')?.addEventListener('click', async () => { const { logout } = await import('./auth.js'); logout() })
+  document.getElementById('snav-salir')?.addEventListener('click', async () => { cerrarTiempoRealCajero(); const { logout } = await import('./auth.js'); logout() })
 }
 
 function initNavDueno() {
@@ -777,6 +789,16 @@ export function initBienvenida() {
 // volver a pintarla, la sesión anterior apaga su reloj y sus listeners.
 let cajeroSesion = 0
 
+// Tiempo real (2F): un solo canal abierto a la vez. Los ids de códigos cuyo
+// aviso ya se mostró se guardan en memoria para no repetirlo al ponerse al día.
+let canalCajero = null
+const avisosVistos = new Set()
+
+function cerrarTiempoRealCajero() {
+  if (canalCajero) supabase.removeChannel(canalCajero)
+  canalCajero = null
+}
+
 function mensajeCajero(error, max) {
   const m = error?.message || ''
   if (navigator.onLine === false || /Failed to fetch|NetworkError|Load failed/i.test(m)) return 'Sin conexión. Revisa tu internet e intenta de nuevo.'
@@ -824,6 +846,7 @@ export function paginaCajero() {
           <button class="s-btn danger" id="cj-qr-cancelar">Cancelar código</button>
         </div>
       </div>
+      <div class="cj-exito" id="cj-exito" role="alert" hidden></div>
     </div>
     ${navBarCajero()}
   `
@@ -834,7 +857,9 @@ export async function initCajero() {
   const sesion = ++cajeroSesion
   const $ = id => document.getElementById(id)
   const vigente = () => sesion === cajeroSesion && !!$('cj-root')
-  const estado = { codigos: [], max: null, abierto: null, creando: false, wakeLock: null }
+  const estado = { codigos: [], max: null, abierto: null, creando: false, wakeLock: null, usuarioId: null }
+  const avisos = { cola: [], actual: null, temporizador: null }
+  let canal = null
 
   const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
   if (!vigente()) return
@@ -958,6 +983,106 @@ export async function initCajero() {
     }
   }
 
+  // ── Avisos "sumó su punto" (2F) ──
+  // Llegan por tiempo real o al ponerse al día; se muestran de uno en uno.
+  // El normal se cierra solo a los 6 s; el de premio solo con "Listo".
+  function encolarAviso(fila) {
+    if (!fila?.reclamado_en || avisosVistos.has(fila.id)) return
+    avisosVistos.add(fila.id)
+    avisos.cola.push(fila)
+    if (!avisos.actual) siguienteAviso()
+  }
+
+  function siguienteAviso() {
+    clearTimeout(avisos.temporizador)
+    const fila = avisos.cola.shift()
+    avisos.actual = fila || null
+    const el = $('cj-exito')
+    if (!el) return
+    if (!fila) { el.hidden = true; el.innerHTML = ''; return }
+    const premio = fila.aviso_premio_listo === true
+    const quien = `${esc(fila.aviso_nombre || 'Cliente')} (···${esc(fila.aviso_ultimos4 || '····')})`
+    const puntos = fila.aviso_puntos != null && fila.aviso_meta != null ? `${fila.aviso_puntos}/${fila.aviso_meta}` : ''
+    el.className = `cj-exito${premio ? ' premio' : ''}`
+    el.innerHTML = premio
+      ? `<div class="cj-exito-centro">
+          <div class="cj-exito-icono">🎁</div>
+          <div class="cj-exito-titulo">¡Le toca premio!</div>
+          <div class="cj-exito-quien">${quien}</div>
+          <div class="cj-exito-texto">completó su tarjeta</div>
+          ${puntos ? `<div class="cj-exito-puntos">${puntos}</div>` : ''}
+        </div>
+        <button class="cj-exito-listo" id="cj-exito-listo">Listo</button>`
+      : `<div class="cj-exito-centro">
+          <div class="cj-exito-icono">✓</div>
+          <div class="cj-exito-quien">${quien}</div>
+          <div class="cj-exito-texto">sumó su punto</div>
+          ${puntos ? `<div class="cj-exito-puntos">${puntos}</div>` : ''}
+        </div>
+        <button class="cj-exito-listo" id="cj-exito-listo">Listo</button>`
+    el.hidden = false
+    $('cj-exito-listo').addEventListener('click', siguienteAviso)
+    try { navigator.vibrate?.(premio ? [150, 80, 150] : 150) } catch (e) {}
+    if (!premio) avisos.temporizador = setTimeout(() => { if (vigente()) siguienteAviso() }, 6000)
+  }
+
+  // Un código propio cambió: si se reclamó o se canceló, deja de estar pendiente.
+  function alCambiarCodigo(fila) {
+    if (!fila?.id || !(fila.reclamado_en || fila.cancelado_en)) return
+    if (estado.abierto?.id === fila.id) cerrarQR()
+    quitar(fila.id)
+    if (fila.reclamado_en) encolarAviso(fila)
+  }
+
+  // Para no perder avisos (señal caída, pantalla apagada): códigos propios
+  // reclamados en los últimos 5 minutos que aún no se mostraron.
+  async function buscarReclamados() {
+    if (!estado.usuarioId) return
+    try {
+      const desde = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+      const { data, error } = await supabase
+        .from('codigos')
+        .select('id, reclamado_en, cancelado_en, aviso_nombre, aviso_ultimos4, aviso_puntos, aviso_meta, aviso_premio_listo')
+        .eq('creado_por', estado.usuarioId)
+        .gte('reclamado_en', desde)
+        .order('reclamado_en', { ascending: true })
+      if (!vigente()) return
+      if (error) throw error
+      for (const fila of data || []) alCambiarCodigo(fila)
+    } catch (e) {
+      console.error('Error al buscar códigos reclamados:', e)
+    }
+  }
+
+  function ponerseAlDia() {
+    cargarPendientes()
+    buscarReclamados()
+  }
+
+  async function conectarTiempoReal() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!vigente()) return
+      estado.usuarioId = session?.user?.id || null
+      if (!estado.usuarioId) return
+      // Si quedó un canal de una visita anterior a esta pantalla, se cierra antes.
+      cerrarTiempoRealCajero()
+      // Nombre único por sesión: así nunca se reutiliza un canal que se está cerrando.
+      canal = supabase
+        .channel(`cajero-${estado.usuarioId}-${sesion}`)
+        .on('postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'codigos', filter: `creado_por=eq.${estado.usuarioId}` },
+          payload => { if (vigente()) alCambiarCodigo(payload.new) })
+        .subscribe(status => {
+          // Al conectar y al reconectar se revisa lo que pudo llegar mientras no había conexión.
+          if (status === 'SUBSCRIBED' && vigente()) ponerseAlDia()
+        })
+      canalCajero = canal
+    } catch (e) {
+      console.error('Error al conectar el tiempo real:', e)
+    }
+  }
+
   // Cada segundo: contadores y, al caducar, el código desaparece solo.
   const reloj = setInterval(() => {
     if (!vigente()) { limpiar(); return }
@@ -977,11 +1102,11 @@ export async function initCajero() {
     }
   }, 1000)
 
-  // Al volver a la app (o recuperar señal) se recargan los pendientes:
-  // así desaparecen los que el cliente ya usó.
+  // Al volver a la app (o recuperar señal) se recargan los pendientes y se
+  // muestran los avisos que no llegaron por tiempo real.
   const alVolver = () => {
     if (document.visibilityState !== 'visible') return
-    cargarPendientes()
+    ponerseAlDia()
     if (estado.abierto) mantenerPantalla(true)
   }
   document.addEventListener('visibilitychange', alVolver)
@@ -989,9 +1114,15 @@ export async function initCajero() {
 
   function limpiar() {
     clearInterval(reloj)
+    clearTimeout(avisos.temporizador)
     document.removeEventListener('visibilitychange', alVolver)
     window.removeEventListener('online', alVolver)
     mantenerPantalla(false)
+    if (canal) {
+      supabase.removeChannel(canal)
+      if (canalCajero === canal) canalCajero = null
+      canal = null
+    }
   }
 
   $('cj-cobre').addEventListener('click', cobre)
@@ -1004,6 +1135,7 @@ export async function initCajero() {
   })
 
   cargarPendientes()
+  conectarTiempoReal()
   try {
     const { data: nd } = await supabase.from('negocios').select('color_principal').eq('id', negocio.id).single()
     if (vigente() && nd?.color_principal) aplicarColorNegocio(nd.color_principal)
