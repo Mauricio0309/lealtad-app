@@ -242,6 +242,12 @@ function inyectarEstilos() {
     .cj-exito-puntos { font-size: 56px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; margin-top: 8px; }
     .cj-exito-listo { width: 100%; max-width: 420px; height: 72px; border: none; border-radius: 20px; background: ${DS.white}; color: ${DS.green800}; font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 800; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
     .cj-exito-listo:active { transform: scale(0.98); }
+    .cj-manual-acceso { text-align: center; padding: 4px 16px 8px; }
+    .cj-manual-enlace { min-height: 44px; padding: 8px 12px; background: none; border: none; font-family: 'Inter', sans-serif; font-size: 13px; color: ${DS.gray500}; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+    .cj-manual { position: fixed; inset: 0; z-index: 250; background: ${DS.white}; overflow-y: auto; padding: calc(24px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom)); }
+    .cj-manual[hidden] { display: none; }
+    .cj-manual-caja { max-width: 420px; margin: 0 auto; }
+    .cj-manual .cl-btn { margin-top: 0; }
     .cj-exito.premio .cj-exito-listo { color: #78350f; }
 
     .cl-root { min-height: 100vh; background: ${DS.white}; color: ${DS.gray900}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
@@ -709,6 +715,26 @@ export function paginaCajero() {
         <div class="cj-pend-head"><div class="s-section-label">Códigos pendientes</div><div class="cj-contador" id="cj-contador"></div></div>
         <div id="cj-lista"><p class="cj-vacio">Cargando...</p></div>
       </div>
+      <div class="cj-manual-acceso"><button type="button" class="cj-manual-enlace" id="cj-manual-abrir">Captura manual</button></div>
+      <div class="cj-manual" id="cj-manual" hidden>
+        <div class="cj-manual-caja">
+          <div class="cj-qr-titulo">Captura manual</div>
+          <div class="cj-qr-sub">Solo si el cliente no puede escanear.</div>
+          <div class="cl-campo">
+            <label class="cl-label" for="cj-manual-tel">Teléfono del cliente</label>
+            <div class="cl-input-wrap" id="cj-manual-tel-wrap"><span class="cl-prefijo">+52</span><input class="cl-input" id="cj-manual-tel" type="tel" inputmode="numeric" autocomplete="off" enterkeyhint="next" placeholder="10 dígitos" /></div>
+            <p class="cl-error-campo" id="cj-manual-tel-error" role="alert" hidden></p>
+          </div>
+          <div class="cl-campo">
+            <label class="cl-label" for="cj-manual-nombre">Primer nombre (solo si es nuevo)</label>
+            <div class="cl-input-wrap" id="cj-manual-nombre-wrap"><input class="cl-input" id="cj-manual-nombre" type="text" autocomplete="off" autocapitalize="words" enterkeyhint="done" maxlength="30" placeholder="Ana" /></div>
+            <p class="cl-error-campo" id="cj-manual-nombre-error" role="alert" hidden></p>
+          </div>
+          <div id="cj-manual-msg" style="margin-top:16px"></div>
+          <button class="cl-btn" id="cj-manual-sumar">Sumar punto</button>
+          <button class="cl-enlace" id="cj-manual-cerrar">Cancelar</button>
+        </div>
+      </div>
       <div class="cj-qr" id="cj-qr" hidden>
         <div>
           <div class="cj-qr-titulo">Escanea con tu cámara</div>
@@ -887,20 +913,21 @@ export async function initCajero() {
     const premio = fila.aviso_premio_listo === true
     const quien = `${esc(fila.aviso_nombre || 'Cliente')} (···${esc(fila.aviso_ultimos4 || '····')})`
     const puntos = fila.aviso_puntos != null && fila.aviso_meta != null ? `${fila.aviso_puntos}/${fila.aviso_meta}` : ''
+    const manual = fila.manual ? ' · captura manual' : ''
     el.className = `cj-exito${premio ? ' premio' : ''}`
     el.innerHTML = premio
       ? `<div class="cj-exito-centro">
           <div class="cj-exito-icono">🎁</div>
           <div class="cj-exito-titulo">¡Le toca premio!</div>
           <div class="cj-exito-quien">${quien}</div>
-          <div class="cj-exito-texto">completó su tarjeta</div>
+          <div class="cj-exito-texto">completó su tarjeta${manual}</div>
           ${puntos ? `<div class="cj-exito-puntos">${puntos}</div>` : ''}
         </div>
         <button class="cj-exito-listo" id="cj-exito-listo">Listo</button>`
       : `<div class="cj-exito-centro">
           <div class="cj-exito-icono">✓</div>
           <div class="cj-exito-quien">${quien}</div>
-          <div class="cj-exito-texto">sumó su punto</div>
+          <div class="cj-exito-texto">sumó su punto${manual}</div>
           ${puntos ? `<div class="cj-exito-puntos">${puntos}</div>` : ''}
         </div>
         <button class="cj-exito-listo" id="cj-exito-listo">Listo</button>`
@@ -1041,6 +1068,86 @@ export async function initCajero() {
       canal = null
     }
   }
+
+  // ── Captura manual (2H): el cliente no pudo escanear ──
+  // Mismas reglas que el QR, pero se registra como "manual" con el mesero que
+  // la hizo, y cada mesero tiene un tope diario (lo decide el servidor).
+  const manual = { enviando: false }
+
+  function errorManual(campo, texto) {
+    const wrap = $(`cj-manual-${campo}-wrap`); const el = $(`cj-manual-${campo}-error`)
+    if (!wrap || !el) return
+    wrap.classList.toggle('error', !!texto)
+    el.textContent = texto || ''
+    el.hidden = !texto
+  }
+  const avisarManual = texto => { $('cj-manual-msg').innerHTML = texto ? `<div class="cl-aviso" role="alert">${texto}</div>` : '' }
+
+  function abrirManual() {
+    $('cj-manual-tel').value = ''; $('cj-manual-nombre').value = ''
+    errorManual('tel', ''); errorManual('nombre', ''); avisarManual('')
+    $('cj-manual').hidden = false
+    setTimeout(() => $('cj-manual-tel')?.focus(), 50)
+  }
+  const cerrarManual = () => { $('cj-manual').hidden = true }
+
+  function mensajeManual(e) {
+    const m = e?.message || ''
+    if (m.includes('YA_SUMO_HOY')) return 'Este cliente ya sumó hoy.'
+    if (m.includes('NUMERO_EXCLUIDO')) return 'Este número no gana puntos.'
+    if (m.includes('LIMITE_MANUALES')) {
+      return e?.details === 'desactivada'
+        ? 'La captura manual está desactivada en este negocio. Pide al cliente que escanee el código.'
+        : 'Llegaste al tope de capturas manuales de hoy. Pide al cliente que escanee el código.'
+    }
+    return mensajeCajero(e, estado.max)
+  }
+
+  async function sumarManual() {
+    if (manual.enviando) return
+    // Si pegaron el número con lada (52… o 521…), se queda con los 10 dígitos.
+    let digitos = $('cj-manual-tel').value.replace(/\D/g, '')
+    if (digitos.length === 12 && digitos.startsWith('52')) digitos = digitos.slice(2)
+    else if (digitos.length === 13 && digitos.startsWith('521')) digitos = digitos.slice(3)
+    const nombre = $('cj-manual-nombre').value.trim()
+    errorManual('tel', ''); errorManual('nombre', ''); avisarManual('')
+    if (digitos.length !== 10) { errorManual('tel', 'Escribe los 10 dígitos del número.'); return }
+
+    const btn = $('cj-manual-sumar')
+    manual.enviando = true; btn.disabled = true; btn.textContent = 'Sumando...'
+    try {
+      const { data, error } = await supabase.rpc('visita_manual', { p_telefono: digitos, p_nombre: nombre || null })
+      if (!vigente()) return
+      if (error) throw error
+      cerrarManual()
+      // Mismo aviso verde (o dorado) que el QR, marcado como captura manual.
+      encolarAviso({
+        id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        reclamado_en: new Date().toISOString(),
+        aviso_nombre: data.nombre, aviso_ultimos4: data.ultimos4,
+        aviso_puntos: data.puntos, aviso_meta: data.meta,
+        aviso_premio_listo: data.premio_listo === true,
+        manual: true,
+      }, 'captura manual')
+    } catch (e) {
+      if (!vigente()) return
+      const m = e?.message || ''
+      if (m.includes('TELEFONO_INVALIDO')) errorManual('tel', 'Revisa el número: deben ser 10 dígitos.')
+      else if (m.includes('NOMBRE_INVALIDO')) errorManual('nombre', 'Es cliente nuevo: escribe su primer nombre.')
+      else { console.error('Error en la captura manual:', e); avisarManual(mensajeManual(e)) }
+    } finally {
+      manual.enviando = false
+      if (btn.isConnected) { btn.disabled = false; btn.textContent = 'Sumar punto' }
+    }
+  }
+
+  $('cj-manual-abrir').addEventListener('click', abrirManual)
+  $('cj-manual-cerrar').addEventListener('click', cerrarManual)
+  $('cj-manual-sumar').addEventListener('click', sumarManual)
+  $('cj-manual-tel').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, ''); errorManual('tel', '') })
+  $('cj-manual-tel').addEventListener('keydown', e => { if (e.key === 'Enter') $('cj-manual-nombre').focus() })
+  $('cj-manual-nombre').addEventListener('input', () => errorManual('nombre', ''))
+  $('cj-manual-nombre').addEventListener('keydown', e => { if (e.key === 'Enter') sumarManual() })
 
   $('cj-cobre').addEventListener('click', cobre)
   $('cj-qr-cancelar').addEventListener('click', cancelar)
@@ -1574,7 +1681,10 @@ export function initLanding(negocioId) {
 }
 
 // ── PANEL DUEÑO — solo niveles, sin premios separados ─────
-const PLANTILLAS_PREMIO = ['Un café gratis', 'Un postre gratis', 'Un corte gratis', 'Un taco gratis', '10% de descuento']
+const PLANTILLAS_PREMIO = [
+  'Un café gratis', 'Un postre gratis', 'Un corte gratis', 'Un taco gratis',
+  '20% de descuento en tu cuenta', '10% de descuento', '2x1',
+]
 
 // "+529981234567" → "998 123 4567"
 function telefonoLegible(e164) {
