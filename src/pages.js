@@ -13,24 +13,6 @@ const DS = {
   gray300: '#cbd5e1', gray100: '#f1f5f9', gray50: '#f8fafc', white: '#ffffff',
 }
 
-const NIVELES_DEFAULT = [
-  { nombre: 'Inicio', emoji: '⭐', visitas_minimas: 0, premio_bienvenida: '' },
-]
-
-function getNivelActual(totalVisitas, niveles) {
-  if (!niveles || niveles.length === 0) return NIVELES_DEFAULT[0]
-  const lista = [...niveles].sort((a, b) => a.visitas_minimas - b.visitas_minimas)
-  let actual = lista[0]
-  for (const n of lista) { if (totalVisitas >= n.visitas_minimas) actual = n }
-  return actual
-}
-
-function colorNivel(nivel) {
-  if (!nivel) return DS.gray500
-  const colores = { 'Bronce': '#cd7f32', 'Plata': '#9ca3af', 'Oro': '#f5a623', 'Platino': '#667eea' }
-  return colores[nivel.nombre] || DS.green800
-}
-
 function aplicarColorNegocio(color) {
   document.documentElement.style.setProperty('--negocio-color', color || DS.green800)
 }
@@ -231,6 +213,61 @@ function inyectarEstilos() {
     .dn-agregar .s-btn { width: auto; padding: 0 20px; }
     .dn-quitar { min-height: 40px; padding: 8px 14px; border: none; border-radius: 10px; background: #fee2e2; color: #dc2626; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; }
     .dn-quitar:disabled { opacity: 0.6; }
+    .dn-tabs { display: flex; gap: 4px; margin: 14px 16px; padding: 4px; background: ${DS.white}; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .dn-tab { flex: 1; min-height: 44px; border: none; border-radius: 10px; background: none; font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; color: ${DS.gray500}; cursor: pointer; }
+    .dn-tab[aria-selected="true"] { background: var(--negocio-color, ${DS.green800}); color: ${DS.white}; }
+    [role="tabpanel"][hidden] { display: none; }
+    .dn-hero { background: var(--negocio-color, ${DS.green800}); color: ${DS.white}; border-radius: 20px; padding: 22px 20px; margin: 0 16px 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+    .dn-hero-lbl { font-size: 16px; font-weight: 600; opacity: 0.9; }
+    .dn-hero-num { font-family: 'Sora', sans-serif; font-size: 48px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; margin-top: 2px; }
+    .dn-hero-sub { font-size: 19px; font-weight: 700; margin-top: 6px; line-height: 1.3; }
+    .dn-hero-nota { font-size: 14px; font-weight: 500; opacity: 0.8; }
+    .dn-hero-invita { display: block; margin-top: 12px; padding: 8px 0; background: none; border: none; color: ${DS.white}; opacity: 0.85; font-family: 'Inter', sans-serif; font-size: 14px; text-align: left; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+    .dn-cifras { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 16px 14px; }
+    .dn-cifras.dos { grid-template-columns: repeat(2, 1fr); }
+    .dn-cifra { background: ${DS.white}; border-radius: 16px; padding: 14px 10px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .dn-cifra-num { font-family: 'Sora', sans-serif; font-size: 30px; font-weight: 800; line-height: 1.1; color: ${DS.gray900}; font-variant-numeric: tabular-nums; }
+    .dn-cifra-de { font-size: 16px; font-weight: 700; color: ${DS.gray500}; }
+    .dn-cifra-lbl { font-size: 12px; line-height: 1.3; color: ${DS.gray500}; margin-top: 4px; }
+    .dn-cambio { font-size: 12px; font-weight: 700; margin-top: 6px; }
+    .dn-cambio.sube { color: ${DS.green700}; }
+    .dn-cambio.baja { color: #dc2626; }
+    .dn-cambio.igual { color: ${DS.gray500}; }
+    .dn-fila-btn { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: calc(100% - 32px); margin: 0 16px 14px; padding: 16px; background: ${DS.white}; border: none; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); font-family: 'Inter', sans-serif; text-align: left; cursor: pointer; color: ${DS.gray900}; }
+    .dn-fila-btn:disabled { cursor: default; }
+    .dn-fila-btn:not(:disabled):active { transform: scale(0.99); }
+    .dn-fila-titulo { display: block; font-size: 16px; font-weight: 700; }
+    .dn-fila-sub { display: block; font-size: 13px; color: ${DS.gray500}; margin-top: 2px; }
+    .dn-fila-der { display: flex; align-items: center; gap: 8px; }
+    .dn-fila-num { font-family: 'Sora', sans-serif; font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .dn-fila-flecha { font-size: 28px; color: ${DS.gray300}; line-height: 1; }
+    .dn-mesero { padding: 12px 0; border-bottom: 1px solid ${DS.gray100}; }
+    .dn-mesero:last-child { border-bottom: none; padding-bottom: 0; }
+    .dn-mesero:first-of-type { padding-top: 0; }
+    .dn-mesero-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .dn-tu { font-weight: 500; color: ${DS.gray500}; }
+    .dn-revisar { flex-shrink: 0; padding: 3px 10px; border-radius: 999px; background: #fee2e2; color: #b91c1c; font-size: 12px; font-weight: 700; }
+    .dn-motivo { font-size: 13px; color: #b91c1c; margin-top: 4px; }
+    .dn-vacio { text-align: left; }
+    .dn-vacio-titulo { font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 800; line-height: 1.2; color: ${DS.gray900}; }
+    .dn-vacio-sub { font-size: 15px; color: ${DS.gray500}; margin: 8px 0 14px; }
+    .dn-pasos { list-style: none; display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
+    .dn-pasos li { display: flex; gap: 12px; font-size: 14px; line-height: 1.45; color: ${DS.gray700}; }
+    .dn-pasos strong { color: ${DS.gray900}; font-size: 15px; }
+    .dn-paso-icono { font-size: 24px; line-height: 1.2; flex-shrink: 0; }
+    .dn-opcional { font-weight: 400; color: ${DS.gray500}; }
+    .dn-pesos { position: relative; }
+    .dn-pesos span { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: ${DS.gray500}; font-size: 15px; }
+    .dn-pesos .s-input { padding-left: 28px; }
+    .dn-hoja-fondo { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.55); display: flex; align-items: flex-end; justify-content: center; animation: sFadeIn 0.2s ease; }
+    .dn-hoja { width: 100%; max-width: 480px; max-height: 80vh; overflow-y: auto; background: ${DS.white}; border-radius: 24px 24px 0 0; padding: 20px 20px calc(28px + env(safe-area-inset-bottom)); }
+    .dn-hoja-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+    .dn-hoja-titulo { font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 800; color: ${DS.gray900}; }
+    .dn-hoja-sub { font-size: 13px; color: ${DS.gray500}; margin-top: 2px; }
+    .dn-hoja-cerrar { flex-shrink: 0; min-height: 40px; padding: 8px 14px; border: none; border-radius: 10px; background: ${DS.gray100}; color: ${DS.gray700}; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .dn-esq { background: linear-gradient(90deg, #e9edf2 25%, #f4f6f9 50%, #e9edf2 75%); background-size: 200% 100%; animation: dnBrillo 1.3s ease-in-out infinite; }
+    @keyframes dnBrillo { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+    @media (prefers-reduced-motion: reduce) { .dn-esq { animation: none; } }
     .cj-exito { position: fixed; inset: 0; z-index: 300; background: ${DS.green600}; color: ${DS.white}; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: calc(24px + env(safe-area-inset-top)) 24px calc(20px + env(safe-area-inset-bottom)); text-align: center; font-family: 'Sora', sans-serif; animation: sFadeIn 0.2s ease; }
     .cj-exito[hidden] { display: none; }
     .cj-exito.premio { background: linear-gradient(160deg, ${DS.gold400}, ${DS.gold500}); color: #422006; }
@@ -453,92 +490,15 @@ function initNavDueno() {
   })
 }
 
-function cargarChartJS() {
-  return new Promise((resolve) => {
-    if (window.Chart) { resolve(); return }
-    const script = document.createElement('script')
-    script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'
-    script.onload = resolve
-    document.head.appendChild(script)
-  })
-}
-
-async function renderizarGraficas(visitas, clientes) {
-  await cargarChartJS()
-  const hoy = new Date(); const dias7 = []; const labels7 = []
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(hoy); d.setDate(d.getDate() - i)
-    dias7.push(d.toISOString().split('T')[0])
-    labels7.push(d.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric' }))
-  }
-  const vpd = dias7.map(dia => (visitas||[]).filter(v => v.fecha?.startsWith(dia)).length)
-  const inicioEsteMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0]
-  const inicioMesAnt = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1).toISOString().split('T')[0]
-  const finMesAnt = new Date(hoy.getFullYear(), hoy.getMonth(), 0).toISOString().split('T')[0]
-  const vem = (visitas||[]).filter(v => v.fecha >= inicioEsteMes).length
-  const vma = (visitas||[]).filter(v => v.fecha >= inicioMesAnt && v.fecha <= finMesAnt).length
-  const nuevos = (clientes||[]).filter(c => c.total_visitas <= 1).length
-  const recurrentes = (clientes||[]).filter(c => c.total_visitas > 1).length
-  const total = nuevos + recurrentes
-
-  ;['chart-barras','chart-dona','chart-meses'].forEach(id => { const c = document.getElementById(id); if (c?._chartInstance) c._chartInstance.destroy() })
-
-  const ctxB = document.getElementById('chart-barras')
-  if (ctxB) ctxB._chartInstance = new window.Chart(ctxB, {
-    type: 'bar',
-    data: { labels: labels7, datasets: [{ data: vpd, backgroundColor: vpd.map((_, i) => i === 6 ? DS.green700 : DS.green100), borderRadius: 6, borderSkipped: false }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 11 }, color: DS.gray500 } }, y: { grid: { color: DS.gray100 }, ticks: { font: { size: 11 }, color: DS.gray500, stepSize: 1 }, beginAtZero: true } } }
-  })
-
-  const ctxD = document.getElementById('chart-dona')
-  if (ctxD) {
-    if (total === 0) {
-      ctxD.parentElement.innerHTML = `<p style="text-align:center;color:${DS.gray500};font-size:13px;padding:40px 0">Aún no hay clientes para mostrar</p>`
-    } else {
-      ctxD._chartInstance = new window.Chart(ctxD, {
-        type: 'doughnut',
-        data: { labels: ['Recurrentes', 'Nuevos'], datasets: [{ data: [recurrentes, nuevos], backgroundColor: [DS.green700, DS.green100], borderWidth: 0 }] },
-        options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, color: DS.gray700, padding: 16 } }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw} (${Math.round((ctx.raw/total)*100)}%)` } } } }
-      })
-    }
-  }
-
-  const ctxM = document.getElementById('chart-meses')
-  if (ctxM) {
-    const ma = new Date().toLocaleDateString('es-MX', { month: 'long' })
-    const mp = new Date(new Date().getFullYear(), new Date().getMonth()-1, 1).toLocaleDateString('es-MX', { month: 'long' })
-    ctxM._chartInstance = new window.Chart(ctxM, {
-      type: 'bar',
-      data: { labels: [mp, ma], datasets: [{ data: [vma, vem], backgroundColor: [DS.gray100, DS.green700], borderRadius: 8, borderSkipped: false }] },
-      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: DS.gray100 }, ticks: { font: { size: 11 }, color: DS.gray500, stepSize: 1 }, beginAtZero: true }, y: { grid: { display: false }, ticks: { font: { size: 12, weight: '600' }, color: DS.gray700 } } } }
-    })
-  }
-}
-
-// FIX: CSV con created_at como fallback
-function exportarCSV(clientes, niveles, negocioNombre) {
-  const headers = ['Nombre', 'Teléfono', 'Visitas totales', 'Nivel', 'Fecha registro']
-  const filas = (clientes||[]).map(c => {
-    const nivel = getNivelActual(c.total_visitas, niveles)
-    const fechaRaw = c.fecha_registro || c.created_at
-    const fecha = fechaRaw ? new Date(fechaRaw).toLocaleDateString('es-MX') : '—'
-    return [c.nombre, c.telefono, c.total_visitas, `${nivel.emoji} ${nivel.nombre}`, fecha]
-  })
-  const csv = [headers, ...filas].map(row => row.join(',')).join('\n')
-  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url; link.download = `clientes-${negocioNombre}-${new Date().toISOString().split('T')[0]}.csv`; link.click()
-  URL.revokeObjectURL(url)
-}
-
 function onboardingVisto() { return localStorage.getItem('sello_onboarding') === 'done' }
 function marcarOnboardingVisto() { localStorage.setItem('sello_onboarding', 'done') }
 
+// Bienvenida del dueño en 3 pasos. También se muestran en el panel mientras
+// el negocio no tiene clientes.
 const PASOS_ONBOARDING = [
-  { icon: '🧾', titulo: 'Registra visitas en segundos', desc: 'El cajero busca al cliente por teléfono o nombre y toca "Registrar visita". Así de simple.' },
-  { icon: '🏆', titulo: 'Configura tus niveles de lealtad', desc: 'Define cuántas visitas necesita un cliente para subir de nivel y qué premio recibe al llegar.' },
-  { icon: '📊', titulo: 'Ve tus estadísticas en tiempo real', desc: 'Consulta cuántos clientes tienes, qué días son más concurridos y quiénes son tus clientes más fieles.' },
+  { icon: '🎁', titulo: 'Elige tu premio y tu meta', desc: 'Por ejemplo: un café gratis a las 10 visitas. Lo cambias cuando quieras en Mi Panel → Ajustes.' },
+  { icon: '👥', titulo: 'Da de alta a tus meseros', desc: 'Cada mesero entra a Sello desde su celular con su propia cuenta. Agrega sus números en Ajustes → Personal para que no ganen puntos.' },
+  { icon: '🧾', titulo: 'Haz una visita de prueba', desc: 'Toca "Cobré una cuenta", escanea el QR con tu celular y suma tu primer punto. Así verás lo mismo que tus clientes.' },
 ]
 
 // ── Pantalla de celebración al subir de nivel ─────────────
@@ -663,8 +623,8 @@ export async function paginaBienvenida() {
         <div class="sbv-bienvenido">Bienvenido de vuelta</div>
         <h1 class="sbv-nombre">${negocio.nombre}</h1>
         <div class="sbv-btns">
-          <button class="sbv-btn primary" id="sbv-cajero"><span class="sbv-btn-icon">🧾</span><div><div>Panel Cajero</div><span class="sbv-btn-sub">Registrar visitas de clientes</span></div></button>
-          <button class="sbv-btn secondary" id="sbv-panel"><span class="sbv-btn-icon">📊</span><div><div>Mi Panel</div><span class="sbv-btn-sub">Estadísticas, niveles y más</span></div></button>
+          <button class="sbv-btn primary" id="sbv-cajero"><span class="sbv-btn-icon">🧾</span><div><div>Cajero</div><span class="sbv-btn-sub">Cobrar, dar puntos y canjear premios</span></div></button>
+          <button class="sbv-btn secondary" id="sbv-panel"><span class="sbv-btn-icon">📊</span><div><div>Mi Panel</div><span class="sbv-btn-sub">Tus números y ajustes</span></div></button>
         </div>
         <button class="sbv-salir" id="sbv-salir">Cerrar sesión</button>
       </div>
@@ -2150,16 +2110,36 @@ export function initLanding(negocioId) {
   document.getElementById('landing-registrar')?.addEventListener('click', () => navigate('negocio', negocioId))
 }
 
-// ── PANEL DUEÑO — solo niveles, sin premios separados ─────
+// ═══════════════════════════════════════════════════════════
+// PANEL DEL DUEÑO (Fase 4)
+// Pestaña "Resumen": en 3 segundos, si Sello le está trayendo clientes de
+// vuelta. Todo lo calcula el servidor (resumen_dueno, resumen_meseros,
+// clientes_inactivos); el navegador solo pinta.
+// Pestaña "Ajustes": programa, personal, personalización y exportar.
+// ═══════════════════════════════════════════════════════════
 const PLANTILLAS_PREMIO = [
   'Un café gratis', 'Un postre gratis', 'Un corte gratis', 'Un taco gratis',
   '20% de descuento en tu cuenta', '10% de descuento', '2x1',
 ]
 
+// Límites del ticket promedio y del costo del premio (los mismos que revisa el servidor).
+const TICKET_MAX = 100000
+const COSTO_MAX = 100000
+
 // "+529981234567" → "998 123 4567"
 function telefonoLegible(e164) {
   const d = String(e164 || '').replace(/^\+52/, '')
   return d.length === 10 ? `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` : esc(e164)
+}
+
+const formatoPesos = n => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(Number(n) || 0)
+const formatoNumero = n => new Intl.NumberFormat('es-MX').format(Number(n) || 0)
+
+// "120" o "120.50" o "120,50" → 120.5; vacío → null; texto inválido → NaN.
+function leerPesos(texto) {
+  const t = String(texto || '').trim().replace(/[$\s]/g, '').replace(',', '.')
+  if (!t) return null
+  return /^\d+(\.\d{1,2})?$/.test(t) ? Number(t) : NaN
 }
 
 function mensajeDueno(error) {
@@ -2168,14 +2148,241 @@ function mensajeDueno(error) {
   if (m.includes('META_INVALIDA')) return 'Las visitas para el premio deben ser de 1 a 100.'
   if (m.includes('PREMIO_INVALIDO')) return 'Escribe el premio (máximo 80 letras).'
   if (m.includes('MAX_CODIGOS_INVALIDO')) return 'Los códigos activos deben ser de 1 a 50.'
+  if (m.includes('TICKET_INVALIDO')) return `Lo que gasta un cliente debe ser de $1 a ${formatoPesos(TICKET_MAX)}, o déjalo vacío.`
+  if (m.includes('COSTO_INVALIDO')) return `El costo del premio debe ser de $0 a ${formatoPesos(COSTO_MAX)}, o déjalo vacío.`
   if (m.includes('TELEFONO_INVALIDO')) return 'Escribe los 10 dígitos del número.'
   if (m.includes('NO_ENCONTRADO')) return 'Ese número ya no estaba en la lista.'
-  if (m.includes('Acceso denegado')) return 'Solo el dueño puede cambiar esto. Sal y vuelve a entrar.'
+  if (m.includes('Acceso denegado')) return 'Solo el dueño puede ver y cambiar esto. Sal y vuelve a entrar.'
   return 'Algo salió mal. Intenta de nuevo.'
 }
 
-// Sección "Programa": se guarda con la RPC guardar_programa (fase 2G).
-function initProgramaDueno() {
+// Pestaña elegida: se recuerda en esta pestaña del navegador.
+const CLAVE_PESTANA_DUENO = 'sello_pestana_dueno'
+function leerPestanaDueno() { try { return sessionStorage.getItem(CLAVE_PESTANA_DUENO) === 'ajustes' ? 'ajustes' : 'resumen' } catch (e) { return 'resumen' } }
+function guardarPestanaDueno(p) { try { sessionStorage.setItem(CLAVE_PESTANA_DUENO, p) } catch (e) {} }
+
+// Esqueletos de carga: la forma del panel aparece al instante, nunca en blanco.
+function esqueletoResumen() {
+  return `
+    <div class="dn-esq" style="height:150px;margin:0 16px 14px;border-radius:20px"></div>
+    <div class="dn-cifras">${'<div class="dn-esq" style="height:96px;border-radius:16px"></div>'.repeat(3)}</div>
+    <div class="dn-esq" style="height:64px;margin:0 16px 14px;border-radius:16px"></div>
+    <div class="dn-cifras dos">${'<div class="dn-esq" style="height:96px;border-radius:16px"></div>'.repeat(2)}</div>
+    <div class="dn-esq" style="height:140px;margin:0 16px 14px;border-radius:16px"></div>`
+}
+function esqueletoAjustes() {
+  return `<div class="dn-esq" style="height:320px;margin:0 16px 14px;border-radius:16px"></div>
+    <div class="dn-esq" style="height:180px;margin:0 16px 14px;border-radius:16px"></div>`
+}
+
+// Tarjeta de error con "Reintentar" (nunca pantalla en blanco).
+function errorPanelHTML(texto, idBoton) {
+  return `<div class="s-card" style="text-align:center">
+    <div style="font-size:34px;margin-bottom:8px" aria-hidden="true">📶</div>
+    <p style="font-size:15px;color:${DS.gray700};margin-bottom:14px">${texto}</p>
+    <button class="s-btn primary" id="${idBoton}">Reintentar</button>
+  </div>`
+}
+
+// ── Resumen ──
+function cambioSemanaHTML(actual, anterior) {
+  const dif = (Number(actual) || 0) - (Number(anterior) || 0)
+  if (!actual && !anterior) return ''
+  if (dif > 0) return `<div class="dn-cambio sube">▲ ${formatoNumero(dif)} vs. la anterior</div>`
+  if (dif < 0) return `<div class="dn-cambio baja">▼ ${formatoNumero(-dif)} vs. la anterior</div>`
+  return `<div class="dn-cambio igual">Igual que la anterior</div>`
+}
+
+function heroResumenHTML(r) {
+  const n = Number(r.visitas_repetidas_semana) || 0
+  const veces = n === 1 ? '1 vez' : `${formatoNumero(n)} veces`
+  if (r.negocio?.ticket_promedio != null) {
+    return `<div class="dn-hero">
+      <div class="dn-hero-lbl">Esta semana tus clientes volvieron</div>
+      <div class="dn-hero-num">${veces}</div>
+      <div class="dn-hero-sub">≈ ${formatoPesos(r.ventas_estimadas)} en ventas <span class="dn-hero-nota">(estimado)</span></div>
+    </div>`
+  }
+  return `<div class="dn-hero">
+    <div class="dn-hero-num">${formatoNumero(n)}</div>
+    <div class="dn-hero-sub">${n === 1 ? 'visita de un cliente que regresó' : 'visitas de clientes que regresaron'} esta semana</div>
+    <button type="button" class="dn-hero-invita" id="dn-invita-ticket">¿Cuánto gasta un cliente? Dínoslo y te decimos cuánto vendiste →</button>
+  </div>`
+}
+
+// Negocio nuevo: en vez de ceros, qué hacer para empezar.
+function vacioResumenHTML() {
+  return `<div class="s-card dn-vacio">
+    <div class="dn-vacio-titulo">Aquí verás si Sello te trae clientes de vuelta</div>
+    <p class="dn-vacio-sub">Aún no tienes clientes. Empieza así:</p>
+    <ol class="dn-pasos">
+      ${PASOS_ONBOARDING.map(p => `<li><span class="dn-paso-icono" aria-hidden="true">${p.icon}</span><span><strong>${p.titulo}</strong><br>${p.desc}</span></li>`).join('')}
+    </ol>
+    <button class="s-btn primary" id="dn-ir-cajero">Ir al cajero</button>
+  </div>`
+}
+
+function meserosHTML(meseros) {
+  const lista = meseros || []
+  const filas = lista.map(m => {
+    const partes = [
+      `${formatoNumero(m.generados)} ${m.generados === 1 ? 'código' : 'códigos'}`,
+      `${formatoNumero(m.reclamados)} ${m.reclamados === 1 ? 'usado' : 'usados'}`,
+      `${formatoNumero(m.manuales)} a mano`,
+    ]
+    if (m.bloqueos_canje > 0) partes.push(`${formatoNumero(m.bloqueos_canje)} ${m.bloqueos_canje === 1 ? 'bloqueo' : 'bloqueos'} al canjear (total)`)
+    return `<div class="dn-mesero">
+      <div class="dn-mesero-top">
+        <span class="s-row-title">${esc(m.nombre)}${m.rol === 'owner' ? ' <span class="dn-tu">(tú)</span>' : ''}</span>
+        ${m.revisar ? '<span class="dn-revisar">Revisar</span>' : ''}
+      </div>
+      <div class="s-row-sub">${partes.join(' · ')}</div>
+      ${m.revisar && m.motivo ? `<div class="dn-motivo">${esc(m.motivo)}</div>` : ''}
+    </div>`
+  }).join('')
+  return `<div class="s-card">
+    <div class="s-section-label">Tu equipo esta semana</div>
+    ${filas || `<p class="cj-vacio">Cuando tu equipo cobre con "Cobré una cuenta", aquí verás a cada mesero.</p>`}
+  </div>`
+}
+
+function resumenHTML(r, meseros) {
+  if (!(Number(r.clientes_registrados) > 0)) return vacioResumenHTML()
+  const deCada10 = Math.round((Number(r.porcentaje_regresan) || 0) / 10)
+  const entregados = Number(r.premios_entregados_semana) || 0
+  return `
+    ${heroResumenHTML(r)}
+    <div class="dn-cifras">
+      <div class="dn-cifra"><div class="dn-cifra-num">${formatoNumero(r.clientes_registrados)}</div><div class="dn-cifra-lbl">clientes registrados</div></div>
+      <div class="dn-cifra"><div class="dn-cifra-num">${formatoNumero(r.visitas_semana)}</div><div class="dn-cifra-lbl">visitas esta semana</div>${cambioSemanaHTML(r.visitas_semana, r.visitas_semana_anterior)}</div>
+      <div class="dn-cifra"><div class="dn-cifra-num">${deCada10}<span class="dn-cifra-de"> de 10</span></div><div class="dn-cifra-lbl">regresaron al menos una vez</div></div>
+    </div>
+    <button type="button" class="dn-fila-btn" id="dn-ver-inactivos"${r.inactivos > 0 ? '' : ' disabled'}>
+      <span><span class="dn-fila-titulo">Dejaron de venir</span><span class="dn-fila-sub">más de 21 días sin venir</span></span>
+      <span class="dn-fila-der"><span class="dn-fila-num">${formatoNumero(r.inactivos)}</span>${r.inactivos > 0 ? '<span class="dn-fila-flecha" aria-hidden="true">›</span>' : ''}</span>
+    </button>
+    <div class="dn-cifras dos">
+      <div class="dn-cifra"><div class="dn-cifra-num">${formatoNumero(entregados)}</div><div class="dn-cifra-lbl">premios entregados esta semana</div>${r.costo_premios_semana != null && entregados > 0 ? `<div class="dn-cambio igual">≈ ${formatoPesos(r.costo_premios_semana)} de costo</div>` : ''}</div>
+      <div class="dn-cifra"><div class="dn-cifra-num">${formatoNumero(r.premios_listos)}</div><div class="dn-cifra-lbl">listos para canjear</div></div>
+    </div>
+    ${meserosHTML(meseros)}`
+}
+
+// Hoja con la lista de quienes dejaron de venir (primer nombre y ···4821).
+async function abrirInactivos() {
+  const hoja = document.createElement('div')
+  hoja.className = 'dn-hoja-fondo'
+  hoja.innerHTML = `<div class="dn-hoja" role="dialog" aria-label="Dejaron de venir">
+    <div class="dn-hoja-cab">
+      <div><div class="dn-hoja-titulo">Dejaron de venir</div><div class="dn-hoja-sub">Más de 21 días sin venir. Los más recientes primero.</div></div>
+      <button class="dn-hoja-cerrar" id="dn-hoja-cerrar">Cerrar</button>
+    </div>
+    <div id="dn-hoja-lista">${'<div class="dn-esq" style="height:52px;border-radius:12px;margin-bottom:10px"></div>'.repeat(4)}</div>
+  </div>`
+  document.body.appendChild(hoja)
+  const cerrar = () => hoja.remove()
+  hoja.querySelector('#dn-hoja-cerrar').addEventListener('click', cerrar)
+  hoja.addEventListener('click', e => { if (e.target === hoja) cerrar() })
+  const lista = hoja.querySelector('#dn-hoja-lista')
+  try {
+    const { data, error } = await supabase.rpc('clientes_inactivos')
+    if (error) throw error
+    const clientes = data?.clientes || []
+    if (!hoja.isConnected) return
+    lista.innerHTML = clientes.length === 0
+      ? `<p class="cj-vacio">¡Nadie! Todos tus clientes vinieron en las últimas 3 semanas.</p>`
+      : clientes.map(c => `<div class="s-row">
+          <div><div class="s-row-title">${esc(c.nombre)} <span style="color:${DS.gray500};font-variant-numeric:tabular-nums">···${esc(c.ultimos4)}</span></div>
+          <div class="s-row-sub">Vino por última vez hace ${formatoNumero(c.dias)} días</div></div>
+          <div class="s-row-sub" style="text-align:right">${formatoNumero(c.visitas)} ${c.visitas === 1 ? 'visita' : 'visitas'}</div>
+        </div>`).join('')
+  } catch (e) {
+    console.error('Error al cargar los clientes inactivos:', e)
+    if (hoja.isConnected) lista.innerHTML = `<p class="cj-vacio">${mensajeDueno(e)}</p>`
+  }
+}
+
+// ── Ajustes ──
+function ajustesHTML(nd, negocioId) {
+  const landingUrl = `${window.location.origin}/#/landing/${negocioId}`
+  const pesos = v => v == null ? '' : String(Number(v))
+  return `
+    <div class="s-card">
+      <div class="s-section-label">Programa</div>
+      <div class="s-field">
+        <label class="s-label" for="prog-meta">Visitas para ganar el premio</label>
+        <input type="number" inputmode="numeric" id="prog-meta" class="s-input" min="1" max="100" value="${nd.meta_puntos ?? 10}" />
+      </div>
+      <div class="s-field">
+        <label class="s-label" for="prog-premio">Premio</label>
+        <input type="text" id="prog-premio" class="s-input" maxlength="80" value="${esc(nd.premio || '')}" placeholder="Ej: Un café gratis" />
+        <div class="dn-plantillas">${PLANTILLAS_PREMIO.map(p => `<button type="button" class="dn-chip" data-premio="${esc(p)}">${esc(p)}</button>`).join('')}</div>
+      </div>
+      <div class="s-field">
+        <label class="s-label" for="prog-ticket">¿Cuánto gasta en promedio un cliente? <span class="dn-opcional">(opcional)</span></label>
+        <div class="dn-pesos"><span>$</span><input type="text" inputmode="decimal" id="prog-ticket" class="s-input" value="${pesos(nd.ticket_promedio)}" placeholder="Ej: 120" autocomplete="off" /></div>
+        <div class="dn-ayuda">Con esto calculamos cuánto te dejan los clientes que regresan.</div>
+      </div>
+      <div class="s-field">
+        <label class="s-label" for="prog-costo">¿Cuánto te cuesta el premio? <span class="dn-opcional">(opcional)</span></label>
+        <div class="dn-pesos"><span>$</span><input type="text" inputmode="decimal" id="prog-costo" class="s-input" value="${pesos(nd.costo_premio)}" placeholder="Ej: 25" autocomplete="off" /></div>
+      </div>
+      <div class="s-field">
+        <label class="s-label" for="prog-max">Códigos activos por mesero</label>
+        <input type="number" inputmode="numeric" id="prog-max" class="s-input" min="1" max="50" value="${nd.max_codigos_activos ?? 3}" />
+        <div class="dn-ayuda">Cuántos QR puede tener abiertos un mesero a la vez. Súbelo si hay mucha gente.</div>
+      </div>
+      <button id="btn-guardar-programa" class="s-btn primary">Guardar programa</button>
+      <div id="msg-programa"></div>
+    </div>
+
+    <div class="s-card">
+      <div class="s-section-label">Personal (no ganan puntos)</div>
+      <div class="dn-ayuda" style="margin:0 0 12px">Agrega el número de cada persona de tu equipo. Esos números no suman puntos.</div>
+      <div class="dn-agregar">
+        <input type="tel" inputmode="numeric" id="excl-tel" class="s-input" placeholder="10 dígitos" autocomplete="off" />
+        <button id="btn-agregar-excl" class="s-btn primary">Agregar</button>
+      </div>
+      <div id="msg-excl"></div>
+      <div id="lista-excl" style="margin-top:8px"><p class="cj-vacio">Cargando...</p></div>
+    </div>
+
+    <div class="s-card">
+      <div class="s-section-label">Personalización</div>
+      <div class="s-field"><label class="s-label" for="input-emoji">Emoji del negocio</label><input type="text" id="input-emoji" class="s-input" value="${esc(nd.emoji_negocio || '☕')}" placeholder="☕" style="font-size:24px;text-align:center" /></div>
+      <div class="s-field">
+        <label class="s-label" for="input-color">Color principal</label>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input type="color" id="input-color" value="${esc(nd.color_principal || DS.green800)}" style="width:48px;height:48px;border:none;border-radius:10px;cursor:pointer;padding:2px" />
+          <span style="font-size:13px;color:${DS.gray500}">Lo ven tus clientes cuando escanean el QR</span>
+        </div>
+      </div>
+      <div class="s-field"><label class="s-label" for="input-descripcion">Descripción corta</label><input type="text" id="input-descripcion" class="s-input" value="${esc(nd.descripcion || '')}" placeholder="Ej: El mejor café de Chetumal" /></div>
+      <button id="btn-guardar-personalizacion" class="s-btn primary" style="margin-top:4px">Guardar personalización</button>
+      <div id="msg-personalizacion" style="margin-top:10px"></div>
+    </div>
+
+    <div class="s-card">
+      <div class="s-section-label">Exportar datos</div>
+      <p style="font-size:13px;color:${DS.gray500};margin-bottom:14px">Descarga la lista de tus clientes para abrirla en Excel.</p>
+      <button id="btn-exportar-csv" class="s-btn ghost">⬇ Descargar clientes (.csv)</button>
+      <div id="msg-exportar" style="margin-top:10px"></div>
+    </div>
+
+    <div class="s-card">
+      <div class="s-section-label">Tu página pública</div>
+      <p style="font-size:13px;color:${DS.gray500};margin-bottom:12px">Compártela en Instagram o WhatsApp.</p>
+      <div style="background:${DS.gray50};border-radius:10px;padding:12px 14px;font-size:12px;color:${DS.gray700};word-break:break-all;margin-bottom:12px;border:1px solid ${DS.gray100}">${esc(landingUrl)}</div>
+      <div style="display:flex;gap:8px">
+        <button id="btn-copiar-landing" class="s-btn ghost" style="flex:1">📋 Copiar link</button>
+        <button id="btn-ver-landing" class="s-btn primary" style="flex:1">👁 Ver página</button>
+      </div>
+      <div id="msg-landing" style="margin-top:8px"></div>
+    </div>`
+}
+
+// Sección "Programa": se guarda con la RPC guardar_programa (2G, ampliada en Fase 4).
+function initProgramaDueno(alGuardar) {
   const $ = id => document.getElementById(id)
   const btn = $('btn-guardar-programa'); const msg = $('msg-programa')
   if (!btn) return
@@ -2186,20 +2393,26 @@ function initProgramaDueno() {
     const meta = parseInt($('prog-meta').value, 10)
     const premio = $('prog-premio').value.trim()
     const max = parseInt($('prog-max').value, 10)
+    const ticket = leerPesos($('prog-ticket').value)
+    const costo = leerPesos($('prog-costo').value)
     // Las mismas reglas que revisa el servidor, para avisar antes de mandar.
     let error = ''
     if (!(meta >= 1 && meta <= 100)) error = 'META_INVALIDA'
     else if (!premio || premio.length > 80) error = 'PREMIO_INVALIDO'
+    else if (ticket !== null && !(ticket >= 1 && ticket <= TICKET_MAX)) error = 'TICKET_INVALIDO'
+    else if (costo !== null && !(costo >= 0 && costo <= COSTO_MAX)) error = 'COSTO_INVALIDO'
     else if (!(max >= 1 && max <= 50)) error = 'MAX_CODIGOS_INVALIDO'
     if (error) { msg.innerHTML = `<p class="s-error">${mensajeDueno({ message: error })}</p>`; return }
     btn.disabled = true; btn.textContent = 'Guardando...'; msg.innerHTML = ''
     try {
       const { error: e } = await supabase.rpc('guardar_programa', {
         p_meta_puntos: meta, p_premio: premio, p_max_codigos_activos: max,
+        p_ticket_promedio: ticket, p_costo_premio: costo,
       })
       if (e) throw e
       msg.innerHTML = `<div class="s-success">✓ Programa guardado</div>`
       setTimeout(() => { if (msg.isConnected) msg.innerHTML = '' }, 2500)
+      alGuardar?.()
     } catch (e) {
       console.error('Error al guardar el programa:', e)
       msg.innerHTML = `<p class="s-error">${mensajeDueno(e)}</p>`
@@ -2282,320 +2495,196 @@ function initPersonalDueno(negocioId) {
   cargar()
 }
 
-export async function paginaDueno() {
-  inyectarEstilos()
-  try {
-    const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
-    if (!negocio) { window.location.hash = '#/login'; window.dispatchEvent(new Event('hashchange')); return '<div></div>' }
-    const { data: nd, error: e0 } = await supabase.from('negocios').select('id,nombre,activo,meta_puntos,color_principal,emoji_negocio,descripcion,logo_url,premio,max_codigos_activos').eq('id', negocio.id).single(); if (e0) throw e0
-    if (nd?.activo === false) { const { logout } = await import('./auth.js'); logout(); return '<div></div>' }
-    aplicarColorNegocio(nd?.color_principal)
-    const { data: clientes } = await supabase.from('clientes').select('*').eq('negocio_id', negocio.id)
-    const { data: visitas } = await supabase.from('visitas').select('*').eq('negocio_id', negocio.id)
-    const { data: niveles } = await supabase.from('niveles').select('*').eq('negocio_id', negocio.id).order('visitas_minimas', { ascending: true })
-    const hoy = new Date().toISOString().split('T')[0]
-    const vhoy = (visitas||[]).filter(v => v.fecha && v.fecha.startsWith(hoy)).length
-    const top5 = [...(clientes||[])].sort((a, b) => b.total_visitas - a.total_visitas).slice(0, 5)
-    const landingUrl = `${window.location.origin}/#/landing/${negocio.id}`
-
-    const filasClientes = top5.map(c => {
-      const nivel = getNivelActual(c.total_visitas, niveles); const nc = colorNivel(nivel)
-      return `<div class="s-row"><div><div class="s-row-title">${c.nombre}</div><div class="s-row-sub">${c.telefono}</div></div><div style="display:flex;align-items:center;gap:8px"><div class="nivel-badge" style="background:${nc}20;color:${nc};font-size:11px;padding:3px 8px">${nivel.emoji} ${nivel.nombre}</div><div style="font-size:13px;color:${DS.gray500}">${c.total_visitas}</div></div></div>`
-    }).join('')
-
-    const filasNiveles = (niveles||[]).map(n => `
-      <div class="s-row">
-        <div>
-          <div class="s-row-title">${n.emoji} ${n.nombre}</div>
-          <div class="s-row-sub">Desde ${n.visitas_minimas} visitas${n.premio_bienvenida ? ' · Premio: ' + n.premio_bienvenida : ' · Sin premio'}</div>
-        </div>
-        <div class="s-row-actions">
-          <button class="btn-editar-nivel" data-id="${n.id}" data-nombre="${n.nombre}" data-emoji="${n.emoji}" data-visitas="${n.visitas_minimas}" data-premio="${n.premio_bienvenida||''}"
-            style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;font-size:12px;background:${DS.gray100};color:${DS.gray700};font-weight:600">✏️</button>
-          <button class="btn-eliminar-nivel" data-id="${n.id}" data-nombre="${n.nombre}"
-            style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;font-size:12px;background:#fee2e2;color:#dc2626;font-weight:600">🗑</button>
-        </div>
-      </div>
-    `).join('')
-
-    return `
-      <div style="padding-bottom:72px">
-        <div class="sello-topbar">${topbarBrand()}<span style="font-size:13px;color:rgba(255,255,255,0.6)">${(nd?.nombre || negocio.nombre).substring(0,20)}</span></div>
-
-        <!-- Resumen -->
-        <div class="s-card" style="margin-top:16px">
-          <div class="s-section-label">Resumen</div>
-          <div class="s-stats">
-            <div class="s-stat"><div class="s-stat-num">${(clientes||[]).length}</div><div class="s-stat-lbl">Clientes</div></div>
-            <div class="s-stat"><div class="s-stat-num" style="color:${DS.gold500}">${vhoy}</div><div class="s-stat-lbl">Hoy</div></div>
-            <div class="s-stat"><div class="s-stat-num">${(visitas||[]).length}</div><div class="s-stat-lbl">Visitas</div></div>
-          </div>
-        </div>
-
-        <!-- Programa (2G): meta, premio y códigos activos por mesero -->
-        <div class="s-card">
-          <div class="s-section-label">Programa</div>
-          <div class="s-field">
-            <label class="s-label" for="prog-meta">Visitas para ganar el premio</label>
-            <input type="number" inputmode="numeric" id="prog-meta" class="s-input" min="1" max="100" value="${nd?.meta_puntos ?? 10}" />
-          </div>
-          <div class="s-field">
-            <label class="s-label" for="prog-premio">Premio</label>
-            <input type="text" id="prog-premio" class="s-input" maxlength="80" value="${esc(nd?.premio || '')}" placeholder="Ej: Un café gratis" />
-            <div class="dn-plantillas">${PLANTILLAS_PREMIO.map(p => `<button type="button" class="dn-chip" data-premio="${esc(p)}">${esc(p)}</button>`).join('')}</div>
-          </div>
-          <div class="s-field">
-            <label class="s-label" for="prog-max">Códigos activos por mesero</label>
-            <input type="number" inputmode="numeric" id="prog-max" class="s-input" min="1" max="50" value="${nd?.max_codigos_activos ?? 3}" />
-            <div class="dn-ayuda">Cuántos QR puede tener abiertos un mesero a la vez. Súbelo si hay mucha gente.</div>
-          </div>
-          <button id="btn-guardar-programa" class="s-btn primary">Guardar programa</button>
-          <div id="msg-programa"></div>
-        </div>
-
-        <!-- Personal (2G): números que no ganan puntos -->
-        <div class="s-card">
-          <div class="s-section-label">Personal (no ganan puntos)</div>
-          <div class="dn-ayuda" style="margin:0 0 12px">Agrega el número de cada persona de tu equipo. Esos números no suman puntos.</div>
-          <div class="dn-agregar">
-            <input type="tel" inputmode="numeric" id="excl-tel" class="s-input" placeholder="10 dígitos" autocomplete="off" />
-            <button id="btn-agregar-excl" class="s-btn primary">Agregar</button>
-          </div>
-          <div id="msg-excl"></div>
-          <div id="lista-excl" style="margin-top:8px"><p class="cj-vacio">Cargando...</p></div>
-        </div>
-
-        <!-- Distribución de niveles -->
-        ${(() => {
-          const nivelesOrdenados = [...(niveles||[])].sort((a,b) => a.visitas_minimas - b.visitas_minimas)
-          if (nivelesOrdenados.length === 0) return ''
-          const dist = nivelesOrdenados.map(n => {
-            const count = (clientes||[]).filter(c => getNivelActual(c.total_visitas, nivelesOrdenados).nombre === n.nombre).length
-            return `<div class="s-stat"><div class="s-stat-num" style="font-size:20px">${n.emoji} ${count}</div><div class="s-stat-lbl">${n.nombre}</div></div>`
-          }).join('')
-          return `<div class="s-card"><div class="s-section-label">Clientes por nivel</div><div class="s-stats" style="grid-template-columns:repeat(${Math.min(nivelesOrdenados.length,4)},1fr)">${dist}</div></div>`
-        })()}
-
-        <!-- Gráficas -->
-        <div class="s-card"><div class="s-section-label">Visitas — últimos 7 días</div><div class="s-chart-wrap"><canvas id="chart-barras"></canvas></div></div>
-        <div class="s-card"><div class="s-section-label">Este mes vs mes anterior</div><div class="s-chart-wrap"><canvas id="chart-meses"></canvas></div></div>
-        <div class="s-card"><div class="s-section-label">Clientes nuevos vs recurrentes</div><div class="s-chart-wrap donut"><canvas id="chart-dona"></canvas></div></div>
-
-        <!-- Personalización -->
-        <div class="s-card">
-          <div class="s-section-label">Personalización</div>
-
-          <div class="s-field"><label class="s-label">Emoji del negocio</label><input type="text" id="input-emoji" class="s-input" value="${nd?.emoji_negocio||'☕'}" placeholder="☕" style="font-size:24px;text-align:center" /></div>
-          <div class="s-field">
-            <label class="s-label">Color principal</label>
-            <div style="display:flex;gap:10px;align-items:center">
-              <input type="color" id="input-color" value="${nd?.color_principal||DS.green800}" style="width:48px;height:48px;border:none;border-radius:10px;cursor:pointer;padding:2px" />
-<span style="font-size:13px;color:${DS.gray500}">Lo ven tus clientes cuando escanean el QR</span>
-            </div>
-          </div>
-          <div class="s-field"><label class="s-label">Descripción corta</label><input type="text" id="input-descripcion" class="s-input" value="${nd?.descripcion||''}" placeholder="Ej: El mejor café de Chetumal" /></div>
-          <button id="btn-guardar-personalizacion" class="s-btn primary" style="margin-top:4px">Guardar personalización</button>
-          <div id="msg-personalizacion" style="margin-top:10px"></div>
-        </div>
-
-        <!-- Niveles de lealtad — sistema unificado -->
-        <div class="s-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-            <div class="s-section-label" style="margin-bottom:0">Niveles de lealtad</div>
-            <button id="btn-nuevo-nivel" style="background:${DS.green800};color:white;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">+ Nuevo nivel</button>
-          </div>
-          <p style="font-size:12px;color:${DS.gray500};margin-bottom:6px">Cada nivel tiene un premio que se entrega cuando el cliente llega a las visitas necesarias.</p>
-          <div style="background:${DS.green50};border:1px solid ${DS.green100};border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:11px;color:${DS.green800}">Las visitas son <strong>acumuladas</strong> — el cliente nunca las pierde aunque pase tiempo sin venir. Configura niveles alcanzables para que los clientes vean progreso desde la primera visita.</div>
-          <div id="form-nivel" style="display:none;background:${DS.gray50};padding:16px;border-radius:12px;margin-bottom:14px">
-            <input type="hidden" id="nivel-editando-id" value="" />
-            <div style="display:grid;grid-template-columns:90px 1fr;gap:10px">
-              <div class="s-field">
-                <label class="s-label">Emoji</label>
-                <input type="text" id="nivel-emoji" class="s-input" placeholder="🥉" style="font-size:22px;text-align:center" maxlength="4" />
-              </div>
-              <div class="s-field"><label class="s-label">Nombre del nivel</label><input type="text" id="nivel-nombre" class="s-input" placeholder="Ej: Bronce, VIP, Estrella..." /></div>
-            </div>
-            <div class="s-field"><label class="s-label">Visitas mínimas para este nivel</label><input type="number" id="nivel-visitas" class="s-input" placeholder="Ej: 0, 10, 25, 50..." min="0" /></div>
-            <div class="s-field">
-  <label class="s-label">Premio al llegar a este nivel (opcional)</label>
-  <input type="text" id="nivel-premio" class="s-input" placeholder="ej: café gratis, 10% de descuento en su comida, corte gratis..." />
-  <div style="font-size:11px;color:#64748b;margin-top:6px;line-height:1.5">
-    Escribe el premio que recibirá el cliente. Ej: <strong>café gratis</strong>, <strong>10% de descuento en su comida</strong>, <strong>corte gratis</strong>.<br>
-    <span style="color:#94a3b8">Evita usar "tu" o "tu compra" — en la imagen que comparten tus clientes puede verse extraño.</span><br>
-    <span style="color:#0a5c47;font-weight:600">Recomendamos tener mínimo 3 niveles distintos para una mejor experiencia del cliente.</span>
-  </div>
-</div>
-            <button id="btn-guardar-nivel" class="s-btn primary" style="margin-top:8px">Guardar nivel</button>
-            <div id="msg-nivel" style="margin-top:10px"></div>
-          </div>
-          <div id="lista-niveles">${filasNiveles || `<p style="color:#aaa;font-size:13px;text-align:center;padding:16px 0">No hay niveles configurados. Agrega el primero con "+ Nuevo nivel"</p>`}</div>
-        </div>
-
-        <!-- Exportar CSV -->
-        <div class="s-card">
-          <div class="s-section-label">Exportar datos</div>
-          <p style="font-size:13px;color:${DS.gray500};margin-bottom:14px">Descarga la lista completa de tus clientes en Excel</p>
-          <button id="btn-exportar-csv" style="background:${DS.green800};color:white;border:none;padding:12px 20px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px">⬇ Descargar clientes (.csv)</button>
-          <div id="msg-exportar" style="margin-top:10px"></div>
-        </div>
-
-        <!-- Landing pública -->
-        <div class="s-card">
-          <div class="s-section-label">Tu página pública</div>
-          <p style="font-size:13px;color:${DS.gray500};margin-bottom:12px">Comparte en Instagram o WhatsApp para que tus clientes vean los niveles y premios.</p>
-          <div style="background:${DS.gray50};border-radius:10px;padding:12px 14px;font-size:12px;color:${DS.gray700};word-break:break-all;margin-bottom:12px;border:1px solid ${DS.gray100}">${landingUrl}</div>
-          <div style="display:flex;gap:8px">
-            <button id="btn-copiar-landing" style="flex:1;padding:10px;background:${DS.gray100};color:${DS.gray700};border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">📋 Copiar link</button>
-            <button id="btn-ver-landing" style="flex:1;padding:10px;background:${DS.green800};color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">👁 Ver página</button>
-          </div>
-          <div id="msg-landing" style="margin-top:8px"></div>
-        </div>
-
-        <!-- Top clientes -->
-        <div class="s-card">
-          <div class="s-section-label">Clientes más frecuentes</div>
-          ${filasClientes || `<p style="color:#aaa;font-size:13px;text-align:center;padding:8px 0">Aún no hay clientes</p>`}
-        </div>
-      </div>
-      ${navBarDueno('panel')}
-    `
-  } catch (e) { return `<div class="sello-topbar">${topbarBrand()}</div><div class="s-card">${errMsg('cargar tu panel')}</div>` }
+// CSV para Excel: nombre, teléfono, visitas, puntos y fecha de registro.
+// Cada celda va entre comillas; las que empiezan con = + - @ llevan un
+// apóstrofo para que Excel no las tome como fórmula.
+function exportarCSV(clientes, negocioNombre) {
+  const celda = v => {
+    let t = String(v ?? '')
+    if (/^[=+\-@]/.test(t)) t = `'${t}`
+    return `"${t.replace(/"/g, '""')}"`
+  }
+  const headers = ['Nombre', 'Teléfono', 'Visitas totales', 'Puntos actuales', 'Fecha de registro']
+  const filas = (clientes || []).map(c => [
+    c.nombre, c.telefono, c.total_visitas ?? 0, c.puntos_actuales ?? 0,
+    c.fecha_registro ? new Date(c.fecha_registro).toLocaleDateString('es-MX') : '—',
+  ])
+  const csv = [headers, ...filas].map(fila => fila.map(celda).join(',')).join('\n')
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  const nombre = String(negocioNombre || 'negocio').replace(/[^\w\-áéíóúñÁÉÍÓÚÑ ]/g, '').trim() || 'negocio'
+  link.href = url; link.download = `clientes-${nombre}-${new Date().toISOString().split('T')[0]}.csv`; link.click()
+  URL.revokeObjectURL(url)
 }
 
-export async function initDueno(negocioId) {
-  inyectarEstilos(); initNavDueno()
-  initProgramaDueno()
-  initPersonalDueno(negocioId)
+function initAjustesExtra(negocioId, nombreNegocio) {
+  const $ = id => document.getElementById(id)
 
-  // Gráficas
-  try {
-    const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
-    const { data: visitas } = await supabase.from('visitas').select('fecha').eq('negocio_id', negocio.id)
-    const { data: clientes } = await supabase.from('clientes').select('total_visitas').eq('negocio_id', negocio.id)
-    await renderizarGraficas(visitas, clientes)
-  } catch (e) {}
-
-  // Personalización
-  document.getElementById('btn-guardar-personalizacion')?.addEventListener('click', async () => {
-    const emoji = document.getElementById('input-emoji').value.trim()
-    const color = document.getElementById('input-color').value
-    const descripcion = document.getElementById('input-descripcion').value.trim()
-    const msg = document.getElementById('msg-personalizacion'); const btn = document.getElementById('btn-guardar-personalizacion')
+  $('btn-guardar-personalizacion')?.addEventListener('click', async () => {
+    const emoji = $('input-emoji').value.trim()
+    const color = $('input-color').value
+    const descripcion = $('input-descripcion').value.trim()
+    const msg = $('msg-personalizacion'); const btn = $('btn-guardar-personalizacion')
     btn.disabled = true; btn.textContent = 'Guardando...'
     try {
       const { error } = await supabase.from('negocios').update({ emoji_negocio: emoji, color_principal: color, descripcion }).eq('id', negocioId)
       if (error) throw error
       aplicarColorNegocio(color)
       msg.innerHTML = `<div class="s-success">✓ Personalización guardada</div>`
-      btn.textContent = 'Actualizar personalización'
-      setTimeout(() => { msg.innerHTML = '' }, 2500)
+      setTimeout(() => { if (msg.isConnected) msg.innerHTML = '' }, 2500)
     } catch (e) { msg.innerHTML = errMsg('guardar') }
-    finally { btn.disabled = false }
+    finally { btn.disabled = false; btn.textContent = 'Guardar personalización' }
   })
 
-  // Niveles
-  document.getElementById('btn-nuevo-nivel')?.addEventListener('click', () => {
-    const f = document.getElementById('form-nivel')
-    if (!f) return
-    const isHidden = f.style.display === 'none' || f.style.display === ''
-    if (isHidden) {
-      document.getElementById('nivel-editando-id').value = ''
-      document.getElementById('nivel-emoji').value = ''
-      document.getElementById('nivel-nombre').value = ''
-      document.getElementById('nivel-visitas').value = ''
-      document.getElementById('nivel-premio').value = ''
-      document.getElementById('msg-nivel').innerHTML = ''
-      document.getElementById('btn-guardar-nivel').textContent = 'Guardar nivel'
-      f.style.display = 'block'
-      setTimeout(() => { document.getElementById('nivel-emoji')?.focus() }, 80)
-    } else {
-      f.style.display = 'none'
-    }
-  })
-
-  document.getElementById('btn-guardar-nivel')?.addEventListener('click', async () => {
-    const id = document.getElementById('nivel-editando-id').value
-    const emojiVal = document.getElementById('nivel-emoji').value.trim()
-    const nombre = document.getElementById('nivel-nombre').value.trim()
-    const visitasVal = document.getElementById('nivel-visitas').value
-    const visitas = parseInt(visitasVal)
-    const premio = document.getElementById('nivel-premio').value.trim()
-    const msg = document.getElementById('msg-nivel'); const btn = document.getElementById('btn-guardar-nivel')
-
-    // Validación campos obligatorios
-    if (!emojiVal || !nombre || visitasVal === '' || isNaN(visitas) || visitas < 0) {
-      msg.innerHTML = `<p class="s-error">Llena emoji, nombre y visitas mínimas</p>`; return
-    }
-    // Validación: no duplicar visitas mínimas
-    const { data: nivelesExistentes } = await supabase.from('niveles').select('id,visitas_minimas,nombre').eq('negocio_id', negocioId)
-    const duplicado = (nivelesExistentes||[]).find(n => n.visitas_minimas === visitas && n.id !== id)
-    if (duplicado) {
-      msg.innerHTML = `<p class="s-error">Ya existe el nivel "${duplicado.nombre}" con ${visitas} visitas. Usa un número diferente.</p>`; return
-    }
-    btn.disabled = true; btn.textContent = 'Guardando...'
-    try {
-      if (id) {
-        const { error } = await supabase.from('niveles').update({ emoji: emojiVal, nombre, visitas_minimas: visitas, premio_bienvenida: premio }).eq('id', id)
-        if (error) throw error
-      } else {
-        const { data: ordenData } = await supabase.from('niveles').select('orden').eq('negocio_id', negocioId).order('orden', { ascending: false }).limit(1)
-        const orden = (ordenData?.[0]?.orden || 0) + 1
-        const { error } = await supabase.from('niveles').insert({ negocio_id: negocioId, emoji: emojiVal, nombre, visitas_minimas: visitas, premio_bienvenida: premio, orden })
-        if (error) throw error
-      }
-      msg.innerHTML = `<div class="s-success">✓ Nivel guardado</div>`
-      setTimeout(() => navigate('dueno'), 1000)
-    } catch (e) { msg.innerHTML = errMsg('guardar el nivel'); btn.disabled = false; btn.textContent = 'Guardar nivel' }
-  })
-
-  document.querySelectorAll('.btn-editar-nivel').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const f = document.getElementById('form-nivel'); f.style.display = 'block'
-      document.getElementById('nivel-editando-id').value = btn.dataset.id
-      document.getElementById('nivel-emoji').value = btn.dataset.emoji
-      document.getElementById('nivel-nombre').value = btn.dataset.nombre
-      document.getElementById('nivel-visitas').value = btn.dataset.visitas
-      document.getElementById('nivel-premio').value = btn.dataset.premio
-      document.getElementById('btn-guardar-nivel').textContent = 'Actualizar nivel'
-      f.scrollIntoView({ behavior: 'smooth' })
-    })
-  })
-
-  document.querySelectorAll('.btn-eliminar-nivel').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!confirm(`¿Eliminar el nivel "${btn.dataset.nombre}"?`)) return
-      btn.disabled = true; btn.textContent = '...'
-      try { const { error } = await supabase.from('niveles').delete().eq('id', btn.dataset.id); if (error) throw error; navigate('dueno') }
-      catch (e) { alert('Sin conexión.'); btn.disabled = false; btn.textContent = '🗑' }
-    })
-  })
-
-  // CSV
-  document.getElementById('btn-exportar-csv')?.addEventListener('click', async () => {
-    const btn = document.getElementById('btn-exportar-csv'); const msg = document.getElementById('msg-exportar')
+  $('btn-exportar-csv')?.addEventListener('click', async () => {
+    const btn = $('btn-exportar-csv'); const msg = $('msg-exportar')
     btn.textContent = 'Preparando...'; btn.disabled = true
     try {
-      const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
-      const { data: clientes } = await supabase.from('clientes').select('*').eq('negocio_id', negocio.id)
-      const { data: nd } = await supabase.from('negocios').select('nombre').eq('id', negocio.id).single()
-      const { data: niveles } = await supabase.from('niveles').select('*').eq('negocio_id', negocio.id)
-      exportarCSV(clientes, niveles, nd?.nombre || 'negocio')
+      const { data: clientes, error } = await supabase.from('clientes')
+        .select('nombre, telefono, total_visitas, puntos_actuales, fecha_registro')
+        .eq('negocio_id', negocioId).order('fecha_registro', { ascending: true })
+      if (error) throw error
+      exportarCSV(clientes, nombreNegocio)
       msg.innerHTML = `<div class="s-success">✓ Archivo descargado</div>`
-      setTimeout(() => { msg.innerHTML = '' }, 3000)
+      setTimeout(() => { if (msg.isConnected) msg.innerHTML = '' }, 3000)
     } catch (e) { msg.innerHTML = errMsg('descargar') }
     finally { btn.textContent = '⬇ Descargar clientes (.csv)'; btn.disabled = false }
   })
 
-
-
-  // Landing
-  document.getElementById('btn-copiar-landing')?.addEventListener('click', () => {
+  $('btn-copiar-landing')?.addEventListener('click', () => {
     const url = `${window.location.origin}/#/landing/${negocioId}`
     navigator.clipboard.writeText(url).then(() => {
-      const msg = document.getElementById('msg-landing')
+      const msg = $('msg-landing')
+      if (!msg) return
       msg.innerHTML = `<div class="s-success">✓ Link copiado</div>`
-      setTimeout(() => { msg.innerHTML = '' }, 2000)
-    })
+      setTimeout(() => { if (msg.isConnected) msg.innerHTML = '' }, 2000)
+    }).catch(() => {})
   })
-  document.getElementById('btn-ver-landing')?.addEventListener('click', () => navigate('landing', negocioId))
+  $('btn-ver-landing')?.addEventListener('click', () => navigate('landing', negocioId))
+}
+
+// Cada visita a #/dueno abre una "sesión"; las respuestas que llegan tarde
+// de una visita anterior se ignoran.
+let duenoSesion = 0
+
+export async function paginaDueno() {
+  inyectarEstilos()
+  const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
+  if (!negocio) { window.location.hash = '#/login'; window.dispatchEvent(new Event('hashchange')); return '<div></div>' }
+  const pestana = leerPestanaDueno()
+  return `
+    <div id="dn-root" style="padding-bottom:88px">
+      <div class="sello-topbar">${topbarBrand()}<span style="font-size:13px;color:rgba(255,255,255,0.6)">${esc(String(negocio.nombre || '').substring(0, 20))}</span></div>
+      <div class="dn-tabs" role="tablist">
+        <button class="dn-tab" role="tab" data-pestana="resumen" aria-selected="${pestana === 'resumen'}">Resumen</button>
+        <button class="dn-tab" role="tab" data-pestana="ajustes" aria-selected="${pestana === 'ajustes'}">Ajustes</button>
+      </div>
+      <div id="dn-resumen" role="tabpanel"${pestana === 'resumen' ? '' : ' hidden'}>${esqueletoResumen()}</div>
+      <div id="dn-ajustes" role="tabpanel"${pestana === 'ajustes' ? '' : ' hidden'}>${esqueletoAjustes()}</div>
+    </div>
+    ${navBarDueno('panel')}
+  `
+}
+
+export async function initDueno(negocioId) {
+  inyectarEstilos(); initNavDueno()
+  const sesion = ++duenoSesion
+  const $ = id => document.getElementById(id)
+  const vigente = () => sesion === duenoSesion && !!$('dn-root')
+  const estado = { resumenCargado: 0, resumenViejo: false, ajustesCargados: false, cargandoResumen: false, cargandoAjustes: false, nombre: '' }
+
+  async function salirSiInactivo(e) {
+    if (!e?.message?.includes('NEGOCIO_INACTIVO')) return false
+    const { logout } = await import('./auth.js'); logout()
+    return true
+  }
+
+  function mostrarPestana(p) {
+    guardarPestanaDueno(p)
+    document.querySelectorAll('.dn-tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.pestana === p)))
+    $('dn-resumen').hidden = p !== 'resumen'
+    $('dn-ajustes').hidden = p !== 'ajustes'
+    if (p === 'resumen' && estado.resumenViejo) cargarResumen()
+    if (p === 'ajustes' && !estado.ajustesCargados) cargarAjustes()
+  }
+
+  async function cargarResumen() {
+    if (estado.cargandoResumen) return
+    estado.cargandoResumen = true
+    // Si ya había datos, se quedan en pantalla mientras se actualizan.
+    if (!estado.resumenCargado) $('dn-resumen').innerHTML = esqueletoResumen()
+    try {
+      const [res, mes] = await Promise.all([supabase.rpc('resumen_dueno'), supabase.rpc('resumen_meseros')])
+      if (!vigente()) return
+      if (res.error) throw res.error
+      if (mes.error) throw mes.error
+      $('dn-resumen').innerHTML = resumenHTML(res.data || {}, res.data?.clientes_registrados > 0 ? mes.data?.meseros : [])
+      estado.resumenCargado = Date.now(); estado.resumenViejo = false
+      $('dn-ver-inactivos')?.addEventListener('click', abrirInactivos)
+      $('dn-ir-cajero')?.addEventListener('click', () => navigate('cajero'))
+      $('dn-invita-ticket')?.addEventListener('click', () => {
+        mostrarPestana('ajustes')
+        // Cuando Ajustes termine de cargar, el campo del ticket queda a la vista.
+        const enfocar = (intentos = 20) => {
+          const campo = $('prog-ticket')
+          if (campo) { campo.scrollIntoView({ behavior: 'smooth', block: 'center' }); campo.focus({ preventScroll: true }) }
+          else if (intentos > 0 && vigente()) setTimeout(() => enfocar(intentos - 1), 150)
+        }
+        enfocar()
+      })
+    } catch (e) {
+      if (!vigente() || await salirSiInactivo(e)) return
+      console.error('Error al cargar el resumen:', e)
+      if (!estado.resumenCargado) {
+        $('dn-resumen').innerHTML = errorPanelHTML(sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar tus números.', 'dn-reintentar-resumen')
+        $('dn-reintentar-resumen')?.addEventListener('click', cargarResumen)
+      }
+    } finally {
+      estado.cargandoResumen = false
+    }
+  }
+
+  async function cargarAjustes() {
+    if (estado.cargandoAjustes) return
+    estado.cargandoAjustes = true
+    $('dn-ajustes').innerHTML = esqueletoAjustes()
+    try {
+      const { data: nd, error } = await supabase.from('negocios')
+        .select('id,nombre,activo,meta_puntos,color_principal,emoji_negocio,descripcion,premio,max_codigos_activos,ticket_promedio,costo_premio')
+        .eq('id', negocioId).single()
+      if (!vigente()) return
+      if (error) throw error
+      if (nd?.activo === false) { const { logout } = await import('./auth.js'); logout(); return }
+      estado.nombre = nd.nombre || ''
+      aplicarColorNegocio(nd.color_principal)
+      $('dn-ajustes').innerHTML = ajustesHTML(nd, negocioId)
+      estado.ajustesCargados = true
+      // Si cambia el ticket o el costo, el resumen se recalcula al volver a él.
+      initProgramaDueno(() => { estado.resumenViejo = true })
+      initPersonalDueno(negocioId)
+      initAjustesExtra(negocioId, estado.nombre)
+    } catch (e) {
+      if (!vigente()) return
+      console.error('Error al cargar los ajustes:', e)
+      $('dn-ajustes').innerHTML = errorPanelHTML(sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar tus ajustes.', 'dn-reintentar-ajustes')
+      $('dn-reintentar-ajustes')?.addEventListener('click', cargarAjustes)
+    } finally {
+      estado.cargandoAjustes = false
+    }
+  }
+
+  document.querySelectorAll('.dn-tab').forEach(b => b.addEventListener('click', () => mostrarPestana(b.dataset.pestana)))
+
+  // Al volver a la app después de un rato, los números se actualizan solos.
+  const alVolver = () => {
+    if (!vigente()) { document.removeEventListener('visibilitychange', alVolver); return }
+    if (document.visibilityState !== 'visible') return
+    if (!$('dn-resumen').hidden && Date.now() - estado.resumenCargado > 60 * 1000) cargarResumen()
+  }
+  document.addEventListener('visibilitychange', alVolver)
+
+  // El color del negocio se aplica desde el principio (lo trae Ajustes).
+  cargarResumen()
+  cargarAjustes()
 }
