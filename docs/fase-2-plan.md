@@ -1,6 +1,38 @@
 # Fase 2: código QR de un solo uso y reclamo
 
-Estado: plan aprobado. Paso actual: **2.0 (preparación)**. No pasar a un paso nuevo sin OK del dueño del proyecto.
+Estado: plan aprobado. Paso actual: **2D (escrito, falta probarlo a mano)**. No pasar a un paso nuevo sin OK del dueño del proyecto.
+
+## Avance
+
+| Paso | Estado | Archivo |
+|---|---|---|
+| 2.0 Preparación | ✅ Hecho | `supabase/fase-2-0-diagnostico.sql`, `supabase/schema-actual.csv`, `supabase/schema-actual-d.csv` |
+| 2A Base de datos | ✅ Hecho (ejecutado y con pruebas anónimas aprobadas) | `supabase/fase-2a.sql` |
+| 2A-bis Quitar `negocios.password` y `password_hash` | ✅ Hecho (ejecutado) | `supabase/fase-2a-bis-quitar-passwords.sql` |
+| 2B Funciones del mesero | ✅ Hecho (ejecutado) | `supabase/fase-2b.sql` |
+| 2C Funciones del cliente | ✅ Hecho (ejecutado) | `supabase/fase-2c.sql`, pruebas en `supabase/fase-2c-pruebas.sql` |
+| 2D Pantalla del mesero | 🟡 Escrito, falta probarlo a mano en el celular | `src/pages.js` (`paginaCajero` / `initCajero`) |
+| 2E – 2H | Pendiente | |
+
+### Lo que sigue
+
+1. Probar 2C en el editor SQL con `supabase/fase-2c-pruebas.sql` (un bloque a la vez, cada uno con su resultado esperado).
+2. Probar 2D a mano en el celular con una cuenta de mesero (y con la del dueño): generar, límite de códigos, cancelar, doble toque, caducidad, volver a la app.
+3. Empezar 2E (pantalla del cliente).
+
+### Cambios al plan durante la fase
+
+- **2A-bis (nuevo):** se eliminaron `negocios.password` y `negocios.password_hash`, que guardaban contraseñas en texto plano. El login ya usa Supabase Auth.
+- **2A:** también se cerró la tabla `premios`, que tenía una política pública y permisos completos para `anon`. `visitas.fecha` pasó a `timestamptz` (los valores viejos se tomaron como UTC) y `dia_local` lo llena un trigger con `negocios.zona_horaria`.
+- **2C:** los números excluidos se revisan también cuando el cliente llega con token; el token se renueva en cada reclamo; se agregó el error `NOMBRE_INVALIDO`.
+- **URL del QR:** `#/c/<negocio_id>/<codigo>` en lugar de `#/c/<codigo>`. Cada token es de un cliente de un solo negocio; con el id del negocio en la URL, el celular sabe qué token mandar sin una llamada extra.
+- **2D:** la búsqueda vieja del cajero y su "+ Registrar visita" se quitaron ya en 2D (el plan los borraba en 2G). Hasta 2H no hay captura manual.
+- **Riesgos aceptados:** entre 2A y 2E las pantallas viejas que buscan por teléfono no encuentran clientes (los números ya están en `+52`). Con un código válido se puede averiguar si un número es del personal o si ya vino hoy (esos errores no gastan el código).
+
+### Pendientes para después de la fase
+
+- La contraseña del panel admin está escrita en `src/pages.js` (`ADMIN_PASSWORD`).
+- `negocios.reset_token` y `negocios.reset_expira` parecen de un sistema viejo de recuperación de contraseña; se pueden quitar como en 2A-bis.
 
 Objetivo: el mesero genera un código/QR de un solo uso al cobrar y el cliente lo reclama desde su celular. El reclamo es atómico en el servidor. Reemplaza `record_visit_temporary` y el flujo viejo de teclear el teléfono.
 
@@ -89,7 +121,7 @@ Objetivo: el mesero genera un código/QR de un solo uso al cobrar y el cliente l
 
 ### 2E Pantalla del cliente
 
-- `#/c/<codigo>`: si el teléfono está recordado → "¿Eres Ana ···4821? **Sumar**" y "No soy yo"; si no → número (con `+52` puesto) y primer nombre, con aviso de privacidad → "¡Ganaste 1 punto!" → tarjeta.
+- `#/c/<negocio_id>/<codigo>`: si el teléfono está recordado → "¿Eres Ana ···4821? **Sumar**" y "No soy yo"; si no → número (con `+52` puesto) y primer nombre, con aviso de privacidad → "¡Ganaste 1 punto!" → tarjeta.
 - `#/tarjeta`: tarjeta por token; el teléfono ya no va en la URL.
 - QR fijo `#/negocio/<id>`: tarjeta si hay token; si no, "Pide tu código al pagar" (decisión 4).
 - Errores amables: "Este código ya se usó", "Pídele uno nuevo al mesero", "Ya sumaste hoy, vuelve mañana".
@@ -135,7 +167,7 @@ Objetivo: el mesero genera un código/QR de un solo uso al cobrar y el cliente l
 | `public_register_customer`, `public_customer_exists` | Alta sin compra y averiguar números |
 | `public_get_customer_card(negocio, teléfono)` | Tarjetas ajenas; la reemplaza `tarjeta_por_token` |
 | `paginaRegistro` / `initRegistro` (`#/registro`) | El cajero ya no registra así (lo cubre 2H) |
-| `paginaRegistroCliente` / `initRegistroCliente` (`#/registro-cliente/...`) | El registro vive en `#/c/<codigo>` |
-| Búsqueda del cajero y botón "+ Registrar visita" | Lo reemplaza "Cobré una cuenta" (y 2H) |
+| `paginaRegistroCliente` / `initRegistroCliente` (`#/registro-cliente/...`) | El registro vive en `#/c/<negocio_id>/<codigo>` |
+| ~~Búsqueda del cajero y botón "+ Registrar visita"~~ | Ya se quitó en 2D; lo reemplaza "Cobré una cuenta" (y 2H) |
 | Rutas `#/cliente/<negocio>/<teléfono>` en `main.js` y `router.js` | El teléfono deja de ir en la URL |
 | `localStorage` `sello_premio_*` | Nunca llegaba al cliente |
