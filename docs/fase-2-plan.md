@@ -1,6 +1,6 @@
 # Fase 2: código QR de un solo uso y reclamo
 
-Estado: plan aprobado. Paso actual: **2D (escrito, falta probarlo a mano)**. No pasar a un paso nuevo sin OK del dueño del proyecto.
+Estado: **Fase 2 terminada** (2.0 a 2H hechos). Lo que sigue es la Fase 3. No pasar a un paso nuevo sin OK del dueño del proyecto.
 
 ## Avance
 
@@ -11,28 +11,42 @@ Estado: plan aprobado. Paso actual: **2D (escrito, falta probarlo a mano)**. No 
 | 2A-bis Quitar `negocios.password` y `password_hash` | ✅ Hecho (ejecutado) | `supabase/fase-2a-bis-quitar-passwords.sql` |
 | 2B Funciones del mesero | ✅ Hecho (ejecutado) | `supabase/fase-2b.sql` |
 | 2C Funciones del cliente | ✅ Hecho (ejecutado) | `supabase/fase-2c.sql`, pruebas en `supabase/fase-2c-pruebas.sql` |
-| 2D Pantalla del mesero | 🟡 Escrito, falta probarlo a mano en el celular | `src/pages.js` (`paginaCajero` / `initCajero`) |
-| 2E – 2H | Pendiente | |
+| 2D Pantalla del mesero | ✅ Hecho | `src/pages.js` (`paginaCajero` / `initCajero`) |
+| 2E Pantalla del cliente | ✅ Hecho | `src/pages.js` (`paginaReclamar` / `initReclamar`, `paginaTarjeta` / `initTarjeta`) |
+| 2F Tiempo real | ✅ Hecho | `src/pages.js` (`initCajero`: Realtime + consulta de respaldo cada 3 s) |
+| 2G Configuración del dueño y limpieza | ✅ Hecho | `supabase/fase-2g.sql`, `src/pages.js` (`initProgramaDueno`, `initPersonalDueno`), `public/sw.js` |
+| 2H Captura manual | ✅ Hecho | `supabase/fase-2h.sql`, `src/pages.js` (captura manual en `initCajero`) |
 
 ### Lo que sigue
 
-1. Probar 2C en el editor SQL con `supabase/fase-2c-pruebas.sql` (un bloque a la vez, cada uno con su resultado esperado).
-2. Probar 2D a mano en el celular con una cuenta de mesero (y con la del dueño): generar, límite de códigos, cancelar, doble toque, caducidad, volver a la app.
-3. Empezar 2E (pantalla del cliente).
+1. **Fase 3: canje del premio con dos llaves.** El cliente toca "Canjear mi premio" y ve un código de 4 dígitos (5 minutos, un solo uso); el mesero lo escribe en "Canjear", ve premio, nombre y últimos 4 dígitos, y confirma la entrega. Se descuentan los puntos y queda registrado qué mesero confirmó.
+2. **Fase 4: panel del dueño.**
+   - Los 3 números: clientes registrados, visitas de la semana y clientes que regresaron.
+   - Tabla por mesero (códigos generados, reclamados y capturas manuales, con alerta si hay mucha diferencia), con el nombre del mesero guardado en `profiles`.
+   - Personalización de la tarjeta (ver CLAUDE.md, "Personalización de la tarjeta").
+   - Onboarding nuevo (el actual todavía habla del cajero buscando por teléfono).
+3. **Después: panel de administración de Sello** (ver CLAUDE.md): tabla `admins`, solo conteos, alta de negocios con una Edge Function.
 
 ### Cambios al plan durante la fase
 
 - **2A-bis (nuevo):** se eliminaron `negocios.password` y `negocios.password_hash`, que guardaban contraseñas en texto plano. El login ya usa Supabase Auth.
 - **2A:** también se cerró la tabla `premios`, que tenía una política pública y permisos completos para `anon`. `visitas.fecha` pasó a `timestamptz` (los valores viejos se tomaron como UTC) y `dia_local` lo llena un trigger con `negocios.zona_horaria`.
-- **2C:** los números excluidos se revisan también cuando el cliente llega con token; el token se renueva en cada reclamo; se agregó el error `NOMBRE_INVALIDO`.
+- **2C:** los números excluidos se revisan también cuando el cliente llega con token; el token se renueva en cada reclamo; se agregó el error `NOMBRE_INVALIDO`. Con un token que ya no sirve, `reclamar_codigo` responde `TELEFONO_INVALIDO` (no `TOKEN_INVALIDO`); la app lo trata como token vencido y pide el número.
 - **URL del QR:** `#/c/<negocio_id>/<codigo>` en lugar de `#/c/<codigo>`. Cada token es de un cliente de un solo negocio; con el id del negocio en la URL, el celular sabe qué token mandar sin una llamada extra.
-- **2D:** la búsqueda vieja del cajero y su "+ Registrar visita" se quitaron ya en 2D (el plan los borraba en 2G). Hasta 2H no hay captura manual.
-- **Riesgos aceptados:** entre 2A y 2E las pantallas viejas que buscan por teléfono no encuentran clientes (los números ya están en `+52`). Con un código válido se puede averiguar si un número es del personal o si ya vino hoy (esos errores no gastan el código).
+- **2D:** la búsqueda vieja del cajero y su "+ Registrar visita" se quitaron ya en 2D (el plan los borraba en 2G).
+- **2E:** la tarjeta es `#/tarjeta/<negocio_id>` (no `#/tarjeta`), saludo según la hora, recarga al volver a la app y animación del sello nuevo.
+- **2F:** Realtime tardaba 5 a 10 s; se agregó una consulta de respaldo cada 3 s por los ids de los códigos pendientes. Los avisos vistos se guardan en `localStorage` 10 minutos.
+- **2G:** también se quitaron el panel admin con `ADMIN_PASSWORD` y el kiosko (`#/kiosko` y `get_kiosk_progress`, que buscaba clientes por teléfono sin límite de intentos). `public_get_landing` se queda por ahora.
+- **2H:** tope diario de capturas manuales por mesero (`negocios.max_manuales_dia`, 10 por defecto; 0 la desactiva). El dueño todavía no lo puede cambiar desde el panel.
+- **Riesgo aceptado:** con un código válido se puede averiguar si un número es del personal o si ya vino hoy (esos errores no gastan el código).
 
 ### Pendientes para después de la fase
 
-- La contraseña del panel admin está escrita en `src/pages.js` (`ADMIN_PASSWORD`).
 - `negocios.reset_token` y `negocios.reset_expira` parecen de un sistema viejo de recuperación de contraseña; se pueden quitar como en 2A-bis.
+- La contraseña del panel admin quedó en el historial de git del repo público: si se usó en otro lado, cambiarla.
+- `max_manuales_dia` en la sección "Programa" del panel del dueño (agregarlo a `guardar_programa`).
+- La página pública `#/landing/<id>` todavía muestra niveles; cambiarla para mostrar la meta y el premio.
+- La ruta `#/privacidad` no se abre: el router no la reconoce.
 
 Objetivo: el mesero genera un código/QR de un solo uso al cobrar y el cliente lo reclama desde su celular. El reclamo es atómico en el servidor. Reemplaza `record_visit_temporary` y el flujo viejo de teclear el teléfono.
 
