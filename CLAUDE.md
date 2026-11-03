@@ -151,6 +151,12 @@ Reemplaza el botón "Cobré una cuenta" del mesero; todo lo demás (reclamar, co
 - Dar de baja o reactivar un negocio con negocios.activo (ya bloquea login, creación de códigos y reclamos).
 - Dar de alta un negocio con su cuenta de dueño mediante una Edge Function (la llave service_role nunca va en el navegador).
 
+## Datos de clientes
+- Los datos de clientes (teléfono en E.164, nombre, historial de visitas) nunca se borran por limpieza técnica.
+- Solo el dueño de cada negocio ve los datos de sus clientes; el administrador de Sello ve solo conteos.
+- El correo se pedirá de forma opcional dentro de la tarjeta, nunca al registrarse.
+- Usar el teléfono o el correo para promociones requiere consentimiento y verificación.
+
 ## 4. App de Sello (ÚLTIMO paso; va DESPUÉS de WhatsApp)
 
 La app deja de ser "la tarjeta de un negocio" y se vuelve la cartera de lealtad del cliente en toda la ciudad.
