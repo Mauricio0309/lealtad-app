@@ -790,9 +790,33 @@ export function initBienvenida() {
 let cajeroSesion = 0
 
 // Tiempo real (2F): un solo canal abierto a la vez. Los ids de códigos cuyo
-// aviso ya se mostró se guardan en memoria para no repetirlo al ponerse al día.
+// aviso ya se mostró se guardan en memoria y en localStorage (con su hora)
+// para no repetirlo al ponerse al día ni al recargar la app. Se olvidan a
+// los 10 minutos: la búsqueda al ponerse al día solo mira los últimos 5.
+const CLAVE_AVISOS_VISTOS = 'sello_avisos_vistos'
+const avisosVistos = new Map() // id del código → ms en que se mostró
 let canalCajero = null
-const avisosVistos = new Set()
+
+function podarAvisosVistos() {
+  const limite = Date.now() - 10 * 60 * 1000
+  for (const [id, hora] of avisosVistos) if (!(hora > limite)) avisosVistos.delete(id)
+}
+
+function cargarAvisosVistos() {
+  try {
+    const guardados = JSON.parse(localStorage.getItem(CLAVE_AVISOS_VISTOS) || '{}')
+    for (const [id, hora] of Object.entries(guardados)) {
+      if (!avisosVistos.has(id) && typeof hora === 'number') avisosVistos.set(id, hora)
+    }
+  } catch (e) {}
+  podarAvisosVistos()
+}
+
+function marcarAvisoVisto(id) {
+  avisosVistos.set(id, Date.now())
+  podarAvisosVistos()
+  try { localStorage.setItem(CLAVE_AVISOS_VISTOS, JSON.stringify(Object.fromEntries(avisosVistos))) } catch (e) {}
+}
 
 function cerrarTiempoRealCajero() {
   if (canalCajero) supabase.removeChannel(canalCajero)
@@ -875,6 +899,7 @@ export async function initCajero() {
   const avisar = (texto, tipo = 'aviso') => { $('cj-msg').innerHTML = texto ? `<div class="cj-aviso ${tipo}">${texto}</div>` : '' }
 
   function pintarLista() {
+    actualizarSondeo()
     const activos = estado.codigos.length
     $('cj-contador').textContent = estado.max ? `${activos} de ${estado.max} activos` : ''
     $('cj-lista').innerHTML = activos === 0
@@ -986,9 +1011,13 @@ export async function initCajero() {
   // ── Avisos "sumó su punto" (2F) ──
   // Llegan por tiempo real o al ponerse al día; se muestran de uno en uno.
   // El normal se cierra solo a los 6 s; el de premio solo con "Listo".
-  function encolarAviso(fila) {
+  function encolarAviso(fila, origen) {
     if (!fila?.reclamado_en || avisosVistos.has(fila.id)) return
-    avisosVistos.add(fila.id)
+    if (avisos.actual?.id === fila.id || avisos.cola.some(f => f.id === fila.id)) return
+    // Solo diagnóstico (no se muestra): por dónde llegó y cuánto tardó.
+    // Depende de que el reloj del celular esté bien puesto.
+    const segundos = ((Date.now() - new Date(fila.reclamado_en).getTime()) / 1000).toFixed(1)
+    console.info(`[Sello] Aviso por ${origen}: ${segundos} s desde reclamado_en (código ${fila.id})`)
     avisos.cola.push(fila)
     if (!avisos.actual) siguienteAviso()
   }
@@ -1000,6 +1029,7 @@ export async function initCajero() {
     const el = $('cj-exito')
     if (!el) return
     if (!fila) { el.hidden = true; el.innerHTML = ''; return }
+    marcarAvisoVisto(fila.id)
     const premio = fila.aviso_premio_listo === true
     const quien = `${esc(fila.aviso_nombre || 'Cliente')} (···${esc(fila.aviso_ultimos4 || '····')})`
     const puntos = fila.aviso_puntos != null && fila.aviso_meta != null ? `${fila.aviso_puntos}/${fila.aviso_meta}` : ''
@@ -1027,11 +1057,43 @@ export async function initCajero() {
   }
 
   // Un código propio cambió: si se reclamó o se canceló, deja de estar pendiente.
-  function alCambiarCodigo(fila) {
+  function alCambiarCodigo(fila, origen) {
     if (!fila?.id || !(fila.reclamado_en || fila.cancelado_en)) return
     if (estado.abierto?.id === fila.id) cerrarQR()
     quitar(fila.id)
-    if (fila.reclamado_en) encolarAviso(fila)
+    if (fila.reclamado_en) encolarAviso(fila, origen)
+  }
+
+  // Red de seguridad para que el aviso llegue en 1-3 s aunque Realtime tarde:
+  // cada 3 s pregunta por los códigos pendientes que ya conoce (por id).
+  // Solo corre con códigos activos y con la pantalla visible.
+  const sondeo = { intervalo: null, enCurso: false }
+
+  function actualizarSondeo() {
+    const debeCorrer = vigente() && estado.codigos.length > 0
+    if (debeCorrer && !sondeo.intervalo) sondeo.intervalo = setInterval(sondear, 3000)
+    if (!debeCorrer && sondeo.intervalo) { clearInterval(sondeo.intervalo); sondeo.intervalo = null }
+  }
+
+  async function sondear() {
+    if (!vigente()) { actualizarSondeo(); return }
+    if (document.hidden || sondeo.enCurso) return
+    const ids = estado.codigos.map(c => c.id)
+    if (!ids.length) { actualizarSondeo(); return }
+    sondeo.enCurso = true
+    try {
+      const { data, error } = await supabase
+        .from('codigos')
+        .select('id, reclamado_en, cancelado_en, aviso_nombre, aviso_ultimos4, aviso_puntos, aviso_meta, aviso_premio_listo')
+        .in('id', ids)
+      if (!vigente()) return
+      if (error) throw error
+      for (const fila of data || []) alCambiarCodigo(fila, 'consulta de respaldo')
+    } catch (e) {
+      console.error('Error en la consulta de respaldo de códigos:', e)
+    } finally {
+      sondeo.enCurso = false
+    }
   }
 
   // Para no perder avisos (señal caída, pantalla apagada): códigos propios
@@ -1048,7 +1110,7 @@ export async function initCajero() {
         .order('reclamado_en', { ascending: true })
       if (!vigente()) return
       if (error) throw error
-      for (const fila of data || []) alCambiarCodigo(fila)
+      for (const fila of data || []) alCambiarCodigo(fila, 'búsqueda al ponerse al día')
     } catch (e) {
       console.error('Error al buscar códigos reclamados:', e)
     }
@@ -1072,7 +1134,7 @@ export async function initCajero() {
         .channel(`cajero-${estado.usuarioId}-${sesion}`)
         .on('postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'codigos', filter: `creado_por=eq.${estado.usuarioId}` },
-          payload => { if (vigente()) alCambiarCodigo(payload.new) })
+          payload => { if (vigente()) alCambiarCodigo(payload.new, 'Realtime') })
         .subscribe(status => {
           // Al conectar y al reconectar se revisa lo que pudo llegar mientras no había conexión.
           if (status === 'SUBSCRIBED' && vigente()) ponerseAlDia()
@@ -1114,6 +1176,7 @@ export async function initCajero() {
 
   function limpiar() {
     clearInterval(reloj)
+    clearInterval(sondeo.intervalo); sondeo.intervalo = null
     clearTimeout(avisos.temporizador)
     document.removeEventListener('visibilitychange', alVolver)
     window.removeEventListener('online', alVolver)
@@ -1134,6 +1197,7 @@ export async function initCajero() {
     if (c) mostrarQR(c)
   })
 
+  cargarAvisosVistos()
   cargarPendientes()
   conectarTiempoReal()
   try {
