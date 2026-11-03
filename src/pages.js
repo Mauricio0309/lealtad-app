@@ -249,6 +249,34 @@ function inyectarEstilos() {
     .cj-manual-caja { max-width: 420px; margin: 0 auto; }
     .cj-manual .cl-btn { margin-top: 0; }
     .cj-exito.premio .cj-exito-listo { color: #78350f; }
+    .cj-canjear { width: 100%; height: 72px; margin-top: 12px; border: 2px solid var(--negocio-color, ${DS.green800}); border-radius: 20px; background: ${DS.white}; color: var(--negocio-color, ${DS.green800}); font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform 0.1s; }
+    .cj-canjear:active { transform: scale(0.98); }
+    .cj-canje { position: fixed; inset: 0; z-index: 250; background: ${DS.white}; overflow-y: auto; display: flex; padding: calc(24px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom)); }
+    .cj-canje[hidden] { display: none; }
+    .cj-canje-caja { width: 100%; max-width: 420px; margin: 0 auto; display: flex; flex-direction: column; text-align: center; }
+    .cj-canje-casillas { display: flex; justify-content: center; gap: 12px; margin: 24px 0 12px; }
+    .cj-canje-casilla { width: 64px; height: 80px; border: 2px solid ${DS.gray300}; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-family: 'Sora', sans-serif; font-size: 40px; font-weight: 800; color: ${DS.gray900}; font-variant-numeric: tabular-nums; }
+    .cj-canje-casilla.llena { border-color: var(--negocio-color, ${DS.green800}); }
+    .cj-canje-casillas.error .cj-canje-casilla { border-color: #dc2626; }
+    .cj-canje-casillas.sacudir { animation: cjSacudir 0.35s ease; }
+    .cj-canje-msg { min-height: 48px; font-size: 16px; line-height: 1.4; color: ${DS.gray700}; }
+    .cj-canje-msg.error { color: #b91c1c; font-weight: 600; }
+    .cj-teclado { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: auto; padding-top: 12px; }
+    .cj-tecla { height: 68px; border: none; border-radius: 16px; background: ${DS.gray100}; color: ${DS.gray900}; font-family: 'Sora', sans-serif; font-size: 28px; font-weight: 700; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    .cj-tecla:active { background: ${DS.gray300}; }
+    .cj-tecla:disabled { opacity: 0.4; cursor: not-allowed; }
+    .cj-tecla.vacia { visibility: hidden; }
+    .cj-canje-pie { margin-top: 12px; }
+    .cj-canje-ficha { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 16px 0; }
+    .cj-canje-premio-lbl { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: ${DS.gray500}; }
+    .cj-canje-premio { font-family: 'Sora', sans-serif; font-size: 32px; font-weight: 800; line-height: 1.15; color: ${DS.gray900}; }
+    .cj-canje-quien { font-family: 'Sora', sans-serif; font-size: 34px; font-weight: 800; line-height: 1.15; color: ${DS.gray900}; margin-top: 24px; }
+    .cj-canje-tel { font-family: 'Sora', sans-serif; font-size: 34px; font-weight: 800; color: ${DS.gray700}; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+    .cj-canje-alerta { margin-top: 24px; border-radius: 14px; padding: 14px 16px; background: ${DS.gold100}; border: 1px solid #fde68a; color: #92400e; font-size: 17px; font-weight: 700; }
+    .cj-canje-confirmar { width: 100%; height: 72px; border: none; border-radius: 20px; background: ${DS.green600}; color: ${DS.white}; font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 800; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    .cj-canje-confirmar:active { transform: scale(0.98); }
+    .cj-canje-confirmar:disabled { opacity: 0.6; cursor: wait; }
+    @keyframes cjSacudir { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
 
     .cl-root { min-height: 100vh; background: ${DS.white}; color: ${DS.gray900}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
     .cl-root.gris { background: #F5F6F8; }
@@ -299,8 +327,16 @@ function inyectarEstilos() {
       100% { background-color: var(--negocio-color, #2B4ACB); box-shadow: inset 0 0 0 0 transparent; transform: scale(1); }
     }
     @media (prefers-reduced-motion: reduce) {
-      .cl-sello.nuevo, .cl-sello.nuevo svg, .cl-exito-icono { animation: none; }
+      .cl-sello.nuevo, .cl-sello.nuevo svg, .cl-exito-icono, .cj-canje-casillas.sacudir { animation: none; }
     }
+    .cl-cuerpo .cl-btn.cl-canjear-btn { margin-top: 14px; height: 68px; font-size: 22px; }
+    .cl-exito-icono.emoji { font-size: 36px; line-height: 1; }
+    .cl-canje-lbl { text-align: center; font-size: 15px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: ${DS.gray500}; }
+    .cl-canje-codigo { text-align: center; font-size: clamp(64px, 24vw, 104px); font-weight: 800; line-height: 1; letter-spacing: 0.12em; padding-left: 0.12em; color: ${DS.gray900}; font-variant-numeric: tabular-nums; margin-top: 10px; }
+    .cl-canje-tiempo { text-align: center; font-size: 24px; font-weight: 700; color: ${DS.gray700}; font-variant-numeric: tabular-nums; margin-top: 16px; }
+    .cl-canje-tiempo.poco { color: #b91c1c; }
+    .cl-canje-instr { text-align: center; font-size: 26px; font-weight: 800; line-height: 1.2; color: ${DS.gray900}; margin-top: 28px; }
+    .cl-canje-premio { text-align: center; font-size: 17px; line-height: 1.4; color: ${DS.gray500}; margin-top: 6px; }
     .cl-premio { background: ${DS.white}; border-radius: 24px; padding: 20px; margin-top: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     .cl-premio-lbl { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: ${DS.gray500}; }
     .cl-premio-nombre { font-size: 22px; font-weight: 800; line-height: 1.25; margin-top: 6px; color: ${DS.gray900}; }
@@ -709,6 +745,7 @@ export function paginaCajero() {
       </div>
       <div class="cj-main">
         <button class="cj-cobre" id="cj-cobre"><span class="cj-cobre-icon">🧾</span>Cobré una cuenta</button>
+        <button class="cj-canjear" id="cj-canjear"><span aria-hidden="true">🎁</span>Canjear premio</button>
         <div id="cj-msg"></div>
       </div>
       <div class="s-card">
@@ -734,6 +771,9 @@ export function paginaCajero() {
           <button class="cl-btn" id="cj-manual-sumar">Sumar punto</button>
           <button class="cl-enlace" id="cj-manual-cerrar">Cancelar</button>
         </div>
+      </div>
+      <div class="cj-canje" id="cj-canje" role="dialog" aria-label="Canjear premio" hidden>
+        <div class="cj-canje-caja" id="cj-canje-caja"></div>
       </div>
       <div class="cj-qr" id="cj-qr" hidden>
         <div>
@@ -910,12 +950,23 @@ export async function initCajero() {
     if (!el) return
     if (!fila) { el.hidden = true; el.innerHTML = ''; return }
     marcarAvisoVisto(fila.id)
-    const premio = fila.aviso_premio_listo === true
+    // El aviso de canje (Fase 3) es verde como el normal, aunque al cliente
+    // todavía le alcance para otro premio.
+    const premio = fila.aviso_premio_listo === true && !fila.canje
     const quien = `${esc(fila.aviso_nombre || 'Cliente')} (···${esc(fila.aviso_ultimos4 || '····')})`
     const puntos = fila.aviso_puntos != null && fila.aviso_meta != null ? `${fila.aviso_puntos}/${fila.aviso_meta}` : ''
     const manual = fila.manual ? ' · captura manual' : ''
     el.className = `cj-exito${premio ? ' premio' : ''}`
-    el.innerHTML = premio
+    el.innerHTML = fila.canje
+      ? `<div class="cj-exito-centro">
+          <div class="cj-exito-icono">🎁</div>
+          <div class="cj-exito-titulo">¡Premio entregado!</div>
+          <div class="cj-exito-quien">${quien}</div>
+          <div class="cj-exito-texto">${esc(fila.premio_texto || '')}</div>
+          ${puntos ? `<div class="cj-exito-texto">Ahora lleva ${puntos}</div>` : ''}
+        </div>
+        <button class="cj-exito-listo" id="cj-exito-listo">Listo</button>`
+      : premio
       ? `<div class="cj-exito-centro">
           <div class="cj-exito-icono">🎁</div>
           <div class="cj-exito-titulo">¡Le toca premio!</div>
@@ -1061,6 +1112,8 @@ export async function initCajero() {
     clearTimeout(avisos.temporizador)
     document.removeEventListener('visibilitychange', alVolver)
     window.removeEventListener('online', alVolver)
+    document.removeEventListener('keydown', teclaFisicaCanje)
+    clearInterval(canje.relojBloqueo)
     mantenerPantalla(false)
     if (canal) {
       supabase.removeChannel(canal)
@@ -1148,6 +1201,200 @@ export async function initCajero() {
   $('cj-manual-tel').addEventListener('keydown', e => { if (e.key === 'Enter') $('cj-manual-nombre').focus() })
   $('cj-manual-nombre').addEventListener('input', () => errorManual('nombre', ''))
   $('cj-manual-nombre').addEventListener('keydown', e => { if (e.key === 'Enter') sumarManual() })
+
+  // ── Canje del premio (Fase 3): la llave del mesero ──
+  // El mesero escribe el código de 4 dígitos que le muestra el cliente, ve el
+  // premio, el nombre y los últimos 4 dígitos, y confirma la entrega.
+  // Todo lo decide el servidor: si el código existe, si sigue vigente, si el
+  // cliente tiene los puntos y cuántos intentos fallidos lleva el mesero.
+  const canje = { digitos: '', consultando: false, confirmando: false, ficha: null, bloqueoHasta: 0, relojBloqueo: null }
+  const canjeAbierto = () => $('cj-canje') && !$('cj-canje').hidden
+  const bloqueadoCanje = () => canje.bloqueoHasta > Date.now()
+
+  function mensajeCanje(texto, tipo = '') {
+    const el = $('cj-canje-msg')
+    if (!el) return
+    el.className = `cj-canje-msg ${tipo}`
+    el.textContent = texto || ''
+  }
+
+  function pintarCasillas(error = false) {
+    const el = $('cj-canje-casillas')
+    if (!el) return
+    el.innerHTML = [0, 1, 2, 3].map(i =>
+      `<span class="cj-canje-casilla${i < canje.digitos.length ? ' llena' : ''}">${canje.digitos[i] || ''}</span>`).join('')
+    el.classList.toggle('error', error)
+    // La sacudida se reinicia en cada error, aunque el anterior siga en pantalla.
+    el.classList.remove('sacudir')
+    if (error) { void el.offsetWidth; el.classList.add('sacudir') }
+  }
+
+  function activarTeclado(activo) {
+    document.querySelectorAll('#cj-teclado .cj-tecla').forEach(b => { b.disabled = !activo })
+  }
+
+  function pintarTeclado() {
+    const teclas = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'borrar']
+    $('cj-canje-caja').innerHTML = `
+      <div class="cj-qr-titulo">Canjear premio</div>
+      <div class="cj-qr-sub">Escribe el código que te muestra el cliente</div>
+      <div class="cj-canje-casillas" id="cj-canje-casillas" aria-live="polite"></div>
+      <div class="cj-canje-msg" id="cj-canje-msg" role="status"></div>
+      <div class="cj-teclado" id="cj-teclado">
+        ${teclas.map(t => t === ''
+          ? '<span class="cj-tecla vacia" aria-hidden="true"></span>'
+          : `<button type="button" class="cj-tecla" data-tecla="${t}"${t === 'borrar' ? ' aria-label="Borrar"' : ''}>${t === 'borrar' ? '⌫' : t}</button>`).join('')}
+      </div>
+      <button type="button" class="s-btn ghost cj-canje-pie" data-canje="cerrar">Cerrar</button>`
+    pintarCasillas()
+  }
+
+  function pintarFicha() {
+    const f = canje.ficha
+    $('cj-canje-caja').innerHTML = `
+      <div class="cj-canje-ficha">
+        <div class="cj-canje-premio-lbl">Premio</div>
+        <div class="cj-canje-premio">${esc(f.premio)}</div>
+        <div class="cj-canje-quien">${esc(f.nombre || 'Cliente')}</div>
+        <div class="cj-canje-tel">···${esc(f.ultimos4 || '····')}</div>
+        <div class="cj-canje-alerta">Confírmalo solo si ves al cliente</div>
+      </div>
+      <div class="cj-canje-msg error" id="cj-canje-msg" role="alert"></div>
+      <button type="button" class="cj-canje-confirmar" id="cj-canje-confirmar" data-canje="confirmar">Confirmar entrega</button>
+      <button type="button" class="s-btn ghost cj-canje-pie" data-canje="cerrar">Cancelar</button>`
+  }
+
+  function abrirCanje() {
+    canje.digitos = ''; canje.ficha = null
+    pintarTeclado()
+    $('cj-canje').hidden = false
+    document.addEventListener('keydown', teclaFisicaCanje)
+    // Si el mesero sigue bloqueado por intentos fallidos, el teclado sigue apagado.
+    if (bloqueadoCanje()) bloquearCanje((canje.bloqueoHasta - Date.now()) / 1000)
+  }
+
+  function cerrarCanje() {
+    $('cj-canje').hidden = true
+    canje.digitos = ''; canje.ficha = null
+    document.removeEventListener('keydown', teclaFisicaCanje)
+  }
+
+  // Tras 5 códigos incorrectos seguidos, el servidor bloquea 5 minutos.
+  function bloquearCanje(segundos) {
+    canje.bloqueoHasta = Date.now() + Math.max(1, Number(segundos) || 300) * 1000
+    clearInterval(canje.relojBloqueo)
+    const tic = () => {
+      const ms = canje.bloqueoHasta - Date.now()
+      if (ms <= 0 || !vigente()) {
+        clearInterval(canje.relojBloqueo); canje.relojBloqueo = null
+        if (vigente() && canjeAbierto() && !canje.ficha) { activarTeclado(true); mensajeCanje('') }
+        return
+      }
+      if (canjeAbierto() && !canje.ficha) {
+        activarTeclado(false)
+        mensajeCanje(`Demasiados códigos incorrectos. Espera ${formatoTiempo(ms)} para intentar de nuevo.`, 'error')
+      }
+    }
+    canje.relojBloqueo = setInterval(tic, 1000)
+    tic()
+  }
+
+  function teclear(t) {
+    if (canje.ficha || canje.consultando || bloqueadoCanje()) return
+    if (t === 'borrar') canje.digitos = canje.digitos.slice(0, -1)
+    else if (/^[0-9]$/.test(t) && canje.digitos.length < 4) canje.digitos += t
+    else return
+    mensajeCanje('')
+    pintarCasillas()
+    // Al cuarto dígito se busca solo: un toque menos para el mesero.
+    if (canje.digitos.length === 4) consultarCanje()
+  }
+
+  // Teclado físico (tablet o computadora en caja). Enter NO confirma la entrega:
+  // confirmar siempre es un toque a propósito en el botón.
+  function teclaFisicaCanje(e) {
+    if (!canjeAbierto()) return
+    if (/^[0-9]$/.test(e.key)) { e.preventDefault(); teclear(e.key) }
+    else if (e.key === 'Backspace') { e.preventDefault(); teclear('borrar') }
+    else if (e.key === 'Escape') cerrarCanje()
+  }
+
+  async function consultarCanje() {
+    canje.consultando = true
+    activarTeclado(false); mensajeCanje('Buscando...')
+    try {
+      const { data, error } = await supabase.rpc('consultar_canje', { p_codigo: canje.digitos })
+      if (!vigente() || !canjeAbierto()) return
+      if (error) throw error
+      if (data?.estado === 'pendiente') { canje.ficha = data; pintarFicha(); return }
+      canje.digitos = ''; pintarCasillas(true)
+      if (data?.estado === 'entregado') return mensajeCanje('Ese premio ya se entregó.', 'error')
+      if (data?.estado === 'cancelado') return mensajeCanje('El cliente canceló ese código. Pídele que genere otro.', 'error')
+      if (data?.estado === 'caducado') return mensajeCanje('Ese código caducó. Pídele al cliente que genere otro.', 'error')
+      if (data?.bloqueado_segundos > 0) return bloquearCanje(data.bloqueado_segundos)
+      const quedan = Number(data?.intentos_restantes)
+      // Solo se avisa de los intentos cuando ya quedan pocos.
+      mensajeCanje(quedan > 0 && quedan <= 2
+        ? `Código incorrecto. ${quedan === 1 ? 'Te queda 1 intento.' : `Te quedan ${quedan} intentos.`}`
+        : 'Código incorrecto. Revísalo con el cliente.', 'error')
+    } catch (e) {
+      if (!vigente() || !canjeAbierto()) return
+      canje.digitos = ''; pintarCasillas(true)
+      if (e?.message?.includes('DEMASIADOS_INTENTOS')) return bloquearCanje(Number(e?.details) || 300)
+      console.error('Error al consultar el canje:', e)
+      mensajeCanje(mensajeCajero(e, estado.max), 'error')
+    } finally {
+      canje.consultando = false
+      if (vigente() && !canje.ficha && !bloqueadoCanje()) activarTeclado(true)
+    }
+  }
+
+  async function confirmarCanje() {
+    const f = canje.ficha; const btn = $('cj-canje-confirmar')
+    if (!f || canje.confirmando || !btn) return
+    canje.confirmando = true; btn.disabled = true; btn.textContent = 'Confirmando...'
+    try {
+      const { data, error } = await supabase.rpc('confirmar_canje', { p_canje_id: f.canje_id })
+      if (!vigente()) return
+      if (error) throw error
+      cerrarCanje()
+      encolarAviso({
+        id: `canje-${f.canje_id}`,
+        reclamado_en: new Date().toISOString(),
+        canje: true,
+        premio_texto: data.premio,
+        aviso_nombre: data.nombre, aviso_ultimos4: data.ultimos4,
+        aviso_puntos: data.puntos, aviso_meta: data.meta,
+      }, 'canje')
+    } catch (e) {
+      if (!vigente()) return
+      const m = e?.message || ''
+      const texto = m.includes('CANJE_YA_ENTREGADO') ? 'Este premio ya se entregó.'
+        : m.includes('CANJE_CANCELADO') ? 'El cliente canceló este código.'
+        : m.includes('CANJE_CADUCADO') ? 'El código caducó. Pídele al cliente que genere otro.'
+        : m.includes('PUNTOS_INSUFICIENTES') ? 'El cliente ya no tiene los puntos para este premio.'
+        : m.includes('CANJE_NO_ENCONTRADO') ? 'Ese código ya no está disponible.'
+        : mensajeCajero(e, estado.max)
+      mensajeCanje(texto, 'error')
+      // Si el canje ya no se puede entregar, reintentar no sirve: se quita el botón.
+      // (Con un error de red sí se puede reintentar: confirmar dos veces nunca
+      // descuenta dos veces, la segunda responde "ya se entregó".)
+      if (/CANJE_|PUNTOS_INSUFICIENTES/.test(m)) btn.remove()
+      console.error('Error al confirmar el canje:', e)
+    } finally {
+      canje.confirmando = false
+      if (btn.isConnected) { btn.disabled = false; btn.textContent = 'Confirmar entrega' }
+    }
+  }
+
+  $('cj-canjear').addEventListener('click', abrirCanje)
+  $('cj-canje').addEventListener('click', e => {
+    const tecla = e.target.closest('[data-tecla]')
+    if (tecla && !tecla.disabled) return teclear(tecla.dataset.tecla)
+    const accion = e.target.closest('[data-canje]')?.dataset.canje
+    if (accion === 'cerrar') cerrarCanje()
+    else if (accion === 'confirmar') confirmarCanje()
+  })
 
   $('cj-cobre').addEventListener('click', cobre)
   $('cj-qr-cancelar').addEventListener('click', cancelar)
@@ -1264,13 +1511,17 @@ function saludoPorHora(fecha = new Date()) {
 }
 
 // Tarjeta con los datos de reclamar_codigo o de tarjeta_por_token.
-// Con exito = true arriba va "¡Ganaste 1 punto!" en lugar del saludo,
-// y el sello recién ganado se llena con una animación.
-function tarjetaClienteHTML(negocio, t, exito = false) {
+// modo = 'punto': arriba va "¡Ganaste 1 punto!" en lugar del saludo, y el
+// sello recién ganado se llena con una animación.
+// modo = 'premio': arriba va "¡Disfruta tu premio!" (el mesero acaba de
+// entregarlo) y la tarjeta ya muestra los puntos que le quedan.
+// Si completó la meta, aparece el botón "Canjear mi premio" (#cl-canjear);
+// quien pinta la tarjeta conecta ese botón con iniciarCanje.
+function tarjetaClienteHTML(negocio, t, modo = null) {
   const meta = Math.max(1, Number(t.meta) || 10)
   const puntos = Math.max(0, Number(t.puntos) || 0)
   const faltan = Math.max(0, meta - puntos)
-  const nuevo = exito && puntos <= meta ? puntos - 1 : -1
+  const nuevo = modo === 'punto' && puntos <= meta ? puntos - 1 : -1
   const sellos = meta <= 30
     ? Array.from({ length: meta }, (_, i) => {
         const lleno = i < puntos
@@ -1278,17 +1529,22 @@ function tarjetaClienteHTML(negocio, t, exito = false) {
         return `<span class="cl-sello${lleno ? ' lleno' : ''}${i === nuevo ? ' nuevo' : ''}">${contenido}</span>`
       }).join('')
     : ''
-  const cabecera = exito
+  const cabecera = modo === 'punto'
     ? `<div class="cl-exito-icono">${palomitaSVG(40)}</div>
        <h1 class="cl-titulo">¡Ganaste 1 punto!</h1>
        <p class="cl-sub">${esc(t.nombre)}, ya llevas ${puntos} de ${meta}.</p>`
+    : modo === 'premio'
+    ? `<div class="cl-exito-icono emoji" aria-hidden="true">🎁</div>
+       <h1 class="cl-titulo">¡Disfruta tu premio!</h1>
+       <p class="cl-sub">${t.premio_entregado ? `${esc(t.premio_entregado)}. ` : ''}Ahora llevas ${puntos} de ${meta}.</p>`
     : `<h1 class="cl-titulo">${saludoPorHora()}, ${esc(t.nombre)}</h1>
        <p class="cl-sub">Tu tarjeta en ${esc(negocio?.nombre || 'este negocio')}</p>`
   return pantallaCliente({
     negocio, gris: true, arriba: true,
     cuerpo: `
       ${cabecera}
-      ${t.premio_listo ? `<div class="cl-listo">🎉 ¡Ya completaste tu meta!<br>Pídele tu premio al mesero</div>` : ''}
+      ${t.premio_listo ? `<div class="cl-listo">🎉 ¡Ya completaste tu meta!</div>
+        <button class="cl-btn cl-canjear-btn" id="cl-canjear">Canjear mi premio</button>` : ''}
       <div class="cl-tarjeta">
         <div class="cl-progreso" aria-label="${puntos} de ${meta} puntos"><span class="cl-progreso-num">${puntos}</span><span class="cl-progreso-meta">/ ${meta}</span></div>
         <div class="cl-progreso-lbl">puntos</div>
@@ -1416,8 +1672,9 @@ export async function initReclamar(negocioId, codigo) {
     // La URL pasa a ser la de la tarjeta: si recarga o vuelve después, ve su tarjeta
     // en vez de un código ya usado.
     try { history.replaceState(null, '', `#/tarjeta/${id}`) } catch (e) {}
-    pintar(tarjetaClienteHTML(negocio, data, true))
+    pintar(tarjetaClienteHTML(negocio, data, 'punto'))
     $('cl-privacidad')?.addEventListener('click', abrirAvisoPrivacidadCliente)
+    $('cl-canjear')?.addEventListener('click', () => iniciarCanje(id, negocio))
     // Esta pantalla ya es la tarjeta: al volver a la app se recarga como tarjeta.
     const alVolver = () => {
       if (document.visibilityState !== 'visible') return
@@ -1545,6 +1802,7 @@ export async function initTarjeta(negocioId, { hayTarjeta = false, desdeMostrado
       aplicarColorNegocio(data.negocio?.color_principal || AZUL_RESPALDO)
       pintar(tarjetaClienteHTML(data.negocio, data))
       $('cl-privacidad')?.addEventListener('click', abrirAvisoPrivacidadCliente)
+      $('cl-canjear')?.addEventListener('click', () => iniciarCanje(negocioId, data.negocio, { desdeMostrador }))
       mostrando = true
     } catch (e) {
       if (!vigente() || mio !== pedido) return
@@ -1573,6 +1831,218 @@ export async function initTarjeta(negocioId, { hayTarjeta = false, desdeMostrado
   document.addEventListener('visibilitychange', alVolver)
 
   cargar()
+}
+
+// ── Canje del premio (Fase 3): la llave del cliente ──
+// El cliente toca "Canjear mi premio" y ve un código de 4 dígitos (5 minutos,
+// un solo uso) para mostrárselo al mesero. Su celular pregunta cada ~3 s si
+// el mesero ya confirmó la entrega.
+// Abre su propia "sesión" de cliente: la tarjeta de abajo deja de recargarse
+// sola mientras el código está en pantalla, y al terminar se vuelve a abrir.
+// Si vuelve a tocar "Canjear" con un código vigente, el servidor devuelve el
+// mismo código (no crea otro).
+async function iniciarCanje(negocioId, negocio, opcionesTarjeta = {}) {
+  const sesion = ++clienteSesion
+  const $ = id => document.getElementById(id)
+  const vigente = () => sesion === clienteSesion && !!$('cl-app')
+  const pintar = html => { if (vigente()) $('cl-app').innerHTML = html }
+  const token = leerToken(negocioId)
+  // limite: momento (reloj del celular) en que caduca. Se calcula con los
+  // segundos que dice el servidor, así no importa si la hora del celular está mal.
+  let canje = null // { codigo, premio, limite }
+  let terminado = false
+  let consultando = false
+  let reloj = null
+  let sondeo = null
+  let wakeLock = null
+
+  const formato = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` }
+  const avisar = texto => { const el = $('cl-aviso'); if (el) el.innerHTML = texto ? `<div class="cl-aviso" role="alert">${texto}</div>` : '' }
+
+  // Pantalla encendida mientras el código está a la vista (si el navegador lo permite):
+  // el cliente sostiene el celular frente al mesero y no debe apagarse.
+  async function mantenerPantalla(encendida) {
+    try {
+      if (encendida && !wakeLock && 'wakeLock' in navigator) {
+        wakeLock = await navigator.wakeLock.request('screen')
+        wakeLock.addEventListener('release', () => { wakeLock = null })
+      }
+      if (!encendida && wakeLock) await wakeLock.release()
+    } catch (e) { wakeLock = null }
+  }
+
+  function limpiar() {
+    clearInterval(reloj); clearInterval(sondeo); reloj = null; sondeo = null
+    document.removeEventListener('visibilitychange', alVolver)
+    mantenerPantalla(false)
+  }
+
+  function alVolver() {
+    if (!vigente()) return limpiar()
+    if (document.visibilityState !== 'visible') return
+    mantenerPantalla(true)
+    consultarEstado()
+  }
+
+  const verTarjeta = () => { terminado = true; limpiar(); if (vigente()) initTarjeta(negocioId, opcionesTarjeta) }
+
+  function mostrarAviso({ icono, titulo, sub = '', reintentar = false, otroCodigo = false }) {
+    terminado = true; limpiar()
+    pintar(pantallaEstadoCliente({
+      negocio, icono, titulo, sub,
+      acciones: `${reintentar ? '<button class="cl-btn" id="cl-reintentar">Reintentar</button>' : ''}
+        ${otroCodigo ? '<button class="cl-btn" id="cl-otro-codigo">Generar otro código</button>' : ''}
+        <button class="${reintentar || otroCodigo ? 'cl-enlace' : 'cl-btn secundario'}" id="cl-ver-tarjeta">Ver mi tarjeta</button>`,
+    }))
+    $('cl-reintentar')?.addEventListener('click', () => iniciarCanje(negocioId, negocio, opcionesTarjeta))
+    $('cl-otro-codigo')?.addEventListener('click', () => iniciarCanje(negocioId, negocio, opcionesTarjeta))
+    $('cl-ver-tarjeta')?.addEventListener('click', verTarjeta)
+  }
+
+  const caducado = () => mostrarAviso({
+    icono: '⏱️', titulo: 'Tu código caducó',
+    sub: 'Tus puntos siguen ahí. Genera otro cuando estés con el mesero.', otroCodigo: true,
+  })
+
+  function mostrarCodigo() {
+    pintar(pantallaCliente({
+      negocio,
+      cuerpo: `
+        <p class="cl-canje-lbl">Tu código</p>
+        <p class="cl-canje-codigo" aria-label="Código ${esc(canje.codigo.split('').join(' '))}">${esc(canje.codigo)}</p>
+        <p class="cl-canje-tiempo" id="cl-canje-tiempo">${formato(canje.limite - Date.now())}</p>
+        <h1 class="cl-canje-instr">Muéstraselo al mesero</h1>
+        <p class="cl-canje-premio">${esc(canje.premio)}</p>`,
+      acciones: `<div id="cl-aviso"></div>
+        <button class="cl-btn secundario" id="cl-canje-cancelar">Cancelar</button>`,
+    }))
+    $('cl-canje-cancelar')?.addEventListener('click', cancelar)
+    reloj = setInterval(tic, 1000)
+    sondeo = setInterval(consultarEstado, 3000)
+    document.addEventListener('visibilitychange', alVolver)
+    mantenerPantalla(true)
+  }
+
+  // Cada segundo: cuenta regresiva. Al llegar a 0 se pregunta una última vez
+  // al servidor (el mesero pudo confirmar justo antes) y luego se da por caducado.
+  function tic() {
+    if (!vigente()) return limpiar()
+    if (terminado) return
+    const ms = canje.limite - Date.now()
+    const el = $('cl-canje-tiempo')
+    if (el) { el.textContent = formato(ms); el.classList.toggle('poco', ms < 60 * 1000) }
+    if (ms <= 0 && !consultando) consultarEstado(true)
+  }
+
+  async function consultarEstado(final = false) {
+    if (!vigente()) return limpiar()
+    if (terminado || consultando || !canje || (!final && document.hidden)) return
+    consultando = true
+    try {
+      const { data, error } = await supabase.rpc('estado_canje', { p_token: token, p_codigo: canje.codigo })
+      if (!vigente() || terminado) return
+      if (error) throw error
+      if (data?.estado === 'entregado') return entregado(data)
+      if (data?.estado === 'caducado') return caducado()
+      if (data?.estado === 'cancelado') return verTarjeta()
+      // Sigue pendiente: se ajusta la cuenta regresiva a lo que dice el servidor.
+      const seg = Number(data?.segundos_restantes)
+      if (Number.isFinite(seg)) canje.limite = Date.now() + seg * 1000
+      if (final && seg <= 0) caducado()
+    } catch (e) {
+      if (!vigente() || terminado) return
+      const m = e?.message || ''
+      if (m.includes('TOKEN_INVALIDO')) { borrarToken(negocioId); return verTarjeta() }
+      if (m.includes('CANJE_NO_ENCONTRADO')) return verTarjeta()
+      // Sin señal: se reintenta en la siguiente vuelta; al llegar a 0, se da por caducado.
+      if (final) return caducado()
+      if (!sinInternet(e)) console.error('Error al consultar el canje:', e)
+    } finally {
+      consultando = false
+    }
+  }
+
+  // El mesero confirmó: "¡Disfruta tu premio!" sobre la tarjeta ya actualizada.
+  async function entregado(data) {
+    terminado = true; limpiar()
+    try { navigator.vibrate?.([120, 60, 120]) } catch (e) {}
+    try {
+      const { data: t, error } = await supabase.rpc('tarjeta_por_token', { p_token: token })
+      if (!vigente()) return
+      if (error) throw error
+      pintar(tarjetaClienteHTML(t.negocio, { ...t, premio_entregado: data?.premio || canje.premio }, 'premio'))
+      $('cl-privacidad')?.addEventListener('click', abrirAvisoPrivacidadCliente)
+      $('cl-canjear')?.addEventListener('click', () => iniciarCanje(negocioId, t.negocio, opcionesTarjeta))
+      // Esta pantalla ya es la tarjeta: al volver a la app se recarga como tarjeta normal.
+      const alVolverTarjeta = () => {
+        if (document.visibilityState !== 'visible') return
+        document.removeEventListener('visibilitychange', alVolverTarjeta)
+        if (vigente()) initTarjeta(negocioId, { ...opcionesTarjeta, hayTarjeta: true })
+      }
+      document.addEventListener('visibilitychange', alVolverTarjeta)
+    } catch (e) {
+      if (!vigente()) return
+      // Sin la tarjeta nueva (sin señal): al menos la celebración.
+      pintar(pantallaEstadoCliente({
+        negocio, icono: '🎁', titulo: '¡Disfruta tu premio!', sub: esc(data?.premio || canje.premio),
+        acciones: '<button class="cl-btn" id="cl-ver-tarjeta">Ver mi tarjeta</button>',
+      }))
+      $('cl-ver-tarjeta')?.addEventListener('click', verTarjeta)
+    }
+  }
+
+  async function cancelar() {
+    const btn = $('cl-canje-cancelar')
+    if (!btn || btn.disabled || terminado) return
+    btn.disabled = true; btn.textContent = 'Cancelando...'; avisar('')
+    try {
+      const { error } = await supabase.rpc('cancelar_canje', { p_token: token, p_codigo: canje.codigo })
+      if (!vigente() || terminado) return
+      if (error) throw error
+      verTarjeta()
+    } catch (e) {
+      if (!vigente() || terminado) return
+      const m = e?.message || ''
+      // El mesero lo confirmó justo antes de que tocara "Cancelar".
+      if (m.includes('CANJE_YA_ENTREGADO')) return entregado({ premio: canje.premio })
+      if (m.includes('TOKEN_INVALIDO')) { borrarToken(negocioId); return verTarjeta() }
+      if (m.includes('CANJE_NO_ENCONTRADO')) return verTarjeta()
+      if (!sinInternet(e)) console.error('Error al cancelar el canje:', e)
+      avisar(sinInternet(e) ? 'Sin conexión. Revisa tu señal e intenta de nuevo.' : 'No se pudo cancelar. Intenta de nuevo.')
+      if (btn.isConnected) { btn.disabled = false; btn.textContent = 'Cancelar' }
+    }
+  }
+
+  async function crear() {
+    if (!token) return verTarjeta()
+    pintar(pantallaCliente({ negocio, cuerpo: '<p class="cl-cargando">Preparando tu código...</p>' }))
+    try {
+      const { data, error } = await supabase.rpc('crear_canje', { p_token: token })
+      if (!vigente()) return
+      if (error) throw error
+      canje = {
+        codigo: String(data.codigo),
+        premio: data.premio || '',
+        limite: Date.now() + Math.max(0, Number(data.segundos_restantes) || 0) * 1000,
+      }
+      mostrarCodigo()
+    } catch (e) {
+      if (!vigente()) return
+      const m = e?.message || ''
+      if (m.includes('TOKEN_INVALIDO')) { borrarToken(negocioId); return verTarjeta() }
+      if (m.includes('PUNTOS_INSUFICIENTES')) return mostrarAviso({ icono: '🎯', titulo: 'Aún no completas tu tarjeta', sub: 'Sigue sumando visitas para tu premio.' })
+      if (m.includes('NUMERO_EXCLUIDO')) return mostrarAviso({ icono: '🚫', titulo: 'Este número no puede canjear premios aquí' })
+      if (m.includes('NEGOCIO_INACTIVO')) return mostrarAviso({ icono: '🔍', titulo: 'Este negocio no está disponible' })
+      if (!sinInternet(e)) console.error('Error al crear el canje:', e)
+      mostrarAviso({
+        icono: '📶',
+        titulo: sinInternet(e) ? 'Necesitas internet para canjear tu premio' : 'No pudimos crear tu código',
+        sub: 'Revisa tu señal e intenta de nuevo.', reintentar: true,
+      })
+    }
+  }
+
+  crear()
 }
 
 
