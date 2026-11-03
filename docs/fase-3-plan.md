@@ -22,6 +22,13 @@ Objetivo: el cliente canjea su premio sin que nadie pueda hacerlo solo. El clien
 - Antifraude: 5 códigos incorrectos seguidos bloquean al mesero 5 minutos. El mesero no puede leer la tabla de canjes (vería los códigos pendientes sin el celular del cliente); el dueño sí la lee, para su panel en la Fase 4.
 - El cliente usa su token de dispositivo (sin sesión); el mesero y el dueño usan su sesión.
 
+## Decisiones de la base de datos
+
+- **Tabla `canjes`:** la vieja (`cliente_id`, `premio_id` → `premios`, `fecha` sin zona) no se usaba y no servía para el código. Se borra y se crea de nuevo, solo si está vacía.
+- **Tabla nueva `canje_intentos`:** cuenta los códigos incorrectos seguidos de cada mesero, guarda el bloqueo y cuántas veces lo bloquearon (para el reporte de la Fase 4).
+- **El dueño lee `canjes` con una política**, no con una función: ve los canjes terminados de su negocio, pero no los pendientes vigentes ni la columna `codigo`. Así tampoco él puede confirmar sin el celular del cliente. La Fase 4 debe pedir columnas explícitas (no `select *`).
+- **Un código incorrecto no es un error en el servidor:** `consultar_canje` responde `no_encontrado`; si lanzara un error, la base desharía el conteo del intento.
+
 ## Funciones RPC
 
 | Función | Quién | Qué hace |
