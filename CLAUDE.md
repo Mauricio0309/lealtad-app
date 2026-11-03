@@ -140,6 +140,17 @@ Reemplaza el botón "Cobré una cuenta" del mesero; todo lo demás (reclamar, co
 - Pie "Powered by Sello" en la página del cliente (estilo Calendly), removible o personalizable en Pro.
 - "Modo mostrador": la misma PWA en una tablet o celular que el negocio ya tenga, para que el cliente teclee su número en el mostrador (con los mismos límites antifraude). No comprar tablets.
 
+## Personalización de la tarjeta (Fase 4, en el panel del dueño)
+- Opciones elegidas de una lista, nunca campos libres, con vista previa en vivo de la tarjeta.
+- Nombre y logo (subida de imagen), color de una paleta de ~8 colores con buen contraste (color libre solo si pasa comprobación de contraste), ícono del sello (palomita, taza de café, tijeras, taco, estrella, corazón), animación del sello (llenado suave, pop, sin animación; siempre respeta "reducir movimiento"), premio y meta con plantillas, mensaje de agradecimiento (máx. ~40 caracteres).
+- Se guardan con una función RPC que valida cada valor contra la lista permitida (no con actualizaciones directas a la tabla).
+
+## Panel de administración de Sello (después de la Fase 4, antes del segundo negocio)
+- Es para el dueño de Sello. Se identifica con una tabla aparte `admins` (user_id), comprobada en el servidor mediante funciones SECURITY DEFINER. Nunca con una contraseña en el código.
+- Ver todos los negocios con sus números (clientes, visitas, códigos) y estadísticas globales. Solo conteos: el admin nunca ve teléfonos ni nombres de clientes.
+- Dar de baja o reactivar un negocio con negocios.activo (ya bloquea login, creación de códigos y reclamos).
+- Dar de alta un negocio con su cuenta de dueño mediante una Edge Function (la llave service_role nunca va en el navegador).
+
 ## 4. App de Sello (ÚLTIMO paso; va DESPUÉS de WhatsApp)
 
 La app deja de ser "la tarjeta de un negocio" y se vuelve la cartera de lealtad del cliente en toda la ciudad.
