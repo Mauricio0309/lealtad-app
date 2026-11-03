@@ -3,11 +3,8 @@ import { getPage } from './router.js'
 import { isLoggedIn, getNegocioActual, getPerfilActual } from './auth.js'
 import {
   paginaCajero, initCajero,
-  paginaRegistro, initRegistro,
-  paginaCliente, initCliente,
   paginaLogin, initLogin,
   paginaQRNegocio, initQRNegocio,
-  paginaRegistroCliente, initRegistroCliente,
   paginaDueno, initDueno,
   paginaBienvenida, initBienvenida,
   paginaOnboarding, initOnboarding,
@@ -18,10 +15,33 @@ import {
   paginaTarjeta, initTarjeta,
 } from './pages.js'
 
+// Actualización automática de la PWA:
+// 1. Al abrir la app y cada que vuelve al primer plano se pregunta si hay un sw.js nuevo.
+// 2. Cuando el SW nuevo toma el control ("controllerchange") hay una versión nueva.
+// 3. Para no borrarle a nadie lo que está escribiendo, la recarga espera a que
+//    la app se oculte o a que cambie de pantalla.
 if ('serviceWorker' in navigator) {
+  let versionNueva = false
+  const recargar = () => { if (versionNueva) { versionNueva = false; window.location.reload() } }
+  // Si no había SW (primera visita), tomar el control no es una versión nueva.
+  const habiaControlador = !!navigator.serviceWorker.controller
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!habiaControlador) return
+    versionNueva = true
+    if (document.visibilityState === 'hidden') recargar()
+  })
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') recargar() })
+  window.addEventListener('hashchange', recargar)
+
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(() => console.log('Sello SW registrado'))
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+      .then(reg => {
+        console.log('Sello SW registrado')
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') reg.update().catch(() => {})
+        })
+      })
       .catch(err => console.log('SW error:', err))
   })
 }
@@ -48,21 +68,10 @@ async function render() {
     return
   }
 
-  if (page === 'cliente') {
-    app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
-    const parts = hash.split('/')
-    const negocioId = parts[2] || ''
-    const telefono = decodeURIComponent(parts[3] || '')
-    app.innerHTML = await paginaCliente(negocioId, telefono)
-    await initCliente(negocioId, telefono)
-    return
-  }
-
+  // QR fijo del mostrador: solo consulta la tarjeta del teléfono recordado.
   if (page === 'negocio') {
-    app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
-    const negocioId = hash.split('/')[2] || ''
-    app.innerHTML = await paginaQRNegocio(negocioId)
-    initQRNegocio(negocioId)
+    app.innerHTML = paginaQRNegocio()
+    initQRNegocio(hash.split('/')[2] || '')
     return
   }
 
@@ -71,15 +80,6 @@ async function render() {
     const negocioId = hash.split('/')[2] || ''
     app.innerHTML = await paginaLanding(negocioId)
     initLanding(negocioId)
-    return
-  }
-
-  if (page === 'registro-cliente') {
-    const parts = hash.split('/')
-    const negocioId = parts[2] || ''
-    const telefono = decodeURIComponent(parts[3] || '')
-    app.innerHTML = paginaRegistroCliente(negocioId, telefono)
-    initRegistroCliente(negocioId, telefono)
     return
   }
 
@@ -122,12 +122,12 @@ async function render() {
     return
   }
 
-  if (profile.role === 'mesero' && !['cajero', 'registro'].includes(page)) {
+  if (profile.role === 'mesero' && page !== 'cajero') {
     window.location.hash = '#/cajero'
     return
   }
 
-  if (profile.role === 'owner' && !['onboarding', 'bienvenida', 'kiosko', 'dueno', 'cajero', 'registro'].includes(page)) {
+  if (profile.role === 'owner' && !['onboarding', 'bienvenida', 'kiosko', 'dueno', 'cajero'].includes(page)) {
     window.location.hash = '#/bienvenida'
     return
   }
@@ -164,13 +164,6 @@ async function render() {
   if (page === 'cajero') {
     app.innerHTML = paginaCajero()
     initCajero()
-    return
-  }
-
-  if (page === 'registro') {
-    const telefono = hash.split('/')[2] || ''
-    app.innerHTML = paginaRegistro(telefono)
-    initRegistro()
     return
   }
 

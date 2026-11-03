@@ -2,10 +2,7 @@ export function getPage() {
   const hash = window.location.hash
   if (hash.startsWith('#/c/')) return 'reclamar'
   if (hash.startsWith('#/tarjeta/')) return 'tarjeta'
-  if (hash.startsWith('#/registro-cliente/')) return 'registro-cliente'
   if (hash.startsWith('#/negocio/')) return 'negocio'
-  if (hash.startsWith('#/registro')) return 'registro'
-  if (hash.startsWith('#/cliente/')) return 'cliente'
   if (hash.startsWith('#/landing/')) return 'landing'
   if (hash.startsWith('#/onboarding')) return 'onboarding'
   if (hash.startsWith('#/kiosko')) return 'kiosko'

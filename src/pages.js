@@ -2,8 +2,6 @@ import QRCode from 'qrcode'
 import { supabase } from './supabase.js'
 import { navigate } from './router.js'
 
-const ADMIN_PASSWORD = 'lealtad2024'
-
 // ═══════════════════════════════════════════════════════════
 // DESIGN SYSTEM
 // ═══════════════════════════════════════════════════════════
@@ -25,12 +23,6 @@ function getNivelActual(totalVisitas, niveles) {
   let actual = lista[0]
   for (const n of lista) { if (totalVisitas >= n.visitas_minimas) actual = n }
   return actual
-}
-
-function getSiguienteNivel(totalVisitas, niveles) {
-  if (!niveles || niveles.length === 0) return null
-  const lista = [...niveles].sort((a, b) => a.visitas_minimas - b.visitas_minimas)
-  return lista.find(n => n.visitas_minimas > totalVisitas) || null
 }
 
 function colorNivel(nivel) {
@@ -238,6 +230,15 @@ function inyectarEstilos() {
     .cj-qr-tiempo-lbl { font-size: 12px; color: ${DS.gray500}; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 8px; }
     .cj-qr-tiempo { font-family: 'Sora', sans-serif; font-size: 40px; font-weight: 800; color: ${DS.gray900}; font-variant-numeric: tabular-nums; line-height: 1.1; }
     .cj-qr-botones { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 10px; }
+    .dn-ayuda { font-size: 12px; color: ${DS.gray500}; margin-top: 6px; line-height: 1.5; }
+    .dn-plantillas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .dn-chip { min-height: 36px; padding: 6px 12px; border: 1.5px solid ${DS.gray300}; border-radius: 999px; background: ${DS.white}; color: ${DS.gray700}; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; }
+    .dn-chip:active { background: ${DS.gray100}; }
+    .dn-agregar { display: flex; gap: 8px; }
+    .dn-agregar .s-input { flex: 1; min-width: 0; }
+    .dn-agregar .s-btn { width: auto; padding: 0 20px; }
+    .dn-quitar { min-height: 40px; padding: 8px 14px; border: none; border-radius: 10px; background: #fee2e2; color: #dc2626; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .dn-quitar:disabled { opacity: 0.6; }
     .cj-exito { position: fixed; inset: 0; z-index: 300; background: ${DS.green600}; color: ${DS.white}; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: calc(24px + env(safe-area-inset-top)) 24px calc(20px + env(safe-area-inset-bottom)); text-align: center; font-family: 'Sora', sans-serif; animation: sFadeIn 0.2s ease; }
     .cj-exito[hidden] { display: none; }
     .cj-exito.premio { background: linear-gradient(160deg, ${DS.gold400}, ${DS.gold500}); color: #422006; }
@@ -507,141 +508,6 @@ const PASOS_ONBOARDING = [
   { icon: '🏆', titulo: 'Configura tus niveles de lealtad', desc: 'Define cuántas visitas necesita un cliente para subir de nivel y qué premio recibe al llegar.' },
   { icon: '📊', titulo: 'Ve tus estadísticas en tiempo real', desc: 'Consulta cuántos clientes tienes, qué días son más concurridos y quiénes son tus clientes más fieles.' },
 ]
-
-async function compartirHistoria({ tipo, negocioNombre, negocioEmoji, nivelNombre, nivelEmoji, premioNombre, totalVisitas, colorNegocio, clienteNombre, faltanVisitas, sigNivelPremio }) {
-  return new Promise((resolve) => {
-    // Formato vertical tipo tarjeta — estilo Duolingo
-    const canvas = document.createElement('canvas')
-    canvas.width = 1080; canvas.height = 1920
-    const ctx = canvas.getContext('2d')
-
-    // Fondo gris muy claro
-    ctx.fillStyle = '#f1f5f9'
-    ctx.fillRect(0, 0, 1080, 1920)
-
-    // Tarjeta blanca centrada con sombra simulada
-    const cx = 540, cy = 960
-    const cw = 860, ch = 1200
-    const cx0 = cx - cw/2, cy0 = cy - ch/2
-
-    // Sombra
-    ctx.fillStyle = 'rgba(0,0,0,0.08)'
-    ctx.beginPath()
-    const sr = 48
-    ctx.roundRect(cx0+8, cy0+12, cw, ch, sr)
-    ctx.fill()
-
-    // Tarjeta blanca
-    ctx.fillStyle = '#ffffff'
-    ctx.beginPath()
-    ctx.roundRect(cx0, cy0, cw, ch, sr)
-    ctx.fill()
-
-    // Franja verde superior de la tarjeta
-    ctx.fillStyle = '#0a5c47'
-    ctx.beginPath()
-    ctx.roundRect(cx0, cy0, cw, 16, [sr, sr, 0, 0])
-    ctx.fill()
-
-    // Logo Sello — círculo verde + palomita
-    const lx = cx, ly = cy0 + 110
-    ctx.strokeStyle = '#0a5c47'; ctx.lineWidth = 8
-    ctx.beginPath(); ctx.arc(lx, ly, 52, 0, Math.PI*2); ctx.stroke()
-    ctx.beginPath(); ctx.arc(lx, ly, 36, 0, Math.PI*2); ctx.stroke()
-    ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.strokeStyle = '#0a5c47'
-    const lpath = ctx.beginPath()
-    ctx.moveTo(lx-16, ly+2); ctx.lineTo(lx-4, ly+16); ctx.lineTo(lx+18, ly-14); ctx.stroke()
-
-    // "Sell" + "o" dorado
-    ctx.textAlign = 'center'
-    ctx.fillStyle = '#0a5c47'; ctx.font = 'bold 56px Arial'
-    const sellW = ctx.measureText('Sell').width
-    ctx.fillText('Sell', cx - ctx.measureText('o').width/2, ly + 90)
-    ctx.fillStyle = '#f5a623'
-    ctx.fillText('o', cx + sellW/2 - 2, ly + 90)
-
-    // Línea divisora
-    ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1.5
-    ctx.beginPath(); ctx.moveTo(cx0+60, ly+120); ctx.lineTo(cx0+cw-60, ly+120); ctx.stroke()
-
-    // Número grande de visitas
-    ctx.fillStyle = '#f5a623'; ctx.font = 'bold 220px Arial'; ctx.textAlign = 'center'
-    ctx.fillText(String(totalVisitas), cx, cy0 + 560)
-
-    // "visitas acumuladas"
-    ctx.fillStyle = '#64748b'; ctx.font = '48px Arial'
-    ctx.fillText('visitas acumuladas', cx, cy0 + 630)
-
-    // Línea divisora
-    ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1.5
-    ctx.beginPath(); ctx.moveTo(cx0+60, cy0+670); ctx.lineTo(cx0+cw-60, cy0+670); ctx.stroke()
-
-    // Texto dinámico según situación del cliente
-    // Si tiene premio: "El Carlitos le regaló un café gratis a Juan"
-    // Si no ha llegado: "Juan está a N visitas de ganarse un café gratis en El Carlitos"
-    let textoLinea1 = ''
-    let textoLinea2 = ''
-    if (premioNombre) {
-      textoLinea1 = `${negocioNombre} le regaló`
-      textoLinea2 = `${premioNombre} a ${clienteNombre || 'un cliente'}`
-    } else if (sigNivelPremio && faltanVisitas > 0) {
-      textoLinea1 = `${clienteNombre || 'Cliente'} está a ${faltanVisitas} visita${faltanVisitas === 1 ? '' : 's'} de ganarse`
-      textoLinea2 = `${sigNivelPremio} en ${negocioNombre}`
-    } else {
-      textoLinea1 = `${clienteNombre || 'Cliente'} tiene`
-      textoLinea2 = `${totalVisitas} visitas en ${negocioNombre}`
-    }
-    ctx.fillStyle = '#0f172a'; ctx.textAlign = 'center'
-    // Función para dibujar texto con wrap
-    const drawWrapped = (texto, startYp, fontSize, color = '#0f172a') => {
-      ctx.font = `bold ${fontSize}px Arial`; ctx.fillStyle = color
-      const maxWt = cw - 120
-      const wds = texto.split(' '); let ln = ''; const lns = []
-      for (const w of wds) {
-        const test = ln ? ln + ' ' + w : w
-        if (ctx.measureText(test).width > maxWt && ln) { lns.push(ln); ln = w }
-        else ln = test
-      }
-      if (ln) lns.push(ln)
-      lns.forEach((l, i) => ctx.fillText(l, cx, startYp + i * (fontSize + 14)))
-      return lns.length * (fontSize + 14)
-    }
-    const h1 = drawWrapped(textoLinea1, cy0 + 730, 54, '#64748b')
-    drawWrapped(textoLinea2, cy0 + 730 + h1 + 10, 62, '#0f172a')
-    const afterText = cy0 + 730 + h1 + 100
-
-    // Línea divisora
-    ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1.5
-    ctx.beginPath(); ctx.moveTo(cx0+60, cy0+1080); ctx.lineTo(cx0+cw-60, cy0+1080); ctx.stroke()
-
-    // Fecha y negocio pie
-    const fecha = new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
-    ctx.fillStyle = '#94a3b8'; ctx.font = '38px Arial'; ctx.textAlign = 'left'
-    ctx.fillText(negocioNombre, cx0 + 60, cy0 + 1130)
-    ctx.textAlign = 'right'
-    ctx.fillText(fecha, cx0 + cw - 60, cy0 + 1130)
-    setTimeout(() => {
-      canvas.toBlob(async (blob) => {
-        if (!blob) { resolve('error'); return }
-        const file = new File([blob], 'sello-historia.png', { type: 'image/png' })
-        const url = URL.createObjectURL(blob)
-        try {
-          if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file], title: tipo === 'premio' ? '¡Gané un premio!' : `¡Llegué a ${nivelNombre}!`, text: `Con Sello en ${negocioNombre} 🎉` })
-          } else {
-            const link = document.createElement('a'); link.href = url; link.download = 'sello-historia.png'; link.click()
-          }
-        } catch(e) {
-          // Fallback final — abrir imagen en nueva pestaña
-          window.open(url, '_blank')
-        }
-        setTimeout(() => URL.revokeObjectURL(url), 3000)
-        resolve('done')
-      }, 'image/png')
-    }, 100)
-  })
-}
-
 
 // ── Pantalla de celebración al subir de nivel ─────────────
 // ═══════════════════════════════════════════════════════════
@@ -1247,434 +1113,16 @@ export function initKiosko() {
   document.getElementById('kiosko-tel')?.addEventListener('keydown', e => { if (e.key === 'Enter') consultarProgreso() })
 }
 
-export function paginaRegistro(telefono = '') {
+// QR fijo del mostrador (#/negocio/<id>): solo para CONSULTAR. Si el teléfono
+// ya está recordado muestra la tarjeta; si no, "Pide tu código al pagar"
+// (decisión 4 del plan). No registra clientes ni pide números.
+export function paginaQRNegocio() {
   inyectarEstilos()
-  return `
-    <div style="padding-bottom:72px">
-      <div class="sello-topbar">${topbarBrand()}<span style="font-size:13px;color:rgba(255,255,255,0.6)">Nuevo cliente</span></div>
-      <div class="s-card" style="margin-top:16px">
-        <div class="s-section-label">Registrar cliente</div>
-        <div class="s-field"><label class="s-label">Nombre</label><input type="text" id="nombre" class="s-input" placeholder="Nombre del cliente" /></div>
-        <div class="s-field"><label class="s-label">Teléfono</label><input type="tel" id="tel" value="${telefono}" class="s-input" placeholder="10 dígitos" /></div>
-        <button class="s-btn primary" id="guardar" style="margin-top:8px">Guardar cliente</button>
-        <div id="msg" style="margin-top:10px"></div>
-      </div>
-    </div>
-    ${navBarCajero()}
-  `
-}
-
-export function initRegistro() {
-  inyectarEstilos(); initNavCajero()
-  document.getElementById('guardar').addEventListener('click', async () => {
-    const nombre = document.getElementById('nombre').value.trim(); const telefono = document.getElementById('tel').value.trim()
-    const msg = document.getElementById('msg'); const btn = document.getElementById('guardar')
-    if (!nombre || !telefono) { msg.innerHTML = `<p class="s-error">Llena todos los campos</p>`; return }
-    btn.disabled = true; btn.textContent = 'Guardando...'
-    try {
-      const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
-      const { data: registro, error } = await supabase.rpc('public_register_customer', {
-        p_business_id: negocio?.id,
-        p_phone: telefono,
-        p_name: nombre,
-      })
-      if (error) throw error
-      if (registro?.status !== 'created') throw new Error('Ese teléfono ya está registrado')
-      const { error: visitError } = await supabase.rpc('record_visit_temporary', { p_client_id: registro.client_id })
-      if (visitError) throw visitError
-      msg.innerHTML = `<div class="s-success">✓ Cliente registrado — primera visita sumada automáticamente</div>`
-      setTimeout(() => navigate('cajero'), 1500)
-    } catch (e) { msg.innerHTML = errMsg('guardar el cliente') }
-    finally { btn.disabled = false; btn.textContent = 'Guardar cliente' }
-  })
-}
-
-function isAdminAuth() { return sessionStorage.getItem('admin_auth') === 'ok' }
-
-export async function paginaAdmin() {
-  inyectarEstilos()
-  if (!isAdminAuth()) {
-    return `
-      <div class="s-login-root">
-        <div class="s-login-card">
-          <div class="s-login-logo">${logoSVG(48, DS.green800)}<div class="s-login-app">Sell<span>o</span></div><div class="s-login-sub">Panel de administrador</div></div>
-          <div class="s-field"><label class="s-label">Contraseña de administrador</label>${pwField('admin-password')}</div>
-          <button class="s-btn primary" id="btn-admin-login" style="margin-top:8px">Entrar</button>
-          <div id="msg-admin" style="margin-top:10px"></div>
-        </div>
-      </div>
-    `
-  }
-  try {
-    const { data: negocios } = await supabase.from('negocios').select('*')
-    const { data: clientes } = await supabase.from('clientes').select('*')
-    const { data: visitas } = await supabase.from('visitas').select('*')
-    const filas = (negocios || []).map(n => {
-      const cn = (clientes||[]).filter(c => c.negocio_id === n.id).length
-      const vn = (visitas||[]).filter(v => v.negocio_id === n.id).length
-      return `
-        <div class="s-row">
-          <div>
-            <div class="s-row-title">${n.emoji_negocio || '🏪'} ${n.nombre}</div>
-            <div class="s-row-sub">${n.email} · ${cn} clientes · ${vn} visitas</div>
-          </div>
-          <div class="s-row-actions">
-            <span class="s-badge ${n.activo ? 'active' : 'inactive'}">${n.activo ? 'Activo' : 'Inactivo'}</span>
-            <button class="btn-toggle-negocio" data-id="${n.id}" data-activo="${n.activo}"
-              style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:${n.activo?'#fee2e2':'#d1fae5'};color:${n.activo?'#dc2626':'#059669'}">
-              ${n.activo ? 'Desactivar' : 'Activar'}
-            </button>
-            <button class="btn-descargar-qr" data-id="${n.id}" data-nombre="${n.nombre}"
-              style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;font-size:12px;background:${DS.green800};color:white;font-weight:600">⬇ QR</button>
-            <button class="btn-limpiar-negocio" data-id="${n.id}" data-nombre="${n.nombre}"
-              style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;font-size:12px;background:#fee2e2;color:#dc2626;font-weight:600">🗑 Datos</button>
-          </div>
-        </div>
-      `
-    }).join('')
-    return `
-      <div>
-        <div class="sello-topbar">
-          ${topbarBrand()}
-          <button id="btn-admin-logout" style="background:rgba(255,255,255,0.15);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px">Salir</button>
-        </div>
-        <div class="s-card" style="margin-top:16px">
-          <div class="s-stats">
-            <div class="s-stat"><div class="s-stat-num">${(negocios||[]).length}</div><div class="s-stat-lbl">Negocios</div></div>
-            <div class="s-stat"><div class="s-stat-num">${(clientes||[]).length}</div><div class="s-stat-lbl">Clientes</div></div>
-            <div class="s-stat"><div class="s-stat-num">${(visitas||[]).length}</div><div class="s-stat-lbl">Visitas</div></div>
-          </div>
-        </div>
-        <div class="s-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <div class="s-section-label" style="margin-bottom:0">Negocios</div>
-            <button id="btn-nuevo-negocio" style="background:${DS.green800};color:white;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">+ Nuevo</button>
-          </div>
-          <div id="form-negocio" style="display:none;background:${DS.gray50};padding:16px;border-radius:12px;margin-bottom:16px">
-            <div class="s-field"><label class="s-label">Nombre del negocio</label><input type="text" id="nuevo-nombre" class="s-input" placeholder="Ej: Café El Sol" /></div>
-            <div class="s-field"><label class="s-label">Correo electrónico</label><input type="email" id="nuevo-email" class="s-input" placeholder="cafe@correo.com" /></div>
-            <div class="s-field"><label class="s-label">Contraseña</label>${pwField('nuevo-password', 'Contraseña para el dueño')}</div>
-            <button id="btn-guardar-negocio" class="s-btn primary" style="margin-top:8px">Guardar negocio</button>
-            <div id="msg-negocio" style="margin-top:10px"></div>
-          </div>
-          ${filas || '<p style="color:#aaa;text-align:center;font-size:14px">No hay negocios aún</p>'}
-        </div>
-        <canvas id="qr-canvas" style="display:none"></canvas>
-      </div>
-    `
-  } catch (e) { return `<div class="sello-topbar">${topbarBrand()}</div><div class="s-card">${errMsg('cargar datos')}</div>` }
-}
-
-export function initAdmin() {
-  inyectarEstilos()
-  if (!isAdminAuth()) {
-    document.getElementById('btn-admin-login')?.addEventListener('click', () => {
-      const pw = document.getElementById('admin-password').value; const msg = document.getElementById('msg-admin')
-      if (pw === ADMIN_PASSWORD) { sessionStorage.setItem('admin_auth', 'ok'); navigate('admin') }
-      else msg.innerHTML = `<p class="s-error">Contraseña incorrecta</p>`
-    })
-    document.getElementById('admin-password')?.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-admin-login').click() })
-    return
-  }
-  document.getElementById('btn-admin-logout')?.addEventListener('click', () => { sessionStorage.removeItem('admin_auth'); navigate('admin') })
-  document.getElementById('btn-nuevo-negocio')?.addEventListener('click', () => { const f = document.getElementById('form-negocio'); f.style.display = f.style.display === 'none' ? 'block' : 'none' })
-  document.getElementById('btn-guardar-negocio')?.addEventListener('click', async () => {
-    const nombre = document.getElementById('nuevo-nombre').value.trim()
-    const email = document.getElementById('nuevo-email').value.trim()
-    const password = document.getElementById('nuevo-password').value.trim()
-    const msg = document.getElementById('msg-negocio')
-    if (!nombre || !email || !password) { msg.innerHTML = `<p class="s-error">Llena todos los campos</p>`; return }
-    msg.innerHTML = `<p style="color:#aaa;text-align:center">Guardando...</p>`
-    try {
-      const { error } = await supabase.from('negocios').insert({ nombre, email, password, password_hash: password, activo: true, meta_puntos: 10 })
-      if (error) throw error
-      msg.innerHTML = `<div class="s-success">✓ Negocio creado. El dueño puede entrar ahora.</div>`
-      setTimeout(() => navigate('admin'), 1500)
-    } catch (e) { msg.innerHTML = errMsg('guardar el negocio') }
-  })
-  document.querySelectorAll('.btn-toggle-negocio').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const act = btn.dataset.activo === 'true'; btn.textContent = '...'; btn.disabled = true
-      try { const { error } = await supabase.from('negocios').update({ activo: !act }).eq('id', btn.dataset.id); if (error) throw error; navigate('admin') }
-      catch (e) { btn.textContent = act ? 'Desactivar' : 'Activar'; btn.disabled = false; alert('Sin conexión.') }
-    })
-  })
-  document.querySelectorAll('.btn-descargar-qr').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const url = `${window.location.origin}/#/negocio/${btn.dataset.id}`
-      const canvas = document.getElementById('qr-canvas')
-      await QRCode.toCanvas(canvas, url, { width: 400, margin: 2, color: { dark: '#000000', light: '#ffffff' } })
-      const cf = document.createElement('canvas'); cf.width = canvas.width; cf.height = canvas.height + 50
-      const ctx = cf.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cf.width, cf.height)
-      ctx.drawImage(canvas, 0, 0); ctx.fillStyle = '#000'; ctx.font = 'bold 22px Arial'; ctx.textAlign = 'center'
-      ctx.fillText(btn.dataset.nombre, canvas.width / 2, canvas.height + 35)
-      const link = document.createElement('a'); link.download = `QR-${btn.dataset.nombre}.png`; link.href = cf.toDataURL('image/png'); link.click()
-    })
-  })
-  // Botón limpiar datos de prueba
-  document.querySelectorAll('.btn-limpiar-negocio').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!confirm(`¿Eliminar TODOS los clientes y visitas de "${btn.dataset.nombre}"? Esto no se puede deshacer.`)) return
-      btn.disabled = true; btn.textContent = '...'
-      try {
-        const { data: cls } = await supabase.from('clientes').select('id').eq('negocio_id', btn.dataset.id)
-        const ids = (cls||[]).map(c => c.id)
-        if (ids.length > 0) {
-          await supabase.from('visitas').delete().in('cliente_id', ids)
-          await supabase.from('canjes').delete().in('cliente_id', ids)
-          await supabase.from('clientes').delete().eq('negocio_id', btn.dataset.id)
-        }
-        await supabase.from('visitas').delete().eq('negocio_id', btn.dataset.id)
-        alert(`✓ Datos de "${btn.dataset.nombre}" eliminados.`)
-        navigate('admin')
-      } catch (e) { alert('Sin conexión.'); btn.disabled = false; btn.textContent = '🗑 Datos' }
-    })
-  })
-}
-
-export async function paginaCliente(negocioId, telefono) {
-  inyectarEstilos()
-  try {
-    if (!negocioId || !telefono) throw new Error('Vuelve a entrar desde el QR del negocio')
-    const { data: card, error } = await supabase.rpc('public_get_customer_card', {
-      p_business_id: negocioId,
-      p_phone: telefono,
-    })
-    if (error) throw error
-    if (!card) throw new Error('No encontramos una tarjeta para esos datos')
-    const data = { total_visitas: card.total_visits, negocios: card.business }
-    const niveles = card.levels || []
-    const historial = card.history || []
-    const colorNegocio = card.business?.color_principal || DS.green800
-    const emojiNegocio = card.business?.emoji_negocio || '☕'
-    const negocioNombre = card.business?.nombre || 'Programa de Lealtad'
-    aplicarColorNegocio(colorNegocio)
-    const tieneNiveles = niveles && niveles.length > 0
-    const nivelActual = getNivelActual(data.total_visitas, niveles)
-    const sigNivel = getSiguienteNivel(data.total_visitas, niveles)
-    const nivelColor = colorNivel(nivelActual)
-    let nivelProgPct = 0
-    if (sigNivel) {
-      const rango = sigNivel.visitas_minimas - (nivelActual.visitas_minimas || 0)
-      const avance = data.total_visitas - (nivelActual.visitas_minimas || 0)
-      nivelProgPct = rango > 0 ? Math.min(Math.round((avance / rango) * 100), 100) : 0
-    } else {
-      nivelProgPct = 100
-    }
-    const _h = new Date().getHours()
-    const saludo = _h < 12 ? 'Buenos días' : _h < 19 ? 'Buenas tardes' : 'Buenas noches'
-    const esNivelInicial = nivelActual.visitas_minimas === 0
-    const filasHistorial = (historial||[]).map(v => {
-      const fecha = new Date(v.fecha).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
-      return `<div class="s-row"><div class="s-row-title" style="font-weight:400;font-size:13px;color:${DS.gray700}">Visita registrada</div><div style="font-size:12px;color:${DS.gray500}">${fecha}</div></div>`
-    }).join('')
-
-    return `
-      <div style="min-height:100vh;background:${DS.gray50};padding-bottom:40px">
-
-        <!-- Header minimalista -->
-        <div style="background:${DS.white};border-bottom:1px solid ${DS.gray100};padding:14px 20px;display:flex;align-items:center;justify-content:space-between">
-          <div style="display:flex;align-items:center;gap:10px">
-            ${logoSVG(22, DS.green800)}
-            <span style="font-family:'Sora',sans-serif;font-weight:800;font-size:16px;color:${DS.green800}">Sell<span style="color:${DS.gold500}">o</span></span>
-          </div>
-          <span style="font-size:12px;color:${DS.gray500}">${emojiNegocio} ${negocioNombre}</span>
-        </div>
-
-        <!-- Hero negocio -->
-        <div style="background:var(--negocio-color,${DS.green800});padding:28px 20px 56px;position:relative;overflow:hidden">
-          <div style="position:absolute;top:-30px;right:-30px;width:160px;height:160px;background:rgba(255,255,255,0.06);border-radius:50%"></div>
-          <div style="position:absolute;bottom:-40px;left:-20px;width:120px;height:120px;background:rgba(255,255,255,0.04);border-radius:50%"></div>
-
-          <div style="font-size:11px;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">${negocioNombre}</div>
-          <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;color:${DS.white};line-height:1.1">${saludo}</div>
-          <div style="font-size:13px;color:rgba(255,255,255,0.55);margin-top:4px">Aquí está tu progreso</div>
-        </div>
-
-        <!-- Tarjeta principal flotante -->
-        <div style="margin:-28px 16px 14px;background:${DS.white};border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,0.10);padding:20px;position:relative;z-index:1">
-
-          <!-- Nivel actual -->
-          ${tieneNiveles ? `
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <div style="background:${nivelColor}18;border-radius:10px;padding:8px 12px;font-family:'Sora',sans-serif;font-weight:700;font-size:13px;color:${nivelColor}">${nivelActual.emoji} ${nivelActual.nombre}</div>
-            ${!sigNivel ? `<div style="font-size:11px;color:${DS.gold500};font-weight:700">💎 Máximo</div>` : ''}
-          </div>
-          ` : `<div style="font-size:12px;color:${DS.gray500};text-align:center;padding:8px 0;margin-bottom:8px">Sin niveles configurados aún</div>`}
-
-          <!-- Número grande de visitas -->
-          <div style="text-align:center;padding:20px 0 16px">
-            <div style="font-family:'Sora',sans-serif;font-size:72px;font-weight:800;color:${DS.green800};line-height:1">${data.total_visitas}</div>
-            <div style="font-size:13px;color:${DS.gray500};margin-top:4px">visitas acumuladas</div>
-            <div style="font-size:11px;color:${DS.gray300};margin-top:2px">Las visitas nunca se pierden</div>
-          </div>
-
-          <!-- Barra de progreso con hitos — solo si hay siguiente nivel -->
-          ${sigNivel ? `
-          <div style="margin-bottom:16px">
-            <div style="display:flex;justify-content:flex-end;font-size:11px;color:${DS.gray500};margin-bottom:6px">
-              <span>${data.total_visitas}/${sigNivel.visitas_minimas}</span>
-            </div>
-            <div style="height:8px;background:${DS.gray100};border-radius:999px;overflow:hidden;margin-bottom:10px">
-              <div style="height:100%;width:${nivelProgPct}%;background:${nivelColor};border-radius:999px"></div>
-            </div>
-            <div style="font-size:12px;color:${DS.gray500};text-align:right">${sigNivel.visitas_minimas - data.total_visitas} visita${sigNivel.visitas_minimas - data.total_visitas === 1 ? '' : 's'} para ${sigNivel.emoji} ${sigNivel.nombre}</div>
-          </div>
-          ` : ''}
-
-          <!-- Premio próximo destacado -->
-          ${sigNivel && sigNivel.premio_bienvenida ? `
-          <div style="background:linear-gradient(135deg,${DS.gold100},#fffdf5);border:1.5px solid #fde68a;border-radius:14px;padding:14px 16px;text-align:center">
-            <div style="font-size:10px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Tu próximo premio</div>
-            <div style="font-family:'Sora',sans-serif;font-size:17px;font-weight:800;color:#78350f">${sigNivel.premio_bienvenida}</div>
-            <div style="font-size:11px;color:#92400e;margin-top:3px">Faltan ${sigNivel.visitas_minimas - data.total_visitas} visita${sigNivel.visitas_minimas - data.total_visitas === 1 ? '' : 's'}</div>
-          </div>
-          ` : !sigNivel ? `
-          <div style="background:linear-gradient(135deg,${DS.gold100},#fffdf5);border:1.5px solid #fde68a;border-radius:14px;padding:14px 16px;text-align:center">
-            <div style="font-family:'Sora',sans-serif;font-size:16px;font-weight:800;color:#78350f">🏆 Nivel máximo alcanzado</div>
-            <div style="font-size:12px;color:#92400e;margin-top:3px">Eres ${nivelActual.emoji} ${nivelActual.nombre}</div>
-          </div>
-          ` : ''}
-
-          <!-- Banner premio ganado (aparece cuando el cajero registró subida de nivel) -->
-          <div id="banner-premio-ganado" style="display:none;background:linear-gradient(135deg,#fef3c7,#fffdf5);border:2px solid #fde68a;border-radius:14px;padding:16px;text-align:center;margin-top:12px">
-            <div style="font-size:11px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">🎉 ¡Felicidades!</div>
-            <div id="banner-premio-texto" style="font-family:'Sora',sans-serif;font-size:17px;font-weight:800;color:#78350f"></div>
-            <div style="font-size:12px;color:#92400e;margin-top:4px">Muéstraselo al cajero para reclamarlo</div>
-            <button id="banner-cerrar" style="margin-top:10px;padding:8px 16px;border:none;border-radius:8px;background:#f5a623;color:white;font-family:'Sora',sans-serif;font-size:12px;font-weight:700;cursor:pointer">Entendido</button>
-          </div>
-
-          <!-- Botón compartir — siempre verde, texto según situación -->
-          <button id="btn-compartir-nivel" style="width:100%;margin-top:14px;padding:13px;border:none;border-radius:12px;background:${DS.green800};color:white;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-            Compartir mi progreso
-          </button>
-
-        </div>
-
-        <!-- Historial -->
-        ${historial && historial.length > 0 ? `
-        <div style="margin:0 16px;background:${DS.white};border-radius:16px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
-          <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${DS.gray500};margin-bottom:4px">Historial</div>
-          ${filasHistorial}
-        </div>
-        ` : ''}
-      </div>
-    `
-  } catch (e) { return `<div style="min-height:100vh;background:${DS.gray50};display:flex;align-items:center;justify-content:center"><div class="s-card">${errMsg()}</div></div>` }
-}
-
-export async function initCliente(negocioId, telefono) {
-  inyectarEstilos()
-  try {
-    const { data: card, error } = await supabase.rpc('public_get_customer_card', {
-      p_business_id: negocioId,
-      p_phone: telefono,
-    })
-    if (error || !card) return
-    const data = { total_visitas: card.total_visits, negocios: card.business }
-    const niveles = card.levels || []
-    const nivelActual = getNivelActual(data.total_visitas, niveles)
-    const sigNivel = getSiguienteNivel(data.total_visitas, niveles)
-    // Premio: si ya tiene nivel con premio úsalo, si no usa el del siguiente nivel para motivar
-    const premioParaCompartir = nivelActual.premio_bienvenida || ''
-    const datosCompartir = { negocioNombre: data.negocios?.nombre || '', negocioEmoji: data.negocios?.emoji_negocio || '☕', colorNegocio: data.negocios?.color_principal || DS.green800, nivelNombre: nivelActual.nombre, nivelEmoji: nivelActual.emoji, totalVisitas: data.total_visitas, clienteNombre: '', premioNombre: premioParaCompartir, sigNivelNombre: sigNivel?.nombre || '', sigNivelPremio: sigNivel?.premio_bienvenida || '', faltanVisitas: sigNivel ? sigNivel.visitas_minimas - data.total_visitas : 0 }
-
-    // Banner de premio ganado — se activa desde localStorage cuando el cajero registró subida
-    const key = `sello_premio_${negocioId}_${telefono}`
-    const premioGuardado = localStorage.getItem(key)
-    if (premioGuardado) {
-      const banner = document.getElementById('banner-premio-ganado')
-      const texto = document.getElementById('banner-premio-texto')
-      if (banner && texto) {
-        texto.textContent = premioGuardado
-        banner.style.display = 'block'
-        document.getElementById('banner-cerrar')?.addEventListener('click', () => {
-          localStorage.removeItem(key)
-          banner.style.display = 'none'
-        })
-      }
-    }
-
-    // Botón compartir
-    document.getElementById('btn-compartir-nivel')?.addEventListener('click', async () => {
-      const btn = document.getElementById('btn-compartir-nivel')
-      if (!btn) return
-      btn.disabled = true; btn.textContent = 'Generando...'
-      try {
-        await compartirHistoria({ ...datosCompartir, tipo: 'nivel' })
-      } catch(err) { console.error('compartir:', err) }
-      btn.disabled = false; btn.textContent = 'Compartir mi progreso'
-    })
-  } catch (e) { console.error('initCliente:', e) }
-}
-
-export async function paginaQRNegocio(negocioId) {
-  inyectarEstilos()
-  try {
-    const { data: negocio, error } = await supabase.rpc('public_get_business', { p_business_id: negocioId })
-    if (error) throw error
-    if (!negocio) return `<div class="sq-root"><h1>No encontrado</h1></div>`
-    aplicarColorNegocio(negocio.color_principal)
-    return `
-      <div class="sq-root">
-        <div class="sq-logo">
-          ${negocio.logo_url ? `<img src="${negocio.logo_url}" style="width:80px;height:80px;border-radius:20px;object-fit:cover;border:3px solid rgba(255,255,255,0.3)" onerror="this.style.display='none'" id="logo-negocio-qr" />` : logoSVG(52, DS.white)}
-        </div>
-        <div class="sq-negocio">Programa de lealtad</div>
-        <h1 class="sq-nombre">${negocio.emoji_negocio || '☕'} ${negocio.nombre}</h1>
-        <p class="sq-sub">${negocio.descripcion || 'Acumula visitas y sube de nivel'}</p>
-        <div class="sq-form">
-          <label style="font-size:13px;color:rgba(255,255,255,0.5);display:block;text-align:left;margin-bottom:8px">Tu número de teléfono</label>
-          <input type="tel" id="tel-negocio" class="sq-input" placeholder="10 dígitos" />
-          <button class="sq-btn" id="btn-entrar">Entrar →</button>
-          <div id="msg-negocio" style="margin-top:12px;font-size:13px;color:rgba(255,255,255,0.4);text-align:center"></div>
-        </div>
-      </div>
-    `
-  } catch (e) { return `<div class="sq-root"><div class="sq-form">${errMsg()}</div></div>` }
+  return `<div id="cl-app">${cargandoCliente(true)}</div>`
 }
 
 export function initQRNegocio(negocioId) {
-  inyectarEstilos()
-  const doEntrar = async () => {
-    const telefono = document.getElementById('tel-negocio').value.trim(); if (!telefono) return
-    const msg = document.getElementById('msg-negocio'); const btn = document.getElementById('btn-entrar')
-    msg.textContent = 'Buscando...'; btn.disabled = true
-    try {
-      const { data: existe, error } = await supabase.rpc('public_customer_exists', {
-        p_business_id: negocioId,
-        p_phone: telefono,
-      })
-      if (error) throw error
-      if (existe) navigate('cliente', `${negocioId}/${encodeURIComponent(telefono)}`)
-      else navigate('registro-cliente', `${negocioId}/${telefono}`)
-    } catch (e) { msg.innerHTML = errMsg(); btn.disabled = false }
-  }
-  document.getElementById('btn-entrar')?.addEventListener('click', doEntrar)
-  document.getElementById('tel-negocio')?.addEventListener('keydown', e => { if (e.key === 'Enter') doEntrar() })
-}
-
-export function paginaRegistroCliente(negocioId, telefono) {
-  inyectarEstilos()
-  return `
-    <div class="sq-root">
-      <div class="sq-logo">${logoSVG(52, DS.white)}</div>
-      <h1 class="sq-nombre">Bienvenido 👋</h1>
-      <p class="sq-sub">Regístrate para acumular visitas y subir de nivel</p>
-      <div class="sq-form">
-        <label style="font-size:13px;color:rgba(255,255,255,0.5);display:block;text-align:left;margin-bottom:8px">Tu nombre</label>
-        <input type="text" id="nombre-cliente" class="sq-input" placeholder="¿Cómo te llamas?" style="margin-bottom:12px" />
-        <label style="font-size:13px;color:rgba(255,255,255,0.5);display:block;text-align:left;margin-bottom:8px">Teléfono</label>
-        <input type="tel" id="tel-cliente" class="sq-input" value="${telefono}" readonly style="opacity:0.5;margin-bottom:16px" />
-        <button class="sq-btn" id="btn-registrar-cliente">Registrarme →</button>
-        <p style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:12px;text-align:center;line-height:16px">
-          Al registrarte aceptas nuestro
-          <span id="link-privacidad" style="text-decoration:underline;cursor:pointer;color:rgba(255,255,255,0.5)">aviso de privacidad</span>
-        </p>
-        <div id="msg-registro" style="margin-top:8px;font-size:13px;color:rgba(255,255,255,0.4);text-align:center"></div>
-      </div>
-    </div>
-  `
+  return initTarjeta(negocioId, { desdeMostrador: true })
 }
 
 function abrirAvisoPrivacidadCliente() {
@@ -1700,28 +1148,6 @@ function abrirAvisoPrivacidadCliente() {
   document.body.appendChild(modal)
   modal.querySelector('#cerrar-privacidad')?.addEventListener('click', () => modal.remove())
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
-}
-
-export function initRegistroCliente(negocioId, telefono) {
-  inyectarEstilos()
-  document.getElementById('link-privacidad')?.addEventListener('click', abrirAvisoPrivacidadCliente)
-  document.getElementById('btn-registrar-cliente').addEventListener('click', async () => {
-    const nombre = document.getElementById('nombre-cliente').value.trim()
-    const msg = document.getElementById('msg-registro'); const btn = document.getElementById('btn-registrar-cliente')
-    if (!nombre) { msg.innerHTML = `<p style="color:#f87171">Escribe tu nombre</p>`; return }
-    btn.disabled = true; btn.textContent = 'Registrando...'
-    try {
-      const { data, error } = await supabase.rpc('public_register_customer', {
-        p_business_id: negocioId,
-        p_phone: telefono,
-        p_name: nombre,
-      })
-      if (error) {
-        throw error
-      }
-      navigate('cliente', `${negocioId}/${encodeURIComponent(telefono)}`)
-    } catch (e) { msg.innerHTML = errMsg('registrarte'); btn.disabled = false; btn.textContent = 'Registrarme →' }
-  })
 }
 
 
@@ -2020,7 +1446,8 @@ export function paginaTarjeta() {
 // La tarjeta se carga al abrirse y otra vez cada que la app vuelve al primer plano.
 // hayTarjeta = true: ya hay una tarjeta en pantalla (la de "¡Ganaste 1 punto!"),
 // así que se recarga sin pasar por "Cargando...".
-export async function initTarjeta(negocioId, { hayTarjeta = false } = {}) {
+// desdeMostrador = true: viene del QR fijo; sin tarjeta dice "Pide tu código al pagar".
+export async function initTarjeta(negocioId, { hayTarjeta = false, desdeMostrador = false } = {}) {
   inyectarEstilos()
   if (!hayTarjeta) aplicarColorNegocio(AZUL_RESPALDO)
   const sesion = ++clienteSesion
@@ -2030,10 +1457,23 @@ export async function initTarjeta(negocioId, { hayTarjeta = false } = {}) {
   let mostrando = hayTarjeta
   let pedido = 0
 
-  const sinTarjeta = () => {
+  const sinTarjeta = async () => {
     mostrando = false
+    if (!desdeMostrador) {
+      return pintar(pantallaEstadoCliente({
+        icono: '📷', titulo: 'Escanea el código al pagar', sub: 'para ver tu tarjeta.',
+      }))
+    }
+    // En el mostrador se muestra el nombre del negocio (sin datos de clientes).
+    let negocio = null
+    try {
+      const { data } = await supabase.rpc('public_get_business', { p_business_id: negocioId })
+      negocio = data || null
+    } catch (e) {}
+    if (!vigente() || mostrando) return
+    aplicarColorNegocio(negocio?.color_principal || AZUL_RESPALDO)
     pintar(pantallaEstadoCliente({
-      icono: '📷', titulo: 'Escanea el código al pagar', sub: 'para ver tu tarjeta.',
+      negocio, icono: '🧾', titulo: 'Pide tu código al pagar', sub: 'Escanéalo con tu cámara y suma tu punto.',
     }))
   }
 
@@ -2187,12 +1627,140 @@ export function initLanding(negocioId) {
 }
 
 // ── PANEL DUEÑO — solo niveles, sin premios separados ─────
+const PLANTILLAS_PREMIO = ['Un café gratis', 'Un postre gratis', 'Un corte gratis', 'Un taco gratis', '10% de descuento']
+
+// "+529981234567" → "998 123 4567"
+function telefonoLegible(e164) {
+  const d = String(e164 || '').replace(/^\+52/, '')
+  return d.length === 10 ? `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` : esc(e164)
+}
+
+function mensajeDueno(error) {
+  const m = error?.message || ''
+  if (sinInternet(error)) return 'Sin conexión. Revisa tu internet e intenta de nuevo.'
+  if (m.includes('META_INVALIDA')) return 'Las visitas para el premio deben ser de 1 a 100.'
+  if (m.includes('PREMIO_INVALIDO')) return 'Escribe el premio (máximo 80 letras).'
+  if (m.includes('MAX_CODIGOS_INVALIDO')) return 'Los códigos activos deben ser de 1 a 50.'
+  if (m.includes('TELEFONO_INVALIDO')) return 'Escribe los 10 dígitos del número.'
+  if (m.includes('NO_ENCONTRADO')) return 'Ese número ya no estaba en la lista.'
+  if (m.includes('Acceso denegado')) return 'Solo el dueño puede cambiar esto. Sal y vuelve a entrar.'
+  return 'Algo salió mal. Intenta de nuevo.'
+}
+
+// Sección "Programa": se guarda con la RPC guardar_programa (fase 2G).
+function initProgramaDueno() {
+  const $ = id => document.getElementById(id)
+  const btn = $('btn-guardar-programa'); const msg = $('msg-programa')
+  if (!btn) return
+  document.querySelectorAll('.dn-chip').forEach(chip => {
+    chip.addEventListener('click', () => { $('prog-premio').value = chip.dataset.premio; $('prog-premio').focus() })
+  })
+  btn.addEventListener('click', async () => {
+    const meta = parseInt($('prog-meta').value, 10)
+    const premio = $('prog-premio').value.trim()
+    const max = parseInt($('prog-max').value, 10)
+    // Las mismas reglas que revisa el servidor, para avisar antes de mandar.
+    let error = ''
+    if (!(meta >= 1 && meta <= 100)) error = 'META_INVALIDA'
+    else if (!premio || premio.length > 80) error = 'PREMIO_INVALIDO'
+    else if (!(max >= 1 && max <= 50)) error = 'MAX_CODIGOS_INVALIDO'
+    if (error) { msg.innerHTML = `<p class="s-error">${mensajeDueno({ message: error })}</p>`; return }
+    btn.disabled = true; btn.textContent = 'Guardando...'; msg.innerHTML = ''
+    try {
+      const { error: e } = await supabase.rpc('guardar_programa', {
+        p_meta_puntos: meta, p_premio: premio, p_max_codigos_activos: max,
+      })
+      if (e) throw e
+      msg.innerHTML = `<div class="s-success">✓ Programa guardado</div>`
+      setTimeout(() => { if (msg.isConnected) msg.innerHTML = '' }, 2500)
+    } catch (e) {
+      console.error('Error al guardar el programa:', e)
+      msg.innerHTML = `<p class="s-error">${mensajeDueno(e)}</p>`
+    } finally {
+      btn.disabled = false; btn.textContent = 'Guardar programa'
+    }
+  })
+}
+
+// Sección "Personal (no ganan puntos)": lista de numeros_excluidos (el dueño
+// la puede leer por RLS) y altas/bajas con agregar_ / quitar_numero_excluido.
+function initPersonalDueno(negocioId) {
+  const $ = id => document.getElementById(id)
+  const lista = $('lista-excl'); const tel = $('excl-tel'); const btn = $('btn-agregar-excl'); const msg = $('msg-excl')
+  if (!lista) return
+  let numeros = []
+  const avisar = (texto, ok = false) => { msg.innerHTML = texto ? (ok ? `<div class="s-success">${texto}</div>` : `<p class="s-error">${texto}</p>`) : '' }
+
+  function pintar() {
+    lista.innerHTML = numeros.length === 0
+      ? `<p class="cj-vacio">Aún no agregas números</p>`
+      : numeros.map(n => `
+        <div class="s-row">
+          <div class="s-row-title" style="font-variant-numeric:tabular-nums">${telefonoLegible(n.telefono)}</div>
+          <button class="dn-quitar" data-id="${esc(n.id)}">Quitar</button>
+        </div>`).join('')
+  }
+
+  async function cargar() {
+    try {
+      const { data, error } = await supabase.from('numeros_excluidos')
+        .select('id, telefono, creado_en').eq('negocio_id', negocioId).order('creado_en', { ascending: true })
+      if (error) throw error
+      numeros = data || []
+      pintar()
+    } catch (e) {
+      console.error('Error al cargar el personal:', e)
+      lista.innerHTML = `<p class="cj-vacio">${mensajeDueno(e)}</p>`
+    }
+  }
+
+  async function agregar() {
+    if (btn.disabled) return
+    const digitos = tel.value.replace(/\D/g, '')
+    if (digitos.length !== 10) { avisar(mensajeDueno({ message: 'TELEFONO_INVALIDO' })); return }
+    btn.disabled = true; avisar('')
+    try {
+      const { data, error } = await supabase.rpc('agregar_numero_excluido', { p_telefono: digitos })
+      if (error) throw error
+      if (!numeros.some(n => n.id === data.id)) numeros.push(data)
+      pintar(); tel.value = ''
+      avisar(data.ya_existia ? 'Ese número ya estaba en la lista.' : '✓ Número agregado', true)
+    } catch (e) {
+      console.error('Error al agregar el número:', e)
+      avisar(mensajeDueno(e))
+    } finally {
+      btn.disabled = false
+    }
+  }
+
+  async function quitar(boton) {
+    if (boton.disabled) return
+    boton.disabled = true; boton.textContent = '...'; avisar('')
+    try {
+      const { error } = await supabase.rpc('quitar_numero_excluido', { p_id: boton.dataset.id })
+      if (error && !error.message?.includes('NO_ENCONTRADO')) throw error
+      numeros = numeros.filter(n => n.id !== boton.dataset.id)
+      pintar()
+    } catch (e) {
+      console.error('Error al quitar el número:', e)
+      avisar(mensajeDueno(e))
+      if (boton.isConnected) { boton.disabled = false; boton.textContent = 'Quitar' }
+    }
+  }
+
+  tel.addEventListener('input', () => { tel.value = tel.value.replace(/\D/g, '') })
+  tel.addEventListener('keydown', e => { if (e.key === 'Enter') agregar() })
+  btn.addEventListener('click', agregar)
+  lista.addEventListener('click', e => { const b = e.target.closest('.dn-quitar'); if (b) quitar(b) })
+  cargar()
+}
+
 export async function paginaDueno() {
   inyectarEstilos()
   try {
     const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
     if (!negocio) { window.location.hash = '#/login'; window.dispatchEvent(new Event('hashchange')); return '<div></div>' }
-    const { data: nd, error: e0 } = await supabase.from('negocios').select('id,nombre,activo,meta_puntos,color_principal,emoji_negocio,descripcion,logo_url').eq('id', negocio.id).single(); if (e0) throw e0
+    const { data: nd, error: e0 } = await supabase.from('negocios').select('id,nombre,activo,meta_puntos,color_principal,emoji_negocio,descripcion,logo_url,premio,max_codigos_activos').eq('id', negocio.id).single(); if (e0) throw e0
     if (nd?.activo === false) { const { logout } = await import('./auth.js'); logout(); return '<div></div>' }
     aplicarColorNegocio(nd?.color_principal)
     const { data: clientes } = await supabase.from('clientes').select('*').eq('negocio_id', negocio.id)
@@ -2235,6 +1803,39 @@ export async function paginaDueno() {
             <div class="s-stat"><div class="s-stat-num" style="color:${DS.gold500}">${vhoy}</div><div class="s-stat-lbl">Hoy</div></div>
             <div class="s-stat"><div class="s-stat-num">${(visitas||[]).length}</div><div class="s-stat-lbl">Visitas</div></div>
           </div>
+        </div>
+
+        <!-- Programa (2G): meta, premio y códigos activos por mesero -->
+        <div class="s-card">
+          <div class="s-section-label">Programa</div>
+          <div class="s-field">
+            <label class="s-label" for="prog-meta">Visitas para ganar el premio</label>
+            <input type="number" inputmode="numeric" id="prog-meta" class="s-input" min="1" max="100" value="${nd?.meta_puntos ?? 10}" />
+          </div>
+          <div class="s-field">
+            <label class="s-label" for="prog-premio">Premio</label>
+            <input type="text" id="prog-premio" class="s-input" maxlength="80" value="${esc(nd?.premio || '')}" placeholder="Ej: Un café gratis" />
+            <div class="dn-plantillas">${PLANTILLAS_PREMIO.map(p => `<button type="button" class="dn-chip" data-premio="${esc(p)}">${esc(p)}</button>`).join('')}</div>
+          </div>
+          <div class="s-field">
+            <label class="s-label" for="prog-max">Códigos activos por mesero</label>
+            <input type="number" inputmode="numeric" id="prog-max" class="s-input" min="1" max="50" value="${nd?.max_codigos_activos ?? 3}" />
+            <div class="dn-ayuda">Cuántos QR puede tener abiertos un mesero a la vez. Súbelo si hay mucha gente.</div>
+          </div>
+          <button id="btn-guardar-programa" class="s-btn primary">Guardar programa</button>
+          <div id="msg-programa"></div>
+        </div>
+
+        <!-- Personal (2G): números que no ganan puntos -->
+        <div class="s-card">
+          <div class="s-section-label">Personal (no ganan puntos)</div>
+          <div class="dn-ayuda" style="margin:0 0 12px">Agrega el número de cada persona de tu equipo. Esos números no suman puntos.</div>
+          <div class="dn-agregar">
+            <input type="tel" inputmode="numeric" id="excl-tel" class="s-input" placeholder="10 dígitos" autocomplete="off" />
+            <button id="btn-agregar-excl" class="s-btn primary">Agregar</button>
+          </div>
+          <div id="msg-excl"></div>
+          <div id="lista-excl" style="margin-top:8px"><p class="cj-vacio">Cargando...</p></div>
         </div>
 
         <!-- Distribución de niveles -->
@@ -2336,6 +1937,8 @@ export async function paginaDueno() {
 
 export async function initDueno(negocioId) {
   inyectarEstilos(); initNavDueno()
+  initProgramaDueno()
+  initPersonalDueno(negocioId)
 
   // Gráficas
   try {
