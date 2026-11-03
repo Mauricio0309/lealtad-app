@@ -50,6 +50,11 @@ async function render() {
   const page = getPage()
   const hash = window.location.hash
   const app = document.querySelector('#app')
+  // Las pantallas del dueño pintan el fondo de la página (html.ow-pagina) para
+  // que no se vea blanco mientras se dibujan. En las demás se quita.
+  if (!['login', 'onboarding', 'bienvenida', 'dueno', 'terminos', 'admin'].includes(page)) {
+    document.documentElement.classList.remove('ow-pagina')
+  }
   app.innerHTML = ''
 
   // ── Páginas públicas ──
