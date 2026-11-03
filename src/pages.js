@@ -215,6 +215,30 @@ function inyectarEstilos() {
     .landing-premio { background: ${DS.white}; border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; gap: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 12px; }
     .landing-cta-btn { width: 100%; padding: 18px; background: linear-gradient(135deg, ${DS.green600}, ${DS.green700}); border: none; border-radius: 14px; color: ${DS.white}; font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 700; cursor: pointer; }
 
+    .cj-main { padding: 20px 16px 8px; }
+    .cj-cobre { width: 100%; min-height: 38vh; border: none; border-radius: 24px; background: var(--negocio-color, ${DS.green800}); color: ${DS.white}; font-family: 'Sora', sans-serif; font-size: 26px; font-weight: 800; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform 0.1s, opacity 0.15s; }
+    .cj-cobre:active { transform: scale(0.98); }
+    .cj-cobre:disabled { opacity: 0.6; cursor: wait; }
+    .cj-cobre-icon { font-size: 56px; line-height: 1; }
+    .cj-aviso { margin-top: 12px; border-radius: 12px; padding: 12px 14px; font-size: 14px; line-height: 1.4; }
+    .cj-aviso.aviso { background: ${DS.gold100}; border: 1px solid #fde68a; color: #92400e; }
+    .cj-aviso.ok { background: ${DS.green100}; color: ${DS.green800}; }
+    .cj-pend-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+    .cj-pend-head .s-section-label { margin-bottom: 0; }
+    .cj-contador { font-size: 13px; font-weight: 600; color: ${DS.gray700}; }
+    .cj-fila { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; background: none; border: none; border-bottom: 1px solid ${DS.gray100}; text-align: left; cursor: pointer; font-family: 'Inter', sans-serif; }
+    .cj-fila:last-child { border-bottom: none; padding-bottom: 0; }
+    .cj-fila .s-row-title, .cj-fila .s-row-sub { display: block; }
+    .cj-fila-ver { font-size: 13px; font-weight: 600; color: var(--negocio-color, ${DS.green800}); white-space: nowrap; }
+    .cj-vacio { color: #aaa; font-size: 13px; text-align: center; padding: 8px 0; }
+    .cj-qr { position: fixed; inset: 0; z-index: 200; background: ${DS.white}; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: calc(24px + env(safe-area-inset-top)) 24px calc(20px + env(safe-area-inset-bottom)); text-align: center; }
+    .cj-qr[hidden] { display: none; }
+    .cj-qr-titulo { font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 800; color: ${DS.gray900}; }
+    .cj-qr-sub { font-size: 15px; color: ${DS.gray500}; margin-top: 4px; }
+    .cj-qr-tiempo-lbl { font-size: 12px; color: ${DS.gray500}; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 8px; }
+    .cj-qr-tiempo { font-family: 'Sora', sans-serif; font-size: 40px; font-weight: 800; color: ${DS.gray900}; font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .cj-qr-botones { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 10px; }
+
     @keyframes sFadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes sPopIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
   `
@@ -691,23 +715,58 @@ export function initBienvenida() {
   document.getElementById('sbv-salir')?.addEventListener('click', async () => { const { logout } = await import('./auth.js'); logout() })
 }
 
-// ── CAJERO — sin acceso a Mi Panel ────────────────────────
+// ── CAJERO — "Cobré una cuenta" genera un QR de un solo uso ──
+// El servidor decide todo (límite, caducidad); la pantalla solo muestra.
+// Cada visita a #/cajero abre una "sesión"; al salir de la pantalla o al
+// volver a pintarla, la sesión anterior apaga su reloj y sus listeners.
+let cajeroSesion = 0
+
+function mensajeCajero(error, max) {
+  const m = error?.message || ''
+  if (navigator.onLine === false || /Failed to fetch|NetworkError|Load failed/i.test(m)) return 'Sin conexión. Revisa tu internet e intenta de nuevo.'
+  if (m.includes('LIMITE_CODIGOS')) {
+    const tope = max ?? error?.details?.match(/de (\d+)/)?.[1]
+    return `Ya tienes ${tope ? tope + ' códigos activos' : 'el máximo de códigos activos'}. Cancela uno para generar otro.`
+  }
+  if (m.includes('NEGOCIO_INACTIVO')) return 'El negocio está desactivado. Habla con el dueño.'
+  if (m.includes('Acceso denegado')) return 'Tu sesión ya no es válida. Sal y vuelve a entrar.'
+  if (m.includes('CODIGO_USADO')) return '✓ El cliente ya usó este código.'
+  if (m.includes('CODIGO_CADUCADO')) return 'Ese código ya caducó.'
+  if (m.includes('CODIGO_CANCELADO')) return 'Ese código ya estaba cancelado.'
+  if (m.includes('CODIGO_NO_ENCONTRADO')) return 'Ese código ya no está disponible.'
+  return 'Algo salió mal. Intenta de nuevo.'
+}
+
 export function paginaCajero() {
   inyectarEstilos()
   return `
-    <div style="padding-bottom:72px">
+    <div id="cj-root" style="padding-bottom:72px">
       <div class="sello-topbar">
         ${topbarBrand()}
         <span style="font-size:13px;color:rgba(255,255,255,0.6)">Cajero</span>
       </div>
-      <div class="sc-search-area">
-        <div class="sc-search-row"><input type="tel" id="telefono" placeholder="Buscar por teléfono..." class="s-input sc-search-input" /><button id="buscar" class="sc-search-btn">Buscar</button></div>
-        <div class="sc-search-row"><input type="text" id="nombre-buscar" placeholder="O buscar por nombre..." class="s-input sc-search-input" /><button id="buscar-nombre" class="sc-search-btn">Buscar</button></div>
+      <div class="cj-main">
+        <button class="cj-cobre" id="cj-cobre"><span class="cj-cobre-icon">🧾</span>Cobré una cuenta</button>
+        <div id="cj-msg"></div>
       </div>
-      <div id="resultado"></div>
-      <div class="s-card" style="margin-top:4px">
-        <div class="s-section-label">Atendidos hoy</div>
-        <div id="ultimos-clientes"><p style="color:#aaa;font-size:13px;text-align:center;padding:8px 0">Cargando...</p></div>
+      <div class="s-card">
+        <div class="cj-pend-head"><div class="s-section-label">Códigos pendientes</div><div class="cj-contador" id="cj-contador"></div></div>
+        <div id="cj-lista"><p class="cj-vacio">Cargando...</p></div>
+      </div>
+      <div class="cj-qr" id="cj-qr" hidden>
+        <div>
+          <div class="cj-qr-titulo">Escanea con tu cámara</div>
+          <div class="cj-qr-sub">y suma tu punto</div>
+        </div>
+        <div>
+          <canvas id="cj-qr-canvas"></canvas>
+          <div class="cj-qr-tiempo-lbl">Caduca en</div>
+          <div class="cj-qr-tiempo" id="cj-qr-tiempo"></div>
+        </div>
+        <div class="cj-qr-botones">
+          <button class="s-btn ghost" id="cj-qr-cerrar">Cerrar</button>
+          <button class="s-btn danger" id="cj-qr-cancelar">Cancelar código</button>
+        </div>
       </div>
     </div>
     ${navBarCajero()}
@@ -716,155 +775,183 @@ export function paginaCajero() {
 
 export async function initCajero() {
   inyectarEstilos(); initNavCajero()
-  try {
-    const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
-    if (negocio) { const { data: nd } = await supabase.from('negocios').select('color_principal').eq('id', negocio.id).single(); if (nd?.color_principal) aplicarColorNegocio(nd.color_principal) }
-  } catch (e) {}
-  cargarUltimosClientes()
-  document.getElementById('buscar').addEventListener('click', async () => { const t = document.getElementById('telefono').value.trim(); if (!t) return; document.getElementById('nombre-buscar').value = ''; await buscarYMostrar({ telefono: t }) })
-  document.getElementById('buscar-nombre').addEventListener('click', async () => { const n = document.getElementById('nombre-buscar').value.trim(); if (!n) return; document.getElementById('telefono').value = ''; await buscarYMostrar({ nombre: n }) })
-  document.getElementById('telefono').addEventListener('keydown', async e => { if (e.key === 'Enter') { const t = document.getElementById('telefono').value.trim(); if (t) { document.getElementById('nombre-buscar').value = ''; await buscarYMostrar({ telefono: t }) } } })
-  document.getElementById('nombre-buscar').addEventListener('keydown', async e => { if (e.key === 'Enter') { const n = document.getElementById('nombre-buscar').value.trim(); if (n) { document.getElementById('telefono').value = ''; await buscarYMostrar({ nombre: n }) } } })
-}
+  const sesion = ++cajeroSesion
+  const $ = id => document.getElementById(id)
+  const vigente = () => sesion === cajeroSesion && !!$('cj-root')
+  const estado = { codigos: [], max: null, abierto: null, creando: false, wakeLock: null }
 
-async function cargarUltimosClientes() {
-  try {
-    const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual(); if (!negocio) return
-    const hoy = new Date().toISOString().split('T')[0]
-    const { data: visitas, error } = await supabase.from('visitas').select('cliente_id,fecha').eq('negocio_id', negocio.id).gte('fecha', hoy).order('fecha', { ascending: false }).limit(20)
-    if (error) throw error
-    if (!visitas || visitas.length === 0) { document.getElementById('ultimos-clientes').innerHTML = `<p style="color:#aaa;font-size:13px;text-align:center">Ningún cliente atendido hoy</p>`; return }
-    const vistos = new Set(); const ids = []
-    for (const v of visitas) { if (!vistos.has(v.cliente_id)) { vistos.add(v.cliente_id); ids.push(v.cliente_id) } if (ids.length >= 5) break }
-    const { data: clientes } = await supabase.from('clientes').select('id,nombre,telefono,total_visitas').in('id', ids)
-    const ordenados = ids.map(id => clientes.find(c => c.id === id)).filter(Boolean)
-    document.getElementById('ultimos-clientes').innerHTML = ordenados.map(c => `
-      <div class="s-row" style="cursor:pointer" data-tel="${c.telefono}">
-        <div><div class="s-row-title">${c.nombre}</div><div class="s-row-sub">${c.telefono}</div></div>
-        <div class="s-row-actions" style="color:${DS.gray300};font-size:13px">${c.total_visitas} visitas →</div>
-      </div>
-    `).join('')
-    document.querySelectorAll('#ultimos-clientes .s-row').forEach(row => {
-      row.addEventListener('click', async () => { document.getElementById('telefono').value = row.dataset.tel; document.getElementById('nombre-buscar').value = ''; await buscarYMostrar({ telefono: row.dataset.tel }); window.scrollTo({ top: 0, behavior: 'smooth' }) })
-    })
-  } catch (e) {
-    console.error('Error al cargar los últimos clientes del cajero:', e)
-    document.getElementById('ultimos-clientes').innerHTML = `<p style="color:#aaa;font-size:13px;text-align:center">${navigator.onLine === false ? 'Sin conexión' : 'No se pudo cargar el cliente. Intenta de nuevo.'}</p>`
+  const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
+  if (!vigente()) return
+  if (!negocio?.id) {
+    $('cj-cobre').disabled = true
+    $('cj-msg').innerHTML = `<div class="cj-aviso aviso">Tu sesión ya no es válida. Sal y vuelve a entrar.</div>`
+    return
   }
-}
 
-async function buscarYMostrar({ telefono, nombre }) {
-  const res = document.getElementById('resultado')
-  res.innerHTML = `<div class="s-card"><p style="text-align:center;color:#aaa;padding:8px">Buscando...</p></div>`
-  try {
-    const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
-    let q = supabase.from('clientes').select('*').eq('negocio_id', negocio?.id)
-    if (telefono) q = q.eq('telefono', telefono); else if (nombre) q = q.ilike('nombre', `%${nombre}%`)
-    const { data, error } = await q; if (error) throw error
-    if (telefono) {
-      if (!data?.[0]) { res.innerHTML = `<div class="s-card"><p class="s-error" style="margin-bottom:12px">Cliente no encontrado</p><button class="s-btn primary" id="btn-nuevo">+ Registrar nuevo cliente</button></div>`; document.getElementById('btn-nuevo').addEventListener('click', () => navigate('registro', telefono)); return }
-      mostrarCliente(data[0]); return
+  const restante = c => new Date(c.expira_en).getTime() - Date.now()
+  const formatoTiempo = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` }
+  const hora = iso => new Date(iso).toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' })
+  const avisar = (texto, tipo = 'aviso') => { $('cj-msg').innerHTML = texto ? `<div class="cj-aviso ${tipo}">${texto}</div>` : '' }
+
+  function pintarLista() {
+    const activos = estado.codigos.length
+    $('cj-contador').textContent = estado.max ? `${activos} de ${estado.max} activos` : ''
+    $('cj-lista').innerHTML = activos === 0
+      ? `<p class="cj-vacio">No hay códigos pendientes</p>`
+      : estado.codigos.map(c => `
+        <button class="cj-fila" data-id="${c.id}">
+          <span><span class="s-row-title">Cuenta de las ${hora(c.creado_en)}</span><span class="s-row-sub" data-tiempo="${c.id}">Caduca en ${formatoTiempo(restante(c))}</span></span>
+          <span class="cj-fila-ver">Ver QR</span>
+        </button>`).join('')
+  }
+
+  // Mantiene la pantalla encendida mientras el QR está a la vista (si el navegador lo permite).
+  async function mantenerPantalla(encendida) {
+    try {
+      if (encendida && !estado.wakeLock && 'wakeLock' in navigator) {
+        estado.wakeLock = await navigator.wakeLock.request('screen')
+        estado.wakeLock.addEventListener('release', () => { estado.wakeLock = null })
+      }
+      if (!encendida && estado.wakeLock) await estado.wakeLock.release()
+    } catch (e) { estado.wakeLock = null }
+  }
+
+  async function mostrarQR(c) {
+    estado.abierto = c
+    // El id del negocio va en la URL para que el celular del cliente elija su token (2E).
+    const url = `${location.origin}${location.pathname}#/c/${negocio.id}/${c.codigo}`
+    const lado = Math.floor(Math.min(window.innerWidth - 48, window.innerHeight * 0.55, 420))
+    $('cj-qr-tiempo').textContent = formatoTiempo(restante(c))
+    $('cj-qr').hidden = false
+    try {
+      await QRCode.toCanvas($('cj-qr-canvas'), url, { width: lado, margin: 2, errorCorrectionLevel: 'L' })
+    } catch (e) {
+      console.error('Error al dibujar el QR:', e)
+      cerrarQR(); avisar('No se pudo mostrar el QR. Intenta de nuevo.')
+      return
     }
-    if (!data || data.length === 0) { res.innerHTML = `<div class="s-card"><p class="s-error">No se encontró ningún cliente con ese nombre</p></div>`; return }
-    if (data.length === 1) { mostrarCliente(data[0]); return }
-    res.innerHTML = `<div class="s-card"><div class="s-section-label">Se encontraron ${data.length} clientes</div>${data.map(c => `<div class="s-row" style="cursor:pointer" data-id="${c.id}"><div><div class="s-row-title">${c.nombre}</div><div class="s-row-sub">${c.telefono}</div></div><div style="color:${DS.gray300};font-size:13px">${c.total_visitas} visitas →</div></div>`).join('')}</div>`
-    res.querySelectorAll('.s-row').forEach(row => { row.addEventListener('click', () => { const c = data.find(x => x.id === row.dataset.id); if (c) mostrarCliente(c) }) })
-  } catch (e) {
-    console.error('Error al buscar clientes en el cajero:', e)
-    res.innerHTML = `<div class="s-card"><p class="s-error">${navigator.onLine === false ? 'Sin conexión' : 'No se pudo cargar el cliente. Intenta de nuevo.'}</p></div>`
+    mantenerPantalla(true)
   }
-}
 
-async function mostrarCliente(data) {
+  function cerrarQR() {
+    estado.abierto = null
+    $('cj-qr').hidden = true
+    mantenerPantalla(false)
+  }
+
+  function quitar(id) {
+    estado.codigos = estado.codigos.filter(c => c.id !== id)
+    pintarLista()
+  }
+
+  async function cargarPendientes() {
+    try {
+      const { data, error } = await supabase.rpc('mis_codigos_pendientes')
+      if (!vigente()) return
+      if (error) throw error
+      estado.codigos = data.codigos; estado.max = data.max_activos
+      // Si el QR abierto ya no está pendiente (el cliente lo usó o caducó), se cierra.
+      if (estado.abierto && !estado.codigos.some(c => c.id === estado.abierto.id)) cerrarQR()
+      pintarLista()
+    } catch (e) {
+      console.error('Error al cargar los códigos pendientes:', e)
+      if (vigente()) $('cj-lista').innerHTML = `<p class="cj-vacio">${mensajeCajero(e, estado.max)}</p>`
+    }
+  }
+
+  async function cobre() {
+    if (estado.creando) return
+    const btn = $('cj-cobre')
+    estado.creando = true; btn.disabled = true; avisar('')
+    try {
+      const { data, error } = await supabase.rpc('crear_codigo')
+      if (!vigente()) return
+      if (error) throw error
+      const c = { id: data.id, codigo: data.codigo, expira_en: data.expira_en, creado_en: new Date().toISOString() }
+      estado.codigos.unshift(c); estado.max = data.max_activos
+      pintarLista()
+      await mostrarQR(c)
+    } catch (e) {
+      if (!vigente()) return
+      avisar(mensajeCajero(e, estado.max))
+      if (e?.message?.includes('LIMITE_CODIGOS')) cargarPendientes()
+    } finally {
+      estado.creando = false; btn.disabled = false
+    }
+  }
+
+  async function cancelar() {
+    const c = estado.abierto; const btn = $('cj-qr-cancelar')
+    if (!c || btn.disabled) return
+    btn.disabled = true
+    try {
+      const { data, error } = await supabase.rpc('cancelar_codigo', { p_codigo_id: c.id })
+      if (!vigente()) return
+      if (error) throw error
+      estado.max = data.max_activos
+      cerrarQR(); quitar(c.id)
+      avisar('Código cancelado. Ya puedes generar otro.', 'ok')
+    } catch (e) {
+      if (!vigente()) return
+      const m = e?.message || ''
+      // Si ya no estaba activo, se quita de la lista de todos modos.
+      if (/CODIGO_(USADO|CADUCADO|CANCELADO|NO_ENCONTRADO)/.test(m)) { cerrarQR(); quitar(c.id) }
+      avisar(mensajeCajero(e, estado.max), m.includes('CODIGO_USADO') ? 'ok' : 'aviso')
+    } finally {
+      btn.disabled = false
+    }
+  }
+
+  // Cada segundo: contadores y, al caducar, el código desaparece solo.
+  const reloj = setInterval(() => {
+    if (!vigente()) { limpiar(); return }
+    const vencidos = estado.codigos.filter(c => restante(c) <= 0)
+    if (vencidos.length) {
+      if (estado.abierto && vencidos.some(c => c.id === estado.abierto.id)) {
+        cerrarQR(); avisar('El código caducó. Genera otro si el cliente aún no escanea.')
+      }
+      estado.codigos = estado.codigos.filter(c => restante(c) > 0)
+      pintarLista()
+      return
+    }
+    if (estado.abierto) $('cj-qr-tiempo').textContent = formatoTiempo(restante(estado.abierto))
+    for (const c of estado.codigos) {
+      const el = document.querySelector(`[data-tiempo="${c.id}"]`)
+      if (el) el.textContent = `Caduca en ${formatoTiempo(restante(c))}`
+    }
+  }, 1000)
+
+  // Al volver a la app (o recuperar señal) se recargan los pendientes:
+  // así desaparecen los que el cliente ya usó.
+  const alVolver = () => {
+    if (document.visibilityState !== 'visible') return
+    cargarPendientes()
+    if (estado.abierto) mantenerPantalla(true)
+  }
+  document.addEventListener('visibilitychange', alVolver)
+  window.addEventListener('online', alVolver)
+
+  function limpiar() {
+    clearInterval(reloj)
+    document.removeEventListener('visibilitychange', alVolver)
+    window.removeEventListener('online', alVolver)
+    mantenerPantalla(false)
+  }
+
+  $('cj-cobre').addEventListener('click', cobre)
+  $('cj-qr-cancelar').addEventListener('click', cancelar)
+  $('cj-qr-cerrar').addEventListener('click', () => { cerrarQR(); cargarPendientes() })
+  $('cj-lista').addEventListener('click', e => {
+    const fila = e.target.closest('.cj-fila')
+    const c = fila && estado.codigos.find(x => x.id === fila.dataset.id)
+    if (c) mostrarQR(c)
+  })
+
+  cargarPendientes()
   try {
-    const { data: niveles, error } = await supabase.from('niveles').select('*').eq('negocio_id', data.negocio_id).order('visitas_minimas', { ascending: true })
-    if (error) throw error
-    const tieneNiveles = niveles && niveles.length > 0
-    const nivelActual = getNivelActual(data.total_visitas, niveles)
-    const sigNivel = getSiguienteNivel(data.total_visitas, niveles)
-    const nivelColor = colorNivel(nivelActual)
-
-    const visitasParaSiguiente = sigNivel ? sigNivel.visitas_minimas - data.total_visitas : 0
-    const enMaximo = !sigNivel
-
-    const res = document.getElementById('resultado')
-    res.innerHTML = `
-      <div class="s-card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <div style="font-family:'Sora',sans-serif;font-size:18px;font-weight:800;color:${DS.gray900}">${data.nombre}</div>
-          <div class="nivel-badge" style="background:${nivelColor}20;color:${nivelColor}">${nivelActual.emoji} ${nivelActual.nombre}</div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-          <div class="s-stat"><div class="s-stat-num">${data.total_visitas}</div><div class="s-stat-lbl">Visitas totales</div></div>
-          <div class="s-stat"><div class="s-stat-num">${enMaximo ? '💎' : visitasParaSiguiente}</div><div class="s-stat-lbl">${enMaximo ? 'Nivel máximo' : 'Para '+sigNivel.emoji+' '+sigNivel.nombre}</div></div>
-        </div>
-        ${!enMaximo ? `
-        <div class="s-prog-wrap">
-          <div class="s-prog-header"><span>Progreso a ${sigNivel.emoji} ${sigNivel.nombre}</span><span>${data.total_visitas}/${sigNivel.visitas_minimas}</span></div>
-          <div class="s-prog-track"><div class="s-prog-fill" style="width:${Math.min(Math.round((data.total_visitas/sigNivel.visitas_minimas)*100),100)}%"></div></div>
-        </div>
-        ` : ''}
-        <button class="s-btn primary" id="registrar" style="margin-top:4px">+ Registrar visita</button>
-        <div id="msg-cajero" style="margin-top:10px"></div>
-      </div>
-    `
-
-    document.getElementById('registrar').addEventListener('click', async () => {
-      const btn = document.getElementById('registrar'); btn.disabled = true; btn.textContent = 'Registrando...'
-      try {
-        const { data: result, error } = await supabase.rpc('record_visit_temporary', { p_client_id: data.id })
-        if (error?.message?.includes('VISIT_ALREADY_RECORDED_TODAY')) {
-          document.getElementById('msg-cajero').innerHTML = `<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;font-size:14px;color:#92400e;margin-top:4px">⏰ ${data.nombre.split(' ')[0]} ya tiene una visita registrada hoy. Vuelve mañana.</div>`
-          btn.disabled = false; btn.textContent = '+ Registrar visita'; return
-        }
-        if (error) throw error
-        const nv = result.total_visitas
-        const nivelAnterior = getNivelActual(data.total_visitas, niveles)
-        data.total_visitas = nv; data.puntos_actuales = nv
-        const nivelNuevo = getNivelActual(nv, niveles)
-        const subioDeNivel = nivelNuevo.nombre !== nivelAnterior.nombre
-                const llegaANivelConPremio = !subioDeNivel && nivelNuevo.premio_bienvenida && nv === nivelNuevo.visitas_minimas
-        cargarUltimosClientes()
-
-        if (subioDeNivel || llegaANivelConPremio) {
-          // Pantalla grande para el cajero — énfasis en el premio a entregar
-          const el = document.createElement('div')
-          el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:9999;animation:sFadeIn 0.2s ease'
-          el.innerHTML = `
-            <div style="background:white;border-radius:24px;padding:32px 24px;text-align:center;max-width:340px;width:90%;animation:sPopIn 0.35s cubic-bezier(0.34,1.56,0.64,1)">
-              <div style="font-size:52px;margin-bottom:10px">${nivelNuevo.emoji}</div>
-              <div style="font-family:'Sora',sans-serif;font-size:13px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">¡Subió de nivel!</div>
-              <div style="font-family:'Sora',sans-serif;font-size:24px;font-weight:800;color:#0f172a;margin-bottom:16px">${data.nombre.split(' ')[0]} es ahora ${nivelNuevo.nombre}</div>
-              ${nivelNuevo.premio_bienvenida ? `
-              <div style="background:linear-gradient(135deg,#fef3c7,#fffdf5);border:2px solid #fde68a;border-radius:16px;padding:18px;margin-bottom:16px">
-                <div style="font-size:11px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Entrégale ahora</div>
-                <div style="font-family:'Sora',sans-serif;font-size:22px;font-weight:800;color:#78350f">${nivelNuevo.premio_bienvenida}</div>
-              </div>
-              ` : `<div style="font-size:14px;color:#64748b;margin-bottom:16px">Nuevo nivel desbloqueado — felicítalo</div>`}
-              <button id="cajero-cel-ok" style="width:100%;padding:14px;border:none;border-radius:12px;background:#0a5c47;color:white;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer">${nivelNuevo.premio_bienvenida ? '✓ Premio entregado' : 'Confirmar'}</button>
-            </div>
-          `
-          document.body.appendChild(el)
-          el.querySelector('#cajero-cel-ok')?.addEventListener('click', () => {
-            el.remove()
-            // Guardar en localStorage para que el cliente vea su premio cuando abra la app
-            if (nivelNuevo.premio_bienvenida) {
-              localStorage.setItem(`sello_premio_${data.negocio_id}_${data.telefono}`, `Subiste a ${nivelNuevo.nombre} y ganaste: ${nivelNuevo.premio_bienvenida}`)
-            }
-            document.getElementById('msg-cajero').innerHTML = `<div class="s-success">${nivelNuevo.emoji} ${data.nombre.split(' ')[0]} subió a ${nivelNuevo.nombre}${nivelNuevo.premio_bienvenida ? ' — Premio entregado: ' + nivelNuevo.premio_bienvenida : ''}</div>`
-          })
-        } else {
-          const sigNivelNuevo = getSiguienteNivel(nv, niveles)
-          const faltan = sigNivelNuevo ? sigNivelNuevo.visitas_minimas - nv : 0
-          toast({ icon: '✅', title: 'Visita registrada', sub: sigNivelNuevo ? `A ${data.nombre.split(' ')[0]} le faltan ${faltan} visita${faltan===1?'':'s'} para ${sigNivelNuevo.emoji} ${sigNivelNuevo.nombre}` : `${data.nombre.split(' ')[0]} alcanzo el nivel maximo` })
-        }
-      } catch (e) { document.getElementById('msg-cajero').innerHTML = errMsg('registrar la visita') }
-      finally { btn.disabled = false; btn.textContent = '+ Registrar visita' }
-    })
-  } catch (e) {
-    console.error('Error al cargar el cliente en el cajero:', e)
-    document.getElementById('resultado').innerHTML = `<div class="s-card"><p class="s-error">${navigator.onLine === false ? 'Sin conexión' : 'No se pudo cargar el cliente. Intenta de nuevo.'}</p></div>`
-  }
+    const { data: nd } = await supabase.from('negocios').select('color_principal').eq('id', negocio.id).single()
+    if (vigente() && nd?.color_principal) aplicarColorNegocio(nd.color_principal)
+  } catch (e) {}
 }
 
 export async function paginaKiosko() {
