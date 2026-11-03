@@ -280,6 +280,16 @@ function inyectarEstilos() {
     .cl-sellos { display: grid; gap: 10px; justify-items: center; margin-top: 22px; }
     .cl-sello { width: 100%; max-width: 52px; aspect-ratio: 1; border-radius: 50%; border: 2px dashed ${DS.gray300}; display: flex; align-items: center; justify-content: center; font-size: 22px; }
     .cl-sello.lleno { border: none; background: var(--negocio-color, #2B4ACB); }
+    .cl-sello.nuevo { animation: clSelloNuevo 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.4s both; }
+    .cl-sello.nuevo svg { animation: sPopIn 0.3s ease-out 0.9s both; }
+    @keyframes clSelloNuevo {
+      0% { background-color: transparent; box-shadow: inset 0 0 0 2px ${DS.gray300}; transform: scale(0.85); }
+      60% { transform: scale(1.12); }
+      100% { background-color: var(--negocio-color, #2B4ACB); box-shadow: inset 0 0 0 0 transparent; transform: scale(1); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .cl-sello.nuevo, .cl-sello.nuevo svg, .cl-exito-icono { animation: none; }
+    }
     .cl-premio { background: ${DS.white}; border-radius: 24px; padding: 20px; margin-top: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     .cl-premio-lbl { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: ${DS.gray500}; }
     .cl-premio-nombre { font-size: 22px; font-weight: 800; line-height: 1.25; margin-top: 6px; color: ${DS.gray900}; }
@@ -1569,24 +1579,34 @@ function pantallaEstadoCliente({ negocio = null, icono, titulo, sub = '', accion
 
 const cargandoCliente = (gris = false) => pantallaCliente({ cuerpo: '<p class="cl-cargando">Cargando...</p>', gris })
 
+// Según la hora del celular del cliente.
+function saludoPorHora(fecha = new Date()) {
+  const h = fecha.getHours()
+  if (h >= 5 && h < 12) return 'Buenos días'
+  if (h >= 12 && h < 19) return 'Buenas tardes'
+  return 'Buenas noches'
+}
+
 // Tarjeta con los datos de reclamar_codigo o de tarjeta_por_token.
-// Con exito = true arriba va "¡Ganaste 1 punto!" en lugar de "Hola, Ana".
+// Con exito = true arriba va "¡Ganaste 1 punto!" en lugar del saludo,
+// y el sello recién ganado se llena con una animación.
 function tarjetaClienteHTML(negocio, t, exito = false) {
   const meta = Math.max(1, Number(t.meta) || 10)
   const puntos = Math.max(0, Number(t.puntos) || 0)
   const faltan = Math.max(0, meta - puntos)
+  const nuevo = exito && puntos <= meta ? puntos - 1 : -1
   const sellos = meta <= 30
     ? Array.from({ length: meta }, (_, i) => {
         const lleno = i < puntos
         const contenido = i === meta - 1 ? '🎁' : lleno ? palomitaSVG(18) : ''
-        return `<span class="cl-sello${lleno ? ' lleno' : ''}">${contenido}</span>`
+        return `<span class="cl-sello${lleno ? ' lleno' : ''}${i === nuevo ? ' nuevo' : ''}">${contenido}</span>`
       }).join('')
     : ''
   const cabecera = exito
     ? `<div class="cl-exito-icono">${palomitaSVG(40)}</div>
        <h1 class="cl-titulo">¡Ganaste 1 punto!</h1>
        <p class="cl-sub">${esc(t.nombre)}, ya llevas ${puntos} de ${meta}.</p>`
-    : `<h1 class="cl-titulo">Hola, ${esc(t.nombre)}</h1>
+    : `<h1 class="cl-titulo">${saludoPorHora()}, ${esc(t.nombre)}</h1>
        <p class="cl-sub">Tu tarjeta en ${esc(negocio?.nombre || 'este negocio')}</p>`
   return pantallaCliente({
     negocio, gris: true, arriba: true,
@@ -1601,7 +1621,7 @@ function tarjetaClienteHTML(negocio, t, exito = false) {
       <div class="cl-premio">
         <div class="cl-premio-lbl">TU PREMIO</div>
         <div class="cl-premio-nombre">${esc(t.premio || 'Pregúntale al mesero por tu premio')}</div>
-        <div class="cl-premio-falta">${t.premio_listo ? '¡Ya es tuyo!' : `Te faltan ${faltan} visita${faltan === 1 ? '' : 's'}`}</div>
+        <div class="cl-premio-falta">${t.premio_listo ? '¡Ya es tuyo!' : faltan === 1 ? 'Te falta 1 para tu premio' : `Te faltan ${faltan} visitas`}</div>
       </div>
       <p class="cl-privacidad"><button type="button" id="cl-privacidad">Aviso de privacidad</button></p>
     `,
@@ -1661,7 +1681,7 @@ export async function initReclamar(negocioId, codigo) {
   function mostrarConfirmacion(cliente) {
     pintar(pantallaCliente({
       negocio,
-      cuerpo: `<h1 class="cl-titulo">¿Eres ${esc(cliente.nombre)}?</h1>
+      cuerpo: `<h1 class="cl-titulo">${saludoPorHora()}, ¿eres ${esc(cliente.nombre)}?</h1>
         <p class="cl-sub">Tu número termina en <span class="cl-digitos">···${esc(cliente.ultimos4)}</span></p>`,
       acciones: `<div id="cl-aviso"></div>
         <button class="cl-btn" id="cl-sumar">Sí, sumar mi punto</button>
@@ -1722,6 +1742,13 @@ export async function initReclamar(negocioId, codigo) {
     try { history.replaceState(null, '', `#/tarjeta/${id}`) } catch (e) {}
     pintar(tarjetaClienteHTML(negocio, data, true))
     $('cl-privacidad')?.addEventListener('click', abrirAvisoPrivacidadCliente)
+    // Esta pantalla ya es la tarjeta: al volver a la app se recarga como tarjeta.
+    const alVolver = () => {
+      if (document.visibilityState !== 'visible') return
+      document.removeEventListener('visibilitychange', alVolver)
+      if (vigente()) initTarjeta(id, { hayTarjeta: true })
+    }
+    document.addEventListener('visibilitychange', alVolver)
   }
 
   function manejarError(e, desde) {
@@ -1794,36 +1821,49 @@ export function paginaTarjeta() {
   return `<div id="cl-app">${cargandoCliente(true)}</div>`
 }
 
-export async function initTarjeta(negocioId) {
+// La tarjeta se carga al abrirse y otra vez cada que la app vuelve al primer plano.
+// hayTarjeta = true: ya hay una tarjeta en pantalla (la de "¡Ganaste 1 punto!"),
+// así que se recarga sin pasar por "Cargando...".
+export async function initTarjeta(negocioId, { hayTarjeta = false } = {}) {
   inyectarEstilos()
-  aplicarColorNegocio(AZUL_RESPALDO)
+  if (!hayTarjeta) aplicarColorNegocio(AZUL_RESPALDO)
   const sesion = ++clienteSesion
   const $ = id => document.getElementById(id)
   const vigente = () => sesion === clienteSesion && !!$('cl-app')
   const pintar = html => { if (vigente()) $('cl-app').innerHTML = html }
+  let mostrando = hayTarjeta
+  let pedido = 0
 
-  const sinTarjeta = () => pintar(pantallaEstadoCliente({
-    icono: '📷', titulo: 'Escanea el código al pagar', sub: 'para ver tu tarjeta.',
-  }))
+  const sinTarjeta = () => {
+    mostrando = false
+    pintar(pantallaEstadoCliente({
+      icono: '📷', titulo: 'Escanea el código al pagar', sub: 'para ver tu tarjeta.',
+    }))
+  }
 
   async function cargar() {
     const token = leerToken(negocioId)
     if (!token) return sinTarjeta()
-    pintar(cargandoCliente(true))
+    const mio = ++pedido
+    if (!mostrando) pintar(cargandoCliente(true))
     try {
       const { data, error } = await supabase.rpc('tarjeta_por_token', { p_token: token })
-      if (!vigente()) return
+      if (!vigente() || mio !== pedido) return
       if (error) throw error
       // El token guardado para este negocio debe ser de una tarjeta de este negocio.
       if (data?.negocio?.id && data.negocio.id !== negocioId) throw new Error('TOKEN_INVALIDO')
       aplicarColorNegocio(data.negocio?.color_principal || AZUL_RESPALDO)
       pintar(tarjetaClienteHTML(data.negocio, data))
       $('cl-privacidad')?.addEventListener('click', abrirAvisoPrivacidadCliente)
+      mostrando = true
     } catch (e) {
-      if (!vigente()) return
+      if (!vigente() || mio !== pedido) return
       const m = e?.message || ''
       if (m.includes('TOKEN_INVALIDO')) { borrarToken(negocioId); return sinTarjeta() }
       if (m.includes('NEGOCIO_INACTIVO')) return sinTarjeta()
+      // Sin señal al volver a la app: se queda la última tarjeta en pantalla.
+      if (mostrando && sinInternet(e)) return
+      mostrando = false
       console.error('Error al cargar la tarjeta:', e)
       pintar(pantallaEstadoCliente({
         icono: '📶',
@@ -1834,6 +1874,13 @@ export async function initTarjeta(negocioId) {
       $('cl-reintentar')?.addEventListener('click', cargar)
     }
   }
+
+  // Al salir de la pantalla, el listener se quita solo en el siguiente cambio.
+  const alVolver = () => {
+    if (!vigente()) { document.removeEventListener('visibilitychange', alVolver); return }
+    if (document.visibilityState === 'visible') cargar()
+  }
+  document.addEventListener('visibilitychange', alVolver)
 
   cargar()
 }
