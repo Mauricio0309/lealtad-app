@@ -11,6 +11,7 @@ import {
   paginaLanding, initLanding,
   paginaPrivacidad, initPrivacidad,
   paginaTerminos, initTerminos,
+  MENSAJE_CUENTA_DESACTIVADA,
   paginaReclamar, initReclamar,
   paginaTarjeta, initTarjeta,
 } from './pages.js'
@@ -128,6 +129,16 @@ async function render() {
   }
 
   const profile = await getPerfilActual()
+  // El dueño lo desactivó: se cierra la sesión guardada en este celular.
+  if (profile?.activo === false) {
+    const { logout } = await import('./auth.js')
+    await logout()
+    app.innerHTML = paginaLogin()
+    initLogin()
+    const msg = document.getElementById('msg')
+    if (msg) msg.innerHTML = `<p class="s-error">${MENSAJE_CUENTA_DESACTIVADA}</p>`
+    return
+  }
   if (!profile || !['owner', 'mesero'].includes(profile.role)) {
     app.innerHTML = paginaLogin()
     initLogin()

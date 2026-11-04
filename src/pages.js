@@ -480,6 +480,25 @@ function inyectarEstilosDueno() {
     .ow-texto-legal h2 { font-size: 15px; font-weight: 700; margin: 22px 0 6px; }
     .ow-texto-legal p { font-size: 14px; color: var(--ow-texto-2); }
 
+    .ow-tabs .ow-tab { flex: 1 1 auto; padding: 8px 6px; font-size: 14px; white-space: nowrap; }
+    .ow-mesero-fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 12px; padding: 14px 0; border-bottom: 1px solid var(--ow-borde); }
+    .ow-mesero-fila:first-child { padding-top: 0; }
+    .ow-mesero-fila:last-of-type { border-bottom: none; }
+    .ow-mesero-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .ow-estado { flex-shrink: 0; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .ow-estado.activo { background: var(--ow-ok-suave); color: var(--ow-ok); }
+    .ow-estado.inactivo { background: #eef1ef; color: var(--ow-texto-3); }
+    .ow-mesero-acciones { display: flex; gap: 8px; }
+    .ow-mesero-acciones .ow-btn + .ow-btn { margin-top: 0; }
+    .ow-texto-atencion { color: var(--ow-atencion); }
+    .ow-btn.ow-btn-atencion { background: var(--ow-atencion); color: #ffffff; }
+    .ow-aviso-unico { margin-bottom: 14px; padding: 10px 12px; border: 1px solid var(--ow-atencion-borde); border-radius: 10px; background: var(--ow-atencion-suave); font-size: 14px; }
+    .ow-credencial { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; padding: 14px 16px; border: 1px solid var(--ow-borde); border-radius: 12px; background: var(--ow-fondo); }
+    .ow-credencial-lbl { display: block; font-size: 12px; font-weight: 600; color: var(--ow-texto-2); }
+    .ow-credencial-valor { font-weight: 500; word-break: break-all; }
+    .ow-contrasena { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 22px; font-weight: 700; letter-spacing: 0.04em; user-select: all; word-break: break-all; }
+    .ow-cifra-num.sin-corte { white-space: nowrap; }
+
     @media (prefers-reduced-motion: reduce) {
       .ow-esq { animation: none; }
       .ow-paso-cambio, .ow-tab, .ow-btn, .ow-input { transition: none; }
@@ -647,6 +666,7 @@ export function initLogin() {
       }
       const negocio = await login(email, password)
       if (!negocio) { msg.innerHTML = `<p class="s-error">Correo o contraseña incorrectos</p>`; return }
+      if (negocio.desactivado) { msg.innerHTML = `<p class="s-error">${MENSAJE_CUENTA_DESACTIVADA}</p>`; return }
       if (negocio.activo === false) { msg.innerHTML = `<p class="s-error">Esta cuenta está desactivada. Contacta al administrador.</p>`; const { logout } = await import('./auth.js'); logout(); return }
       const perfil = await getPerfilActual()
       if (perfil?.role === 'mesero') { window.location.hash = '#/cajero'; window.dispatchEvent(new Event('hashchange')); return }
@@ -2352,7 +2372,7 @@ function mensajeDueno(error) {
 
 // Pestaña elegida: se recuerda en esta pestaña del navegador.
 const CLAVE_PESTANA_DUENO = 'sello_pestana_dueno'
-function leerPestanaDueno() { try { return sessionStorage.getItem(CLAVE_PESTANA_DUENO) === 'ajustes' ? 'ajustes' : 'resumen' } catch (e) { return 'resumen' } }
+function leerPestanaDueno() { try { const p = sessionStorage.getItem(CLAVE_PESTANA_DUENO); return p === 'ajustes' || p === 'equipo' ? p : 'resumen' } catch (e) { return 'resumen' } }
 function guardarPestanaDueno(p) { try { sessionStorage.setItem(CLAVE_PESTANA_DUENO, p) } catch (e) {} }
 
 // Esqueletos de carga: la forma del panel aparece al instante, nunca en blanco.
@@ -2446,7 +2466,7 @@ function resumenHTML(r, meseros) {
     <div class="ow-cifras">
       <div class="ow-cifra"><div class="ow-cifra-num">${formatoNumero(r.clientes_registrados)}</div><div class="ow-cifra-lbl">Clientes registrados</div></div>
       <div class="ow-cifra"><div class="ow-cifra-num">${formatoNumero(r.visitas_semana)}</div><div class="ow-cifra-lbl">Visitas esta semana</div>${cambioSemanaHTML(r.visitas_semana, r.visitas_semana_anterior)}</div>
-      <div class="ow-cifra"><div class="ow-cifra-num positivo">${deCada10}<span class="ow-cifra-de"> de cada 10</span></div><div class="ow-cifra-lbl">Regresaron</div></div>
+      <div class="ow-cifra"><div class="ow-cifra-num positivo sin-corte">${deCada10}<span class="ow-cifra-de"> de 10</span></div><div class="ow-cifra-lbl">Clientes que regresaron</div></div>
     </div>
     <button type="button" class="ow-fila${inactivos > 0 ? ' atencion' : ''}" id="dn-ver-inactivos"${inactivos > 0 ? '' : ' disabled'}>
       <span><span class="ow-fila-titulo">Dejaron de venir</span><span class="ow-fila-sub">Más de 21 días sin venir</span></span>
@@ -2820,6 +2840,220 @@ function initAjustesExtra(negocioId, nombreNegocio) {
   $('btn-ver-landing')?.addEventListener('click', () => navigate('landing', negocioId))
 }
 
+// ── EQUIPO (Fase 4C) ──
+// El dueño da de alta a sus meseros. Las cuentas las crea la Edge Function
+// crear-mesero (el navegador nunca tiene llaves de administrador). La lista
+// sale de equipo_negocio() (supabase/fase-4c.sql).
+// La contraseña se muestra UNA sola vez: al cerrar la hoja se borra de la
+// pantalla y no se puede volver a ver.
+export const MENSAJE_CUENTA_DESACTIVADA = 'Tu cuenta fue desactivada. Habla con el dueño del negocio.'
+
+const MENSAJES_EQUIPO = {
+  NOMBRE_INVALIDO: 'Escribe el nombre del mesero (máximo 30 letras).',
+  CORREO_INVALIDO: 'Revisa el correo: no parece válido.',
+  CORREO_EN_USO: 'Ese correo ya tiene una cuenta en Sello. Usa otro.',
+  LIMITE_MESEROS: 'Ya tienes 10 meseros activos. Desactiva a uno para agregar otro.',
+  MESERO_NO_ENCONTRADO: 'Ese mesero ya no está en tu equipo.',
+  MESERO_DESACTIVADO: 'Ese mesero está desactivado.',
+  ACCESO_DENEGADO: 'Solo el dueño del negocio puede administrar el equipo.',
+  SIN_SESION: 'Tu sesión ya no es válida. Sal y vuelve a entrar.',
+  NEGOCIO_INACTIVO: 'El negocio está desactivado.',
+}
+
+// Llama a la Edge Function. Si responde con error, lee su código y mensaje.
+async function llamarEquipo(cuerpo) {
+  const { data, error } = await supabase.functions.invoke('crear-mesero', { body: cuerpo })
+  if (error) {
+    let info = null
+    try { info = await error.context?.json?.() } catch (e) {}
+    const err = new Error(info?.error || error.name || 'ERROR')
+    err.mensaje = info?.mensaje
+    err.sinRespuesta = !info && /FetchError|RelayError/i.test(error.name || '')
+    throw err
+  }
+  return data
+}
+
+function mensajeEquipo(e) {
+  if (sinInternet(e)) return 'Sin conexión. Revisa tu internet e intenta de nuevo.'
+  if (e?.sinRespuesta) return 'No pudimos conectar con el servidor. Intenta de nuevo en un momento.'
+  return MENSAJES_EQUIPO[e?.message] || e?.mensaje || mensajeDueno(e)
+}
+
+const limpiarNombreMesero = t => String(t || '').replace(/[\u0000-\u001f\u007f]/g, '').replace(/\s+/g, ' ').trim()
+const CORREO_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+
+// Hoja inferior genérica del dueño. fija = true: no se cierra tocando fuera
+// ni con Escape (para no perder una contraseña por accidente).
+function abrirHojaDueno({ titulo, sub = '' }) {
+  inyectarEstilosDueno()
+  const hoja = document.createElement('div')
+  hoja.className = 'ow-hoja-fondo'
+  hoja.innerHTML = `<div class="ow-hoja" role="dialog" aria-modal="true" aria-labelledby="ow-hoja-titulo">
+    <div class="ow-hoja-cab">
+      <div><h2 class="ow-h2" id="ow-hoja-titulo">${titulo}</h2>${sub ? `<p class="ow-sub" id="ow-hoja-sub">${sub}</p>` : ''}</div>
+      <button class="ow-btn secundario chico" id="ow-hoja-cerrar">Cerrar</button>
+    </div>
+    <div id="ow-hoja-cuerpo"></div>
+  </div>`
+  document.body.appendChild(hoja)
+  const control = {
+    hoja,
+    cuerpo: hoja.querySelector('#ow-hoja-cuerpo'),
+    fija: false,
+    cerrar() { hoja.remove(); document.removeEventListener('keydown', alTeclear) },
+    titulo(texto, subtitulo = '') {
+      hoja.querySelector('#ow-hoja-titulo').textContent = texto
+      const s = hoja.querySelector('#ow-hoja-sub'); if (s) s.textContent = subtitulo
+    },
+  }
+  const alTeclear = e => { if (e.key === 'Escape' && !control.fija) control.cerrar() }
+  document.addEventListener('keydown', alTeclear)
+  hoja.querySelector('#ow-hoja-cerrar').addEventListener('click', () => control.cerrar())
+  hoja.addEventListener('click', e => { if (e.target === hoja && !control.fija) control.cerrar() })
+  return control
+}
+
+// Muestra correo y contraseña UNA vez, con Copiar y Compartir por WhatsApp.
+function mostrarCredenciales(h, datos, negocioNombre, esNueva) {
+  h.fija = true
+  h.hoja.querySelector('#ow-hoja-cerrar').hidden = true
+  h.titulo(esNueva ? `Nueva contraseña de ${datos.nombre}` : `Listo, ${datos.nombre} ya tiene cuenta`, '')
+  const direccion = `${location.origin}${location.pathname}#/login`
+  const mensaje = [
+    `Hola ${datos.nombre}, ${esNueva ? 'esta es tu nueva contraseña de Sello' : `ya tienes tu cuenta de Sello${negocioNombre ? ` en ${negocioNombre}` : ''}`}.`,
+    `1. Abre: ${direccion}`,
+    `2. Correo: ${datos.correo}`,
+    `3. Contraseña: ${datos.contrasena}`,
+    'Entra una sola vez y tu sesión se queda abierta en tu celular.',
+  ].join('\n')
+
+  h.cuerpo.innerHTML = `
+    <p class="ow-aviso-unico">Guárdala o compártela ahora: <strong>no se vuelve a mostrar</strong>.</p>
+    <div class="ow-credencial">
+      <div><span class="ow-credencial-lbl">Correo</span><span class="ow-credencial-valor">${esc(datos.correo)}</span></div>
+      <div><span class="ow-credencial-lbl">Contraseña</span><span class="ow-contrasena">${esc(datos.contrasena)}</span></div>
+    </div>
+    <div class="ow-botones">
+      <button class="ow-btn secundario" id="eq-copiar">Copiar</button>
+      <button class="ow-btn primario" id="eq-whatsapp">Compartir por WhatsApp</button>
+    </div>
+    <div id="eq-copiado"></div>
+    <button class="ow-btn secundario" id="eq-listo" style="margin-top:16px">Ya la guardé</button>`
+
+  h.cuerpo.querySelector('#eq-copiar').addEventListener('click', async () => {
+    const aviso = h.cuerpo.querySelector('#eq-copiado')
+    try { await navigator.clipboard.writeText(mensaje); aviso.innerHTML = avisoOk('Copiado. Pégalo donde quieras.') }
+    catch (e) { aviso.innerHTML = avisoError('No se pudo copiar. Usa "Compartir por WhatsApp".') }
+  })
+  h.cuerpo.querySelector('#eq-whatsapp').addEventListener('click', () => {
+    window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank', 'noopener')
+  })
+  h.cuerpo.querySelector('#eq-listo').addEventListener('click', () => h.cerrar())
+}
+
+function abrirAgregarMesero(negocioNombre, alCambiar) {
+  const h = abrirHojaDueno({ titulo: 'Agregar mesero', sub: 'Le creamos su cuenta y te damos su contraseña.' })
+  h.cuerpo.innerHTML = `
+    <div class="ow-campo"><label class="ow-label" for="eq-nombre">Nombre</label><input id="eq-nombre" class="ow-input" maxlength="30" autocomplete="off" autocapitalize="words" placeholder="Ej: Ana" /></div>
+    <div class="ow-campo"><label class="ow-label" for="eq-correo">Correo</label><input id="eq-correo" type="email" class="ow-input" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="ana@correo.com" /><p class="ow-ayuda">Con este correo entrará a Sello.</p></div>
+    <button class="ow-btn primario" id="eq-crear">Crear cuenta</button>
+    <div id="eq-msg"></div>`
+  const nombre = h.cuerpo.querySelector('#eq-nombre'); const correo = h.cuerpo.querySelector('#eq-correo')
+  const btn = h.cuerpo.querySelector('#eq-crear'); const msg = h.cuerpo.querySelector('#eq-msg')
+  setTimeout(() => nombre.focus(), 50)
+
+  async function crear() {
+    if (btn.disabled) return
+    const n = limpiarNombreMesero(nombre.value); const c = correo.value.trim().toLowerCase()
+    if (!n || n.length > 30) { msg.innerHTML = avisoError(MENSAJES_EQUIPO.NOMBRE_INVALIDO); nombre.focus(); return }
+    if (!CORREO_VALIDO.test(c)) { msg.innerHTML = avisoError(MENSAJES_EQUIPO.CORREO_INVALIDO); correo.focus(); return }
+    btn.disabled = true; btn.textContent = 'Creando cuenta...'; msg.innerHTML = ''
+    try {
+      const datos = await llamarEquipo({ accion: 'crear', nombre: n, correo: c })
+      if (!h.hoja.isConnected) return
+      mostrarCredenciales(h, datos, negocioNombre, false)
+      alCambiar()
+    } catch (e) {
+      console.error('Error al crear el mesero:', e?.message)
+      msg.innerHTML = avisoError(mensajeEquipo(e))
+      btn.disabled = false; btn.textContent = 'Crear cuenta'
+    }
+  }
+  nombre.addEventListener('keydown', e => { if (e.key === 'Enter') correo.focus() })
+  correo.addEventListener('keydown', e => { if (e.key === 'Enter') crear() })
+  btn.addEventListener('click', crear)
+}
+
+function abrirNuevaContrasena(mesero, negocioNombre) {
+  const h = abrirHojaDueno({ titulo: `Nueva contraseña para ${mesero.nombre}`, sub: 'La contraseña anterior dejará de servir.' })
+  h.cuerpo.innerHTML = `<button class="ow-btn primario" id="eq-generar">Generar nueva contraseña</button><div id="eq-msg"></div>`
+  const btn = h.cuerpo.querySelector('#eq-generar'); const msg = h.cuerpo.querySelector('#eq-msg')
+  btn.addEventListener('click', async () => {
+    if (btn.disabled) return
+    btn.disabled = true; btn.textContent = 'Generando...'; msg.innerHTML = ''
+    try {
+      const datos = await llamarEquipo({ accion: 'nueva_contrasena', usuario_id: mesero.usuario_id })
+      if (h.hoja.isConnected) mostrarCredenciales(h, datos, negocioNombre, true)
+    } catch (e) {
+      console.error('Error al cambiar la contraseña:', e?.message)
+      msg.innerHTML = avisoError(mensajeEquipo(e))
+      btn.disabled = false; btn.textContent = 'Generar nueva contraseña'
+    }
+  })
+}
+
+function abrirDesactivar(mesero, alCambiar) {
+  const h = abrirHojaDueno({ titulo: `¿Desactivar a ${mesero.nombre}?`, sub: 'Ya no podrá entrar ni generar códigos, aunque tenga la app abierta. Sus visitas se quedan en tu historial.' })
+  h.cuerpo.innerHTML = `
+    <button class="ow-btn ow-btn-atencion" id="eq-si">Sí, desactivar</button>
+    <button class="ow-btn secundario" id="eq-no">Cancelar</button>
+    <div id="eq-msg"></div>`
+  const btn = h.cuerpo.querySelector('#eq-si'); const msg = h.cuerpo.querySelector('#eq-msg')
+  h.cuerpo.querySelector('#eq-no').addEventListener('click', () => h.cerrar())
+  btn.addEventListener('click', async () => {
+    if (btn.disabled) return
+    btn.disabled = true; btn.textContent = 'Desactivando...'; msg.innerHTML = ''
+    try {
+      await llamarEquipo({ accion: 'desactivar', usuario_id: mesero.usuario_id })
+      h.cerrar()
+      alCambiar()
+    } catch (e) {
+      console.error('Error al desactivar:', e?.message)
+      msg.innerHTML = avisoError(mensajeEquipo(e))
+      btn.disabled = false; btn.textContent = 'Sí, desactivar'
+    }
+  })
+}
+
+function equipoHTML(eq) {
+  const meseros = eq?.meseros || []
+  const activos = Number(eq?.activos) || 0
+  const maximo = Number(eq?.maximo) || 10
+  const lista = meseros.length === 0
+    ? `<div class="ow-vacio">Aún no tienes meseros. Agrega al primero: toma menos de un minuto y su sesión se queda abierta en su celular.</div>`
+    : meseros.map(m => `<div class="ow-mesero-fila">
+        <div class="ow-mesero-info">
+          <span class="ow-persona">${esc(m.nombre)}</span>
+          <span class="ow-estado ${m.activo ? 'activo' : 'inactivo'}">${m.activo ? 'Activo' : 'Desactivado'}</span>
+        </div>
+        ${m.activo ? `<div class="ow-mesero-acciones">
+          <button class="ow-btn secundario chico" data-nueva="${esc(m.usuario_id)}">Nueva contraseña</button>
+          <button class="ow-btn secundario chico ow-texto-atencion" data-desactivar="${esc(m.usuario_id)}">Desactivar</button>
+        </div>` : ''}
+      </div>`).join('')
+  return `
+    <section class="ow-seccion" aria-labelledby="sec-equipo">
+      <h2 class="ow-seccion-titulo" id="sec-equipo">Tu equipo</h2>
+      <p class="ow-seccion-sub">Cada mesero entra una sola vez en su celular y su sesión se queda abierta.</p>
+      <div class="ow-tarjeta">
+        ${lista}
+        <button class="ow-btn primario" id="eq-agregar" style="margin-top:20px"${activos >= maximo ? ' disabled' : ''}>Agregar mesero</button>
+        <p class="ow-ayuda" style="text-align:center">${activos >= maximo ? `Llegaste al máximo de ${maximo} meseros activos.` : `${activos} de ${maximo} meseros activos`}</p>
+      </div>
+    </section>`
+}
+
 // Cada visita a #/dueno abre una "sesión"; las respuestas que llegan tarde
 // de una visita anterior se ignoran.
 let duenoSesion = 0
@@ -2836,9 +3070,11 @@ export async function paginaDueno() {
         <div class="ow-tabs" role="tablist" aria-label="Mi panel">
           <button class="ow-tab" role="tab" id="tab-resumen" aria-controls="dn-resumen" data-pestana="resumen" aria-selected="${pestana === 'resumen'}">Resumen</button>
           <button class="ow-tab" role="tab" id="tab-ajustes" aria-controls="dn-ajustes" data-pestana="ajustes" aria-selected="${pestana === 'ajustes'}">Personalización</button>
+          <button class="ow-tab" role="tab" id="tab-equipo" aria-controls="dn-equipo" data-pestana="equipo" aria-selected="${pestana === 'equipo'}">Equipo</button>
         </div>
         <div id="dn-resumen" role="tabpanel" aria-labelledby="tab-resumen"${pestana === 'resumen' ? '' : ' hidden'}>${esqueletoResumen()}</div>
         <div id="dn-ajustes" role="tabpanel" aria-labelledby="tab-ajustes"${pestana === 'ajustes' ? '' : ' hidden'}>${esqueletoAjustes()}</div>
+        <div id="dn-equipo" role="tabpanel" aria-labelledby="tab-equipo"${pestana === 'equipo' ? '' : ' hidden'}>${[160, 60].map(bloqueEsq).join('')}</div>
       </main>
       ${navBarDueno('panel')}
     </div>
@@ -2850,7 +3086,7 @@ export async function initDueno(negocioId) {
   const sesion = ++duenoSesion
   const $ = id => document.getElementById(id)
   const vigente = () => sesion === duenoSesion && !!$('dn-root')
-  const estado = { resumenCargado: 0, resumenViejo: false, ajustesCargados: false, cargandoResumen: false, cargandoAjustes: false, nombre: '' }
+  const estado = { resumenCargado: 0, resumenViejo: false, ajustesCargados: false, cargandoResumen: false, cargandoAjustes: false, equipoCargado: false, cargandoEquipo: false, nombre: '' }
 
   async function salirSiInactivo(e) {
     if (!e?.message?.includes('NEGOCIO_INACTIVO')) return false
@@ -2863,8 +3099,44 @@ export async function initDueno(negocioId) {
     document.querySelectorAll('.ow-tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.pestana === p)))
     $('dn-resumen').hidden = p !== 'resumen'
     $('dn-ajustes').hidden = p !== 'ajustes'
+    $('dn-equipo').hidden = p !== 'equipo'
     if (p === 'resumen' && estado.resumenViejo) cargarResumen()
     if (p === 'ajustes' && !estado.ajustesCargados) cargarAjustes()
+    if (p === 'equipo' && !estado.equipoCargado) cargarEquipo()
+  }
+
+  // Pestaña "Equipo" (Fase 4C): lista con equipo_negocio(); altas, nuevas
+  // contraseñas y bajas con la Edge Function crear-mesero.
+  async function cargarEquipo() {
+    if (estado.cargandoEquipo) return
+    estado.cargandoEquipo = true
+    if (!estado.equipoCargado) $('dn-equipo').innerHTML = [160, 60].map(bloqueEsq).join('')
+    try {
+      const { data, error } = await supabase.rpc('equipo_negocio')
+      if (!vigente()) return
+      if (error) throw error
+      const meseros = data?.meseros || []
+      $('dn-equipo').innerHTML = equipoHTML(data)
+      estado.equipoCargado = true
+      const nombreNegocio = estado.nombre || (() => { try { return JSON.parse(localStorage.getItem('negocio'))?.nombre || '' } catch (e) { return '' } })()
+      const buscar = id => meseros.find(m => m.usuario_id === id)
+      $('eq-agregar')?.addEventListener('click', () => abrirAgregarMesero(nombreNegocio, cargarEquipo))
+      $('dn-equipo').querySelectorAll('[data-nueva]').forEach(b => b.addEventListener('click', () => {
+        const m = buscar(b.dataset.nueva); if (m) abrirNuevaContrasena(m, nombreNegocio)
+      }))
+      $('dn-equipo').querySelectorAll('[data-desactivar]').forEach(b => b.addEventListener('click', () => {
+        const m = buscar(b.dataset.desactivar); if (m) abrirDesactivar(m, () => { cargarEquipo(); estado.resumenViejo = true })
+      }))
+    } catch (e) {
+      if (!vigente() || await salirSiInactivo(e)) return
+      console.error('Error al cargar el equipo:', e)
+      if (!estado.equipoCargado) {
+        $('dn-equipo').innerHTML = errorPanelHTML(sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar tu equipo.', 'dn-reintentar-equipo')
+        $('dn-reintentar-equipo')?.addEventListener('click', cargarEquipo)
+      }
+    } finally {
+      estado.cargandoEquipo = false
+    }
   }
 
   async function cargarResumen() {
@@ -2950,4 +3222,5 @@ export async function initDueno(negocioId) {
   // Personalización se carga desde el principio: trae el color del negocio (el acento).
   cargarResumen()
   cargarAjustes()
+  if (leerPestanaDueno() === 'equipo') cargarEquipo()
 }

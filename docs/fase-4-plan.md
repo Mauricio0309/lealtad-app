@@ -57,3 +57,10 @@ Tres pasos: elegir premio y meta, dar de alta a los meseros, hacer una visita de
 - Login, bienvenida, panel y ajustes con estilo sobrio (estilos en `inyectarEstilosDueno`, todo dentro de `.ow`; mesero y cliente sin cambios).
 - "Tarjeta de tus clientes": por ahora solo el color, con vista previa. Logo y mensaje de agradecimiento esperan `supabase/fase-4b-tarjeta.sql` (sin ejecutar).
 - Aviso de privacidad del dueño: una línea en el login con enlace a `#/terminos`.
+
+## 4C: alta de meseros (pestaña "Equipo")
+
+- El dueño agrega meseros (nombre y correo), les genera una nueva contraseña o los desactiva. La contraseña se muestra una sola vez, con "Copiar" y "Compartir por WhatsApp".
+- Servidor: Edge Function `supabase/functions/crear-mesero` (solo dueños; el negocio sale de su sesión; solo crea meseros; máximo 10 activos) y `supabase/fase-4c.sql` (profiles.activo, equipo_negocio, alta_mesero y baja_mesero).
+- Un mesero desactivado no pasa `user_has_business_role`, así que no puede generar códigos, capturar a mano ni canjear aunque tenga la sesión abierta; sus códigos pendientes se cancelan y Auth lo bloquea.
+- Despliegue: `docs/fase-4c-despliegue.md`.

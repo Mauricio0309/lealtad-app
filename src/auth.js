@@ -6,14 +6,18 @@ export async function login(email, password) {
     password,
   })
 
+  // Cuenta desactivada por el dueño: Auth la tiene bloqueada (Fase 4C).
+  if (authError && (authError.code === 'user_banned' || /banned/i.test(authError.message || ''))) {
+    return { desactivado: true }
+  }
   if (authError || !authData?.user) return null
 
+  // "*" en vez de columnas sueltas: funciona antes y después de que exista
+  // profiles.activo (fase-4c.sql).
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select(`
-      user_id,
-      role,
-      negocio_id,
+      *,
       negocios:negocio_id (
         id,
         nombre,
@@ -28,6 +32,10 @@ export async function login(email, password) {
     .maybeSingle()
 
   if (profileError || !profile || !profile.negocios) return null
+  if (profile.activo === false) {
+    await supabase.auth.signOut().catch(() => {})
+    return { desactivado: true }
+  }
 
   localStorage.setItem('negocio', JSON.stringify(profile.negocios))
   return profile.negocios
@@ -39,7 +47,7 @@ export async function getPerfilActual() {
 
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('user_id, role, negocio_id')
+    .select('*')
     .eq('user_id', user.id)
     .maybeSingle()
 
