@@ -120,6 +120,7 @@ Orden sugerido; el orden real lo decide qué frene más las ventas.
 - Cómo se verifica: en la tarjeta del cliente un botón "Recibe tu premio por WhatsApp" abre un chat con el número del negocio y un mensaje prellenado con un código. Al recibir ese mensaje entrante (webhook), el servidor confirma que el número es real y que su dueño aceptó. Variante a probar: pedirlo desde el registro en vez de después del primer punto.
 - A los clientes que ya existían se les pide consentimiento y verificación con un toque la siguiente vez que abran su tarjeta.
 - Cobro: por mensaje enviado (alrededor de 4-5 pesos; el costo de Meta para marketing en México bajó en 2025-2026 y una fuente de terceros lo ubica en ~0.04 USD, así que VERIFICAR la tarifa oficial vigente de Meta, que ya publica en pesos, antes de fijar el precio). Sugerido: saldo prepago que el negocio recarga, para no fiar mensajes.
+- **"Dejaron de venir" vuelve con esta fase.** Desde la 4D la tarjeta y su lista están ocultas en el panel del dueño (`MOSTRAR_INACTIVOS = false` en `src/pages.js`): sin un mensaje para invitarlos de vuelta, la lista no le da al dueño nada que hacer. La función `clientes_inactivos()` y la hoja siguen listas; al reactivarlas, que cada cliente de la lista tenga la acción de mandarle el mensaje de 21 días.
 
 ## 2. QR en el ticket (solo para negocios con caja integrable)
 
@@ -144,6 +145,13 @@ Reemplaza el botón "Cobré una cuenta" del mesero; todo lo demás (reclamar, co
 - Opciones elegidas de una lista, nunca campos libres, con vista previa en vivo de la tarjeta.
 - Nombre y logo (subida de imagen), color de una paleta de ~8 colores con buen contraste (color libre solo si pasa comprobación de contraste), ícono del sello (palomita, taza de café, tijeras, taco, estrella, corazón), animación del sello (llenado suave, pop, sin animación; siempre respeta "reducir movimiento"), premio y meta con plantillas, mensaje de agradecimiento (máx. ~40 caracteres).
 - Se guardan con una función RPC que valida cada valor contra la lista permitida (no con actualizaciones directas a la tabla).
+- **La tarjeta lleva la identidad del negocio, no la de Sello:** logo, nombre, color y mensaje de agradecimiento del negocio. Arriba, el logo de Sello pequeño; abajo, "Hecho con Sello" discreto. Ese pie se puede quitar en Pro (ver sección 3).
+
+## Compartir en redes al ganar el premio (después del piloto)
+- Estilo Duolingo: al ganar el premio, el cliente puede compartir una imagen en sus redes.
+- La imagen lleva al frente el logo y el nombre del negocio; la marca Sello va pequeña y discreta.
+- Del cliente solo aparece su primer nombre (nunca teléfono ni otros datos).
+- Se construye después del piloto, con datos de si los clientes de verdad comparten.
 
 ## Panel de administración de Sello (después de la Fase 4, antes del segundo negocio)
 - Es para el dueño de Sello. Se identifica con una tabla aparte `admins` (user_id), comprobada en el servidor mediante funciones SECURITY DEFINER. Nunca con una contraseña en el código.

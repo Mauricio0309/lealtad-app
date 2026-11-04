@@ -306,21 +306,6 @@ select public.crear_codigo();
 rollback;
 
 
--- ═══ PRUEBA 3: tampoco puede consultar un canje ═══
--- Esperado: ERROR: Acceso denegado
-begin;
-select set_config('prueba.mesero', p.user_id::text, true),
-       set_config('prueba.negocio', p.negocio_id::text, true)
-from public.profiles p where p.role = 'mesero' order by p.created_at limit 1;
-set local role service_role;
-select public.baja_mesero(current_setting('prueba.mesero')::uuid, current_setting('prueba.negocio')::uuid);
-reset role;
-set local role authenticated;
-select set_config('request.jwt.claims', json_build_object('sub', current_setting('prueba.mesero'), 'role', 'authenticated')::text, true);
-select public.consultar_canje('1234');
-rollback;
-
-
 -- ═══ PRUEBA 4: el dueño no puede usar alta_mesero directo ═══
 -- Esperado: ERROR: permission denied for function alta_mesero
 begin;

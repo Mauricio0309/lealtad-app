@@ -225,8 +225,19 @@ function inyectarEstilos() {
     .cl-root { min-height: 100vh; background: ${DS.white}; color: ${DS.gray900}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
     .cl-root.gris { background: #F5F6F8; }
     .cl-wrap { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; padding: calc(16px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom)); }
-    .cl-marca { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 16px; font-weight: 700; color: ${DS.gray900}; }
-    .cl-marca-icono { width: 32px; height: 32px; border-radius: 50%; background: var(--negocio-color, #2B4ACB); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    /* 4E: identidad del negocio al frente; Sello pequeño arriba y pie discreto. */
+    .cl-sello-top { display: flex; align-items: center; gap: 6px; min-height: 20px; font-size: 12px; font-weight: 600; color: #94a3b8; }
+    .cl-marca { display: flex; align-items: center; gap: 12px; margin-top: 14px; min-width: 0; }
+    .cl-marca-texto { min-width: 0; }
+    .cl-marca-nombre { display: block; font-size: 17px; font-weight: 700; line-height: 1.25; color: ${DS.gray900}; overflow-wrap: anywhere; }
+    .cl-marca-mensaje { display: block; font-size: 15px; line-height: 1.35; color: ${DS.gray500}; margin-top: 2px; overflow-wrap: anywhere; }
+    .cl-marca.grande { gap: 16px; margin-top: 18px; }
+    .cl-marca.grande .cl-marca-nombre { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
+    .cl-avatar { position: relative; flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; background: var(--negocio-color, #2B4ACB); color: ${DS.white}; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; overflow: hidden; }
+    .cl-marca.grande .cl-avatar { width: 76px; height: 76px; font-size: 34px; }
+    .cl-avatar.con-logo { border-radius: 22%; background: ${DS.white}; box-shadow: inset 0 0 0 1px rgba(15,23,42,0.08); }
+    .cl-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: ${DS.white}; }
+    .cl-pie-sello { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 20px; }
     .cl-cuerpo { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 32px 0 24px; }
     .cl-cuerpo.arriba { justify-content: flex-start; padding-top: 24px; }
     .cl-acciones { display: flex; flex-direction: column; }
@@ -285,6 +296,36 @@ function inyectarEstilos() {
     .cl-premio-lbl { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: ${DS.gray500}; }
     .cl-premio-nombre { font-size: 22px; font-weight: 800; line-height: 1.25; margin-top: 6px; color: ${DS.gray900}; }
     .cl-premio-falta { font-size: 16px; color: ${DS.gray500}; margin-top: 4px; }
+
+    /* Ajuste visual del cliente: solo dentro de .cl-root (la captura manual
+       del mesero usa las mismas clases y no cambia).
+       Botones y campos ~15 % más chicos y un poco más de aire entre bloques. */
+    .cl-root .cl-cuerpo { padding: 36px 0 28px; }
+    .cl-root .cl-cuerpo.arriba { padding-top: 28px; }
+    .cl-root .cl-sub { margin-top: 12px; }
+    .cl-root .cl-campo { margin-top: 24px; }
+    .cl-root .cl-label { font-size: 14px; margin-bottom: 8px; }
+    .cl-root .cl-input-wrap { height: 51px; padding: 0 14px; border-radius: 14px; }
+    .cl-root .cl-input { font-size: 19px; }
+    .cl-root .cl-prefijo { font-size: 19px; padding-right: 10px; margin-right: 10px; }
+    .cl-root .cl-error-campo { font-size: 14px; }
+    .cl-root .cl-btn { height: 53px; border-radius: 17px; font-size: 17px; }
+    .cl-root .cl-cuerpo .cl-btn.cl-canjear-btn { height: 58px; font-size: 19px; margin-top: 16px; }
+    .cl-root .cl-enlace { min-height: 44px; margin-top: 10px; font-size: 15px; }
+    .cl-root .cl-aviso { font-size: 15px; margin-bottom: 16px; }
+    .cl-root .cl-listo { margin-top: 24px; }
+    .cl-root .cl-premio { margin-top: 18px; }
+    .cl-root .cl-privacidad { margin-top: 22px; }
+    /* "¡Ganaste 1 punto!" y "¡Disfruta tu premio!" (la celebración) se quedan grandes. */
+    .cl-root.celebra .cl-btn { height: 62px; border-radius: 20px; font-size: 20px; }
+    .cl-root.celebra .cl-cuerpo .cl-btn.cl-canjear-btn { height: 68px; font-size: 22px; margin-top: 14px; }
+    /* Tarjeta de progreso: un tono muy suave del color del negocio (9 % sobre
+       blanco). Los textos de adentro usan grises más oscuros para leerse bien. */
+    .cl-root .cl-tarjeta { margin-top: 28px; background: ${DS.white}; background: color-mix(in srgb, var(--negocio-color, #2B4ACB) 9%, ${DS.white}); }
+    .cl-root .cl-progreso-meta { color: ${DS.gray500}; }
+    .cl-root .cl-progreso-lbl { color: ${DS.gray700}; }
+    .cl-pie-sello a { color: inherit; text-decoration: none; }
+    .cl-pie-sello a:hover, .cl-pie-sello a:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
 
     @keyframes sFadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes sPopIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
@@ -441,8 +482,19 @@ function inyectarEstilosDueno() {
     .ow-color { width: 38px; height: 38px; padding: 0; border: 3px solid #ffffff; border-radius: 50%; box-shadow: 0 0 0 1px var(--ow-borde); cursor: pointer; }
     .ow-color[aria-checked="true"] { box-shadow: 0 0 0 2px var(--ow-texto); }
     .ow-vista { padding: 16px; border: 1px solid var(--ow-borde); border-radius: 12px; background: #f5f6f8; margin-bottom: 20px; }
-    .ow-vista-marca { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
-    .ow-vista-punto { width: 20px; height: 20px; border-radius: 50%; background: var(--vista-color); flex-shrink: 0; }
+    .ow-vista-sellotop { display: flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; color: #94a3b8; }
+    .ow-vista-marca { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+    .ow-vista-nombre { display: block; font-size: 16px; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; }
+    .ow-vista-mensaje { display: block; font-size: 13px; color: var(--ow-texto-2); overflow-wrap: anywhere; }
+    .ow-vista-avatar { position: relative; flex-shrink: 0; width: 52px; height: 52px; border-radius: 50%; background: var(--vista-color); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; overflow: hidden; }
+    .ow-vista-avatar.con-logo { border-radius: 22%; background: #ffffff; box-shadow: inset 0 0 0 1px rgba(15,23,42,0.08); }
+    .ow-vista-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #ffffff; }
+    .ow-vista-pie { text-align: center; font-size: 10px; color: #94a3b8; margin-top: 10px; }
+    .ow-logo-fila { display: flex; align-items: center; gap: 14px; }
+    .ow-logo-fila .ow-vista-avatar { width: 64px; height: 64px; font-size: 26px; }
+    .ow-logo-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
+    .ow-logo-acciones .ow-enlace { min-height: 36px; padding: 6px 0; }
+    .ow-cuenta { float: right; font-weight: 500; color: var(--ow-texto-3); font-variant-numeric: tabular-nums; }
     .ow-vista-saludo { font-size: 18px; font-weight: 700; margin-top: 12px; }
     .ow-vista-tarjeta { margin-top: 10px; padding: 16px; border-radius: 12px; background: #ffffff; text-align: center; }
     .ow-vista-num { font-size: 34px; font-weight: 800; color: var(--vista-color); font-variant-numeric: tabular-nums; }
@@ -493,11 +545,36 @@ function inyectarEstilosDueno() {
     .ow-texto-atencion { color: var(--ow-atencion); }
     .ow-btn.ow-btn-atencion { background: var(--ow-atencion); color: #ffffff; }
     .ow-aviso-unico { margin-bottom: 14px; padding: 10px 12px; border: 1px solid var(--ow-atencion-borde); border-radius: 10px; background: var(--ow-atencion-suave); font-size: 14px; }
+    /* 4F: el aviso de la contraseña se queda a la vista aunque la hoja se desplace. */
+    .ow-aviso-fijo { position: sticky; top: -20px; z-index: 1; box-shadow: 0 -20px 0 #ffffff; }
     .ow-credencial { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; padding: 14px 16px; border: 1px solid var(--ow-borde); border-radius: 12px; background: var(--ow-fondo); }
     .ow-credencial-lbl { display: block; font-size: 12px; font-weight: 600; color: var(--ow-texto-2); }
     .ow-credencial-valor { font-weight: 500; word-break: break-all; }
     .ow-contrasena { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 22px; font-weight: 700; letter-spacing: 0.04em; user-select: all; word-break: break-all; }
     .ow-cifra-num.sin-corte { white-space: nowrap; }
+
+    /* 4D: gráfica del panel */
+    .ow-seg { display: flex; gap: 4px; padding: 3px; background: var(--ow-fondo); border: 1px solid var(--ow-borde); border-radius: 10px; }
+    .ow-seg button { flex: 1; min-height: 38px; padding: 6px 8px; background: none; border: none; border-radius: 8px; font: inherit; font-size: 14px; font-weight: 600; color: var(--ow-texto-2); cursor: pointer; white-space: nowrap; }
+    .ow-seg button[aria-pressed="true"] { background: var(--ow-superficie); color: var(--ow-texto); box-shadow: 0 0 0 1px var(--ow-borde); }
+    .ow-seg button.apagado { color: var(--ow-texto-3); font-weight: 500; }
+    .ow-seg.chico { display: inline-flex; }
+    .ow-seg.chico button { flex: 0 0 auto; min-height: 32px; padding: 4px 12px; font-size: 13px; }
+    .ow-graf-cab { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px; margin: 18px 0 10px; }
+    .ow-graf-num { font-size: 28px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+    .ow-graf-num small { font-size: 14px; font-weight: 500; color: var(--ow-texto-2); letter-spacing: 0; }
+    .ow-graf-comp { font-size: 13px; color: var(--ow-texto-2); margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .ow-graf-leyenda { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ow-texto-2); margin-bottom: 6px; }
+    .ow-graf-leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+    .ow-graf-leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: #065FD4; }
+    .ow-graf-leyenda i.linea { width: 14px; height: 3px; border-radius: 2px; background: #C3D0E0; }
+    .ow-graf svg { display: block; width: 100%; overflow: visible; touch-action: pan-y; }
+    .ow-graf svg text { font-family: inherit; font-size: 11px; fill: var(--ow-texto-3); font-variant-numeric: tabular-nums; }
+    .ow-graf-lectura { min-height: 20px; margin-top: 6px; font-size: 13px; color: var(--ow-texto-2); font-variant-numeric: tabular-nums; }
+    .ow-graf-lectura strong { color: var(--ow-texto); font-weight: 600; }
+    .ow-graf-nota { margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: var(--ow-fondo); font-size: 14px; color: var(--ow-texto-2); }
+    .ow-graf-nota .ow-enlace { min-height: 0; padding: 0; font-size: 14px; color: var(--ow-texto); font-weight: 600; }
+    .ow-oculto { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
     @media (prefers-reduced-motion: reduce) {
       .ow-esq { animation: none; }
@@ -847,6 +924,207 @@ function mensajeCajero(error, max) {
   return 'Algo salió mal. Intenta de nuevo.'
 }
 
+// ═══════════════════════════════════════════════════════════
+// AYUDAS DE PRIMERA VEZ (4F) — mesero y dueño; el cliente no tiene.
+// Una burbuja corta señala el elemento real (resaltado suave) la primera vez
+// que está a la vista. Una a la vez. "Entendido" (o tocar el elemento) la da
+// por vista; "Saltar todo" da por vistas todas las de esa pantalla.
+// Se recuerdan en localStorage; si falla, al menos no se repiten en la sesión.
+// No tapan los botones de "proteger" (se coloca arriba, abajo o más allá).
+// ═══════════════════════════════════════════════════════════
+const CLAVE_AYUDAS = 'sello_ayudas_vistas'
+const ayudasEnSesion = new Set()
+
+function leerAyudasVistas() {
+  try {
+    const lista = JSON.parse(localStorage.getItem(CLAVE_AYUDAS) || '[]')
+    return new Set([...(Array.isArray(lista) ? lista : []), ...ayudasEnSesion])
+  } catch (e) { return new Set(ayudasEnSesion) }
+}
+function marcarAyudasVistas(ids) {
+  ids.forEach(id => ayudasEnSesion.add(id))
+  try { localStorage.setItem(CLAVE_AYUDAS, JSON.stringify([...leerAyudasVistas()])) } catch (e) {}
+}
+// "Ver ayuda otra vez" (Personalización): en este celular vuelven a salir todas.
+function reiniciarAyudas() {
+  ayudasEnSesion.clear()
+  try { localStorage.removeItem(CLAVE_AYUDAS) } catch (e) {}
+  ayudasMotor.ocultar()
+}
+
+const AYUDAS_MESERO = [
+  { id: 'mesero-cobre', elemento: '#cj-cobre', texto: 'Tócalo al cobrar y muéstrale el código al cliente.',
+    proteger: ['#cj-canjear', '.s-nav'] },
+  { id: 'mesero-qr', elemento: '#cj-qr:not([hidden]) #cj-qr-canvas', texto: 'El cliente lo escanea con su cámara. Verás verde cuando sume.',
+    proteger: ['#cj-qr-cerrar', '#cj-qr-cancelar'] },
+  { id: 'mesero-exito', elemento: '#cj-exito:not([hidden]) .cj-exito-quien', texto: 'Confirma que nombre y últimos 4 dígitos sean de quien tienes enfrente.',
+    proteger: ['#cj-exito-listo'] },
+  { id: 'mesero-canje', elemento: '#cj-canje:not([hidden]) #cj-canje-casillas', texto: 'Pídele al cliente su código de 4 dígitos y escríbelo aquí.',
+    proteger: ['#cj-teclado', '#cj-canje [data-canje]'] },
+]
+const AYUDAS_DUENO = [
+  { id: 'dueno-ventas', elemento: '#dn-ventas', texto: 'Estimado: visitas de clientes que regresaron por lo que gasta un cliente.',
+    proteger: ['.ow-tabs', '.ow-nav'] },
+  { id: 'dueno-ticket', elemento: '#prog-ticket', texto: 'Opcional. Con esto calculamos tus ventas estimadas.',
+    proteger: ['#btn-guardar-programa', '.ow-nav'] },
+  { id: 'dueno-excluidos', elemento: '#excl-tel', texto: 'Agrega tu número y el de tu equipo: no ganan puntos.',
+    proteger: ['#btn-agregar-excl', '.ow-nav'] },
+]
+
+function inyectarEstilosAyudas() {
+  if (document.getElementById('sello-styles-ayudas')) return
+  const s = document.createElement('style')
+  s.id = 'sello-styles-ayudas'
+  s.textContent = `
+    .ay-resalte { position: fixed; z-index: 10000; pointer-events: none; border-radius: 12px; box-shadow: 0 0 0 3px rgba(255,255,255,0.95), 0 0 0 7px rgba(10,92,71,0.35); }
+    .ay-burbuja { position: fixed; z-index: 10001; width: min(320px, calc(100vw - 32px)); padding: 14px 16px 12px; background: #ffffff; color: #0f172a; border-radius: 14px; box-shadow: 0 10px 30px rgba(15,23,42,0.18), 0 0 0 1px rgba(15,23,42,0.06); font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+    .ay-burbuja:focus { outline: none; }
+    .ay-texto { font-size: 16px; line-height: 1.4; font-weight: 500; }
+    .ay-botones { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+    .ay-entendido { min-height: 44px; padding: 8px 18px; border: none; border-radius: 10px; background: var(--negocio-color, #0a5c47); color: #ffffff; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .ay-saltar { min-height: 44px; padding: 8px 4px; border: none; background: none; font: inherit; font-size: 14px; color: #64748b; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+    .ay-entendido:focus-visible, .ay-saltar:focus-visible { outline: 2px solid #0f172a; outline-offset: 2px; }
+  `
+  document.head.appendChild(s)
+}
+
+// Un solo motor para toda la app: cada pantalla le dice su raíz y su lista.
+const ayudasMotor = (() => {
+  let raizId = null, lista = [], tic = null, actual = null, pausaHasta = 0
+  let burbuja = null, resalte = null, focoAntes = null
+
+  const propios = n => n === burbuja || n === resalte || burbuja?.contains(n)
+
+  // ¿Está el elemento completo en pantalla y sin nada encima (otra pantalla u hoja)?
+  function aLaVista(el) {
+    if (!el || !el.isConnected || el.getClientRects().length === 0) return false
+    const r = el.getBoundingClientRect()
+    if (r.width < 8 || r.height < 8) return false
+    if (r.top < 0 || r.left < 0 || r.bottom > window.innerHeight || r.right > window.innerWidth) return false
+    const arriba = (document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2) || []).find(n => !propios(n))
+    return !!arriba && (arriba === el || el.contains(arriba))
+  }
+
+  const cruce = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))
+
+  // Prueba arriba y abajo del elemento (y más allá de los botones protegidos)
+  // y se queda con la posición que menos tape.
+  function colocar() {
+    const el = actual && document.querySelector(actual.elemento)
+    if (!el || !burbuja) return
+    const r = el.getBoundingClientRect()
+    const vw = window.innerWidth, vh = window.innerHeight
+    const w = burbuja.offsetWidth, h = burbuja.offsetHeight, m = 12
+    const protegidos = (actual.proteger || []).flatMap(sel => [...document.querySelectorAll(sel)])
+      .filter(p => p.getClientRects().length > 0).map(p => p.getBoundingClientRect())
+    const left = Math.min(Math.max(16, r.left + r.width / 2 - w / 2), Math.max(16, vw - w - 16))
+    const candidatos = [r.bottom + m, r.top - m - h]
+    // Abajo, saltando los protegidos que estorben; y lo mismo hacia arriba.
+    for (const dir of [1, -1]) {
+      let top = dir > 0 ? r.bottom + m : r.top - m - h
+      for (let i = 0; i < 6; i++) {
+        const choca = protegidos.find(p => cruce(p, { left, right: left + w, top, bottom: top + h }) > 0)
+        if (!choca) break
+        top = dir > 0 ? choca.bottom + m : choca.top - m - h
+        candidatos.push(top)
+      }
+    }
+    let mejor = null
+    for (const t of candidatos) {
+      const top = Math.min(Math.max(8, t), vh - h - 8)
+      const caja = { left, right: left + w, top, bottom: top + h }
+      const tapa = cruce(caja, r) * 3 + protegidos.reduce((s, p) => s + cruce(caja, p) * 3, 0) + Math.abs(top - t)
+      if (!mejor || tapa < mejor.tapa) mejor = { top, tapa }
+    }
+    burbuja.style.left = `${Math.round(left)}px`
+    burbuja.style.top = `${Math.round(mejor.top)}px`
+    const radio = getComputedStyle(el).borderRadius
+    Object.assign(resalte.style, {
+      left: `${r.left - 2}px`, top: `${r.top - 2}px`, width: `${r.width + 4}px`, height: `${r.height + 4}px`,
+      borderRadius: radio && radio !== '0px' ? radio : '10px',
+    })
+  }
+
+  function ocultar(devolverFoco = false) {
+    const el = actual && document.querySelector(actual.elemento)
+    if (el) { el.removeAttribute('aria-describedby'); el.removeEventListener('click', alTocarElemento, true) }
+    burbuja?.remove(); resalte?.remove()
+    burbuja = resalte = null
+    document.removeEventListener('keydown', alTeclear)
+    window.removeEventListener('scroll', colocar, true)
+    window.removeEventListener('resize', colocar)
+    if (devolverFoco && burbuja === null && focoAntes?.isConnected) { try { focoAntes.focus({ preventScroll: true }) } catch (e) {} }
+    actual = null; focoAntes = null
+  }
+
+  function cerrar(todas) {
+    if (!actual) return
+    marcarAyudasVistas(todas ? lista.map(a => a.id) : [actual.id])
+    ocultar(true)
+    pausaHasta = Date.now() + 1200   // nunca dos seguidas de golpe
+  }
+  function alTocarElemento() { cerrar(false) }   // usar el elemento también cuenta como "visto"
+  function alTeclear(e) { if (e.key === 'Escape') cerrar(false) }
+
+  function mostrar(ayuda, el) {
+    inyectarEstilosAyudas()
+    actual = ayuda
+    resalte = document.createElement('div'); resalte.className = 'ay-resalte'; resalte.setAttribute('aria-hidden', 'true')
+    burbuja = document.createElement('div')
+    burbuja.className = 'ay-burbuja'
+    burbuja.setAttribute('role', 'dialog'); burbuja.setAttribute('aria-modal', 'false')
+    burbuja.setAttribute('aria-label', 'Ayuda'); burbuja.tabIndex = -1
+    burbuja.innerHTML = `<p class="ay-texto" id="ay-texto" aria-live="polite">${esc(ayuda.texto)}</p>
+      <div class="ay-botones"><button type="button" class="ay-saltar">Saltar todo</button><button type="button" class="ay-entendido">Entendido</button></div>`
+    document.body.append(resalte, burbuja)
+    burbuja.querySelector('.ay-entendido').addEventListener('click', () => cerrar(false))
+    burbuja.querySelector('.ay-saltar').addEventListener('click', () => cerrar(true))
+    el.setAttribute('aria-describedby', 'ay-texto')
+    el.addEventListener('click', alTocarElemento, true)
+    document.addEventListener('keydown', alTeclear)
+    window.addEventListener('scroll', colocar, true)
+    window.addEventListener('resize', colocar)
+    colocar()
+    // El foco va a la burbuja (lectores de pantalla), salvo si está escribiendo.
+    const activo = document.activeElement
+    if (!activo || !/^(INPUT|TEXTAREA|SELECT)$/.test(activo.tagName)) {
+      focoAntes = activo
+      try { burbuja.querySelector('.ay-entendido').focus({ preventScroll: true }) } catch (e) {}
+    }
+  }
+
+  function revisar() {
+    if (!raizId || !document.getElementById(raizId)) { detener(); return }
+    if (actual) {
+      // Si el elemento se fue (cambió la pantalla), se esconde sin darla por vista.
+      if (!aLaVista(document.querySelector(actual.elemento))) ocultar()
+      else colocar()
+      return
+    }
+    if (Date.now() < pausaHasta || document.visibilityState !== 'visible') return
+    const vistas = leerAyudasVistas()
+    for (const a of lista) {
+      if (vistas.has(a.id)) continue
+      const el = document.querySelector(a.elemento)
+      if (aLaVista(el)) { mostrar(a, el); return }
+    }
+  }
+
+  function detener() { clearInterval(tic); tic = null; ocultar(); raizId = null; lista = [] }
+
+  return {
+    // Se llama al abrir cada pantalla; reemplaza lo de la pantalla anterior.
+    activar(id, ayudas) {
+      detener()
+      raizId = id; lista = ayudas
+      pausaHasta = Date.now() + 800   // que la pantalla termine de dibujarse
+      tic = setInterval(revisar, 400)
+    },
+    pendiente: id => !leerAyudasVistas().has(id),
+    ocultar: () => ocultar(),
+  }
+})()
+
 export function paginaCajero() {
   inyectarEstilos()
   return `
@@ -924,6 +1202,7 @@ export async function initCajero() {
     $('cj-msg').innerHTML = `<div class="cj-aviso aviso">Tu sesión ya no es válida. Sal y vuelve a entrar.</div>`
     return
   }
+  ayudasMotor.activar('cj-root', AYUDAS_MESERO)
 
   const restante = c => new Date(c.expira_en).getTime() - Date.now()
   const formatoTiempo = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` }
@@ -1097,7 +1376,9 @@ export async function initCajero() {
     el.hidden = false
     $('cj-exito-listo').addEventListener('click', siguienteAviso)
     try { navigator.vibrate?.(premio ? [150, 80, 150] : 150) } catch (e) {}
-    if (!premio) avisos.temporizador = setTimeout(() => { if (vigente()) siguienteAviso() }, 6000)
+    // La primera vez sale una ayuda sobre esta pantalla: no se cierra sola
+    // para que dé tiempo de leerla (se cierra con "Listo").
+    if (!premio && !ayudasMotor.pendiente('mesero-exito')) avisos.temporizador = setTimeout(() => { if (vigente()) siguienteAviso() }, 6000)
   }
 
   // Un código propio cambió: si se reclamó o se canceló, deja de estar pendiente.
@@ -1592,13 +1873,56 @@ function palomitaSVG(size = 18, color = '#ffffff') {
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`
 }
 
-function pantallaCliente({ negocio = null, cuerpo, acciones = '', gris = false, arriba = false }) {
+// ── Identidad del negocio (4E) ──
+// El negocio es el protagonista (logo o inicial en su color, nombre y su
+// mensaje de agradecimiento); Sello va pequeño arriba y en un pie discreto.
+// Pie "Hecho con Sello": para el plan Pro bastará con decidir aquí, por
+// negocio, si se muestra (por ejemplo con un campo del negocio).
+const MOSTRAR_PIE_SELLO = true
+// A dónde lleva "Hecho con Sello". Vacía = texto sin enlace (se ve igual).
+// Solo se acepta una dirección https://.
+const SELLO_URL = ''
+function piSelloHTML() {
+  if (!MOSTRAR_PIE_SELLO) return ''
+  const url = /^https:\/\/[^\s"'<>]+$/.test(SELLO_URL) ? SELLO_URL : ''
+  return url
+    ? `<p class="cl-pie-sello"><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">Hecho con Sello</a></p>`
+    : `<p class="cl-pie-sello">Hecho con Sello</p>`
+}
+
+// El logo llega como ruta del bucket público "logos" (la valida el servidor);
+// aquí se vuelve a revisar la forma antes de armar la URL.
+const RUTA_LOGO = /^[0-9a-f-]{36}\/[A-Za-z0-9_-]{1,64}\.(png|jpe?g|webp)$/
+function urlLogo(ruta) {
+  if (!ruta || !RUTA_LOGO.test(ruta)) return null
+  return supabase.storage.from('logos').getPublicUrl(ruta).data?.publicUrl || null
+}
+function inicialNegocio(nombre) {
+  const letra = Array.from(String(nombre || '').trim())[0]
+  return letra ? letra.toLocaleUpperCase('es-MX') : ''
+}
+// Logo del negocio; si no tiene (o no carga), un círculo con su inicial en su color.
+function avatarNegocioHTML(nombre, url) {
+  const ini = esc(inicialNegocio(nombre))
+  if (!url) return `<span class="cl-avatar" aria-hidden="true">${ini}</span>`
+  return `<span class="cl-avatar con-logo" aria-hidden="true">${ini}<img src="${esc(url)}" alt="" decoding="async" onerror="this.parentNode.classList.remove('con-logo');this.remove()"></span>`
+}
+
+// grande = tarjeta y pantallas de éxito: logo grande y mensaje de agradecimiento.
+// celebra = "¡Ganaste 1 punto!" y "¡Disfruta tu premio!": sus botones no se achican.
+function pantallaCliente({ negocio = null, cuerpo, acciones = '', gris = false, arriba = false, grande = false, celebra = false }) {
+  const mensaje = grande ? String(negocio?.mensaje_gracias || '').trim() : ''
   return `
-    <div class="cl-root${gris ? ' gris' : ''}">
+    <div class="cl-root${gris ? ' gris' : ''}${celebra ? ' celebra' : ''}">
       <div class="cl-wrap">
-        <div class="cl-marca"><span class="cl-marca-icono">${palomitaSVG(18)}</span><span>${esc(negocio?.nombre || 'Sello')}</span></div>
+        <div class="cl-sello-top">${logoSVG(14, '#94a3b8')}<span>Sello</span></div>
+        ${negocio?.nombre ? `<div class="cl-marca${grande ? ' grande' : ''}">
+          ${avatarNegocioHTML(negocio.nombre, urlLogo(negocio.logo))}
+          <span class="cl-marca-texto"><span class="cl-marca-nombre">${esc(negocio.nombre)}</span>${mensaje ? `<span class="cl-marca-mensaje">${esc(mensaje)}</span>` : ''}</span>
+        </div>` : ''}
         <div class="cl-cuerpo${arriba ? ' arriba' : ''}">${cuerpo}</div>
         ${acciones ? `<div class="cl-acciones">${acciones}</div>` : ''}
+        ${piSelloHTML()}
       </div>
     </div>
   `
@@ -1650,9 +1974,9 @@ function tarjetaClienteHTML(negocio, t, modo = null) {
        <h1 class="cl-titulo">¡Disfruta tu premio!</h1>
        <p class="cl-sub">${t.premio_entregado ? `${esc(t.premio_entregado)}. ` : ''}Ahora llevas ${puntos} de ${meta}.</p>`
     : `<h1 class="cl-titulo">${saludoPorHora()}, ${esc(t.nombre)}</h1>
-       <p class="cl-sub">Tu tarjeta en ${esc(negocio?.nombre || 'este negocio')}</p>`
+       <p class="cl-sub">${negocio?.nombre ? 'Tu tarjeta de puntos' : 'Tu tarjeta en este negocio'}</p>`
   return pantallaCliente({
-    negocio, gris: true, arriba: true,
+    negocio, gris: true, arriba: true, grande: true, celebra: modo === 'punto' || modo === 'premio',
     cuerpo: `
       ${cabecera}
       ${t.premio_listo ? `<div class="cl-listo">🎉 ¡Ya completaste tu meta!</div>
@@ -2278,7 +2602,7 @@ export async function paginaLanding(negocioId) {
     return `
       <div class="landing-root">
         <div class="landing-hero">
-          ${negocio.logo_url ? `<img src="${negocio.logo_url}" style="width:80px;height:80px;border-radius:20px;object-fit:cover;border:3px solid rgba(255,255,255,0.3);margin-bottom:16px" onerror="this.style.display='none'" />` : `<div style="margin-bottom:16px">${logoSVG(40, 'rgba(255,255,255,0.5)')}</div>`}
+          ${urlLogo(negocio.logo) ? `<img src="${esc(urlLogo(negocio.logo))}" alt="" style="width:80px;height:80px;border-radius:20px;object-fit:contain;background:#ffffff;margin-bottom:16px" onerror="this.style.display='none'" />` : `<div style="margin-bottom:16px">${logoSVG(40, 'rgba(255,255,255,0.5)')}</div>`}
           <div style="font-size:40px;margin-bottom:8px">${negocio.emoji_negocio || '☕'}</div>
           <div class="landing-nombre">${negocio.nombre}</div>
           <div class="landing-tag">${negocio.descripcion || 'Programa de lealtad digital'}</div>
@@ -2318,6 +2642,10 @@ const PLANTILLAS_PREMIO = [
   'Un café gratis', 'Un postre gratis', 'Un corte gratis', 'Un taco gratis',
   '20% de descuento en tu cuenta', '10% de descuento', '2x1',
 ]
+
+// Mensaje de agradecimiento de la tarjeta (4E): máx. 40 caracteres, como el servidor.
+const MENSAJE_GRACIAS_MAX = 40
+const PLANTILLAS_MENSAJE = ['¡Gracias por tu visita!', '¡Qué gusto verte de nuevo!', 'Gracias por preferirnos']
 
 // Límites del ticket promedio y del costo del premio (los mismos que revisa el servidor).
 const TICKET_MAX = 100000
@@ -2366,6 +2694,9 @@ function mensajeDueno(error) {
   if (m.includes('COSTO_INVALIDO')) return `El costo del premio debe ser de $0 a ${formatoPesos(COSTO_MAX)}, o déjalo vacío.`
   if (m.includes('TELEFONO_INVALIDO')) return 'Escribe los 10 dígitos del número.'
   if (m.includes('NO_ENCONTRADO')) return 'Ese número ya no estaba en la lista.'
+  if (m.includes('COLOR_INVALIDO')) return 'Elige un color de la lista.'
+  if (m.includes('LOGO_INVALIDO')) return 'No pudimos guardar el logo. Vuelve a subirlo.'
+  if (m.includes('MENSAJE_INVALIDO')) return `El mensaje debe tener máximo ${MENSAJE_GRACIAS_MAX} letras.`
   if (m.includes('Acceso denegado')) return 'Solo el dueño puede ver y cambiar esto. Sal y vuelve a entrar.'
   return 'Algo salió mal. Intenta de nuevo.'
 }
@@ -2377,7 +2708,7 @@ function guardarPestanaDueno(p) { try { sessionStorage.setItem(CLAVE_PESTANA_DUE
 
 // Esqueletos de carga: la forma del panel aparece al instante, nunca en blanco.
 const bloqueEsq = alto => `<div class="ow-esq" style="height:${alto}px;margin-bottom:16px"></div>`
-const esqueletoResumen = () => [124, 88, 60, 88, 150].map(bloqueEsq).join('')
+const esqueletoResumen = () => [124, 88, 300, 88, 150].map(bloqueEsq).join('')
 const esqueletoAjustes = () => [360, 300, 160].map(bloqueEsq).join('')
 
 // Tarjeta de error con "Reintentar" (nunca pantalla en blanco).
@@ -2403,7 +2734,7 @@ function principalHTML(r) {
     return `<section class="ow-tarjeta ow-principal">
       <div class="ow-principal-lbl">Esta semana tus clientes volvieron</div>
       <div class="ow-principal-num">${n === 1 ? '1 vez' : `${formatoNumero(n)} veces`}</div>
-      <div class="ow-principal-sub">≈ ${formatoPesos(r.ventas_estimadas)} en ventas <span class="ow-nota">(estimado)</span></div>
+      <div class="ow-principal-sub" id="dn-ventas">≈ ${formatoPesos(r.ventas_estimadas)} en ventas <span class="ow-nota">(estimado)</span></div>
     </section>`
   }
   return `<section class="ow-tarjeta ow-principal">
@@ -2456,7 +2787,13 @@ function meserosHTML(meseros) {
   </section>`
 }
 
-function resumenHTML(r, meseros) {
+// "Dejaron de venir" (tarjeta y lista) queda oculto hasta la fase de WhatsApp:
+// sin un mensaje para invitarlos de vuelta, la lista no le da al dueño nada
+// que hacer. El código (abrirInactivos) y la función SQL clientes_inactivos()
+// siguen listos; para reactivarlo basta con poner esto en true.
+const MOSTRAR_INACTIVOS = false
+
+function resumenHTML(r, meseros, prefGrafica) {
   if (!(Number(r.clientes_registrados) > 0)) return vacioResumenHTML()
   const deCada10 = Math.round((Number(r.porcentaje_regresan) || 0) / 10)
   const entregados = Number(r.premios_entregados_semana) || 0
@@ -2468,10 +2805,11 @@ function resumenHTML(r, meseros) {
       <div class="ow-cifra"><div class="ow-cifra-num">${formatoNumero(r.visitas_semana)}</div><div class="ow-cifra-lbl">Visitas esta semana</div>${cambioSemanaHTML(r.visitas_semana, r.visitas_semana_anterior)}</div>
       <div class="ow-cifra"><div class="ow-cifra-num positivo sin-corte">${deCada10}<span class="ow-cifra-de"> de 10</span></div><div class="ow-cifra-lbl">Clientes que regresaron</div></div>
     </div>
-    <button type="button" class="ow-fila${inactivos > 0 ? ' atencion' : ''}" id="dn-ver-inactivos"${inactivos > 0 ? '' : ' disabled'}>
+    ${graficaSeccionHTML(prefGrafica)}
+    ${MOSTRAR_INACTIVOS ? `<button type="button" class="ow-fila${inactivos > 0 ? ' atencion' : ''}" id="dn-ver-inactivos"${inactivos > 0 ? '' : ' disabled'}>
       <span><span class="ow-fila-titulo">Dejaron de venir</span><span class="ow-fila-sub">Más de 21 días sin venir</span></span>
       <span class="ow-fila-der"><span class="ow-fila-num">${formatoNumero(inactivos)}</span>${inactivos > 0 ? '<span class="ow-fila-ver">Ver</span>' : ''}</span>
-    </button>
+    </button>` : ''}
     <div class="ow-cifras dos">
       <div class="ow-cifra"><div class="ow-cifra-num positivo">${formatoNumero(entregados)}</div><div class="ow-cifra-lbl">Premios entregados esta semana</div>${r.costo_premios_semana != null && entregados > 0 ? `<div class="ow-cambio">≈ ${formatoPesos(r.costo_premios_semana)} de costo</div>` : ''}</div>
       <div class="ow-cifra"><div class="ow-cifra-num positivo">${formatoNumero(r.premios_listos)}</div><div class="ow-cifra-lbl">Listos para canjear</div></div>
@@ -2516,22 +2854,226 @@ async function abrirInactivos() {
   }
 }
 
+// ── Gráfica (4D) ──
+// Las series llegan YA agregadas de grafica_dueno(periodo) (solo conteos,
+// nunca clientes). Aquí solo se dibujan con SVG propio, sin librerías:
+//   Visitas  = barras azules del periodo actual y una raya azul grisáceo
+//              claro con el periodo anterior en el mismo tramo.
+//   Clientes = línea azul de clientes registrados acumulados.
+// Solo la gráfica usa este azul; el resto del panel sigue igual.
+// Sin rojo ni alarma: si las visitas bajan, un texto neutro y nada más.
+const AZUL_GRAFICA = '#065FD4'
+const AZUL_ANTERIOR = '#C3D0E0'   // periodo anterior: azul grisáceo muy claro
+const AZUL_RESALTE = '#EEF3FB'    // fondo de la columna tocada
+const PERIODOS_GRAFICA = {
+  semana: { boton: 'Semana', actual: 'Esta semana', anterior: 'Semana anterior', nuevos: 'esta semana' },
+  mes: { boton: 'Mes', actual: 'Últimas 4 semanas', anterior: 'Las 4 anteriores', nuevos: 'en 4 semanas' },
+}
+const DIAS_PARA_MES = 14
+const CLAVE_GRAFICA = 'sello_grafica_dueno'
+function leerPrefGrafica() {
+  try {
+    const p = JSON.parse(sessionStorage.getItem(CLAVE_GRAFICA) || '{}')
+    return { periodo: PERIODOS_GRAFICA[p.periodo] ? p.periodo : 'semana', vista: p.vista === 'clientes' ? 'clientes' : 'visitas' }
+  } catch (e) { return { periodo: 'semana', vista: 'visitas' } }
+}
+function guardarPrefGrafica(p) { try { sessionStorage.setItem(CLAVE_GRAFICA, JSON.stringify(p)) } catch (e) {} }
+
+// "2026-11-04" → fecha local (sin que el navegador la corra por zona horaria).
+const fechaLocal = d => { const [a, m, dd] = String(d).split('-').map(Number); return new Date(a, (m || 1) - 1, dd || 1) }
+const sinPunto = t => t.replace(/\./g, '')
+const formatoDiaSemana = d => sinPunto(fechaLocal(d).toLocaleDateString('es-MX', { weekday: 'short' }))
+const formatoFechaCorta = d => sinPunto(fechaLocal(d).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }))
+
+// Etiqueta corta del eje (cabe en celular) y la larga de la lectura.
+function etiquetaCorta(periodo, p, ultimo) {
+  if (periodo === 'semana') return ultimo ? 'Hoy' : formatoDiaSemana(p.dia)
+  return formatoFechaCorta(p.dia)
+}
+function etiquetaLarga(periodo, p, ultimo) {
+  if (periodo === 'semana') return ultimo ? 'Hoy' : sinPunto(fechaLocal(p.dia).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric' }))
+  if (ultimo) return 'Últimos 7 días'
+  const fin = fechaLocal(p.dia); fin.setDate(fin.getDate() + 6)
+  return `Del ${formatoFechaCorta(p.dia)} al ${sinPunto(fin.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }))}`
+}
+
+// Tope del eje: un número redondo y par (para que la línea de en medio sea entera).
+function topeEje(max) {
+  if (!(max > 0)) return 2
+  const k = Math.pow(10, Math.floor(Math.log10(max / 2)))
+  for (const f of [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) {
+    const paso = f * k
+    if (Number.isInteger(paso) && paso * 2 >= max) return paso * 2
+  }
+  return Math.ceil(max)
+}
+
+// Barra con las esquinas de arriba redondeadas, apoyada en la base.
+function barraPath(x, y, w, h, r = 4) {
+  r = Math.min(r, w / 2, h)
+  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`
+}
+
+const ALTO_GRAFICA = 170
+const MARGEN_GRAFICA = { l: 32, r: 4, t: 10, b: 22 }
+const r1 = n => Math.round(n * 10) / 10
+
+// Lo común a las dos: rejilla, etiquetas del eje x, resaltado y zonas para tocar.
+function marcoGrafica(pts, periodo, ancho, sel, ticks, y) {
+  const m = MARGEN_GRAFICA, pw = ancho - m.l - m.r, ph = ALTO_GRAFICA - m.t - m.b
+  const banda = pw / pts.length
+  const cadaN = Math.max(1, Math.ceil(pts.length / Math.max(2, Math.floor(pw / 38))))
+  let fondo = ''
+  let frente = ''
+  if (sel != null && pts[sel]) fondo += `<rect x="${r1(m.l + banda * sel)}" y="${m.t}" width="${r1(banda)}" height="${ph}" rx="6" fill="${AZUL_RESALTE}"/>`
+  for (const t of ticks) {
+    fondo += `<line x1="${m.l}" x2="${ancho - m.r}" y1="${r1(y(t.v))}" y2="${r1(y(t.v))}" stroke="${t.base ? '#c9d6cf' : '#e6eee9'}" stroke-width="1"/>`
+    fondo += `<text x="${m.l - 6}" y="${r1(y(t.v) + 4)}" text-anchor="end">${formatoNumero(t.v)}</text>`
+  }
+  pts.forEach((p, i) => {
+    const cx = m.l + banda * i + banda / 2
+    if ((pts.length - 1 - i) % cadaN === 0) {
+      frente += `<text x="${r1(cx)}" y="${ALTO_GRAFICA - 5}" text-anchor="middle"${i === sel ? ' style="fill:var(--ow-texto);font-weight:600"' : ''}>${etiquetaCorta(periodo, p, i === pts.length - 1)}</text>`
+    }
+    // Zona para tocar: toda la columna, más grande que la barra.
+    frente += `<rect data-i="${i}" x="${r1(m.l + banda * i)}" y="0" width="${r1(banda)}" height="${ALTO_GRAFICA}" fill="transparent" style="cursor:pointer"/>`
+  })
+  return { fondo, frente, banda }
+}
+
+function svgVisitas(pts, periodo, ancho, sel, resumenTexto) {
+  const max = topeEje(Math.max(1, ...pts.map(p => Math.max(p.actual || 0, p.anterior || 0))))
+  const m = MARGEN_GRAFICA, ph = ALTO_GRAFICA - m.t - m.b
+  const y = v => m.t + ph - (v / max) * ph
+  const ticks = [{ v: 0, base: true }, { v: max / 2 }, { v: max }]
+  const { fondo, frente, banda } = marcoGrafica(pts, periodo, ancho, sel, ticks, y)
+  const bw = Math.max(3, Math.min(28, banda * 0.62))
+  const rw = Math.min(banda * 0.86, bw + 10)
+  let barras = '', rayas = ''
+  pts.forEach(p => {
+    const cx = m.l + banda * p.i + banda / 2
+    if (p.actual > 0) {
+      barras += `<path d="${barraPath(r1(cx - bw / 2), r1(y(p.actual)), r1(bw), r1(y(0) - y(p.actual)))}" fill="${AZUL_GRAFICA}"/>`
+    }
+    if (p.anterior > 0) {
+      const yy = r1(y(p.anterior))
+      // Anillo blanco para que la raya se lea encima de la barra.
+      rayas += `<line x1="${r1(cx - rw / 2)}" x2="${r1(cx + rw / 2)}" y1="${yy}" y2="${yy}" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>`
+      rayas += `<line x1="${r1(cx - rw / 2)}" x2="${r1(cx + rw / 2)}" y1="${yy}" y2="${yy}" stroke="${AZUL_ANTERIOR}" stroke-width="3" stroke-linecap="round"/>`
+    }
+  })
+  return `<svg viewBox="0 0 ${ancho} ${ALTO_GRAFICA}" height="${ALTO_GRAFICA}" role="img" aria-label="${esc(resumenTexto)}">${fondo}${barras}${rayas}${frente}</svg>`
+}
+
+function svgClientes(pts, periodo, ancho, sel, resumenTexto) {
+  const vals = pts.map(p => Number(p.clientes) || 0)
+  const min = Math.min(...vals), max = Math.max(...vals)
+  // Si crecieron poco, el eje no empieza en 0 para que se note la subida;
+  // las etiquetas siempre dicen los números reales.
+  const tramo = Math.max(1, max - min)
+  const yMin = min > tramo * 2 ? Math.max(0, Math.floor(min - tramo)) : 0
+  const yMax = Math.max(yMin + 2, Math.ceil(max + tramo * 0.15))
+  const m = MARGEN_GRAFICA, ph = ALTO_GRAFICA - m.t - m.b
+  const y = v => m.t + ph - ((v - yMin) / (yMax - yMin)) * ph
+  const ticks = [{ v: yMin, base: true }, { v: max }]
+  const { fondo, frente, banda } = marcoGrafica(pts, periodo, ancho, sel, ticks, y)
+  const xy = vals.map((v, i) => [r1(m.l + banda * i + banda / 2), r1(y(v))])
+  const linea = xy.map((c, i) => `${i ? 'L' : 'M'}${c[0]},${c[1]}`).join('')
+  let dibujo = `<path d="${linea}L${xy[xy.length - 1][0]},${r1(y(yMin))}L${xy[0][0]},${r1(y(yMin))}Z" fill="${AZUL_GRAFICA}" fill-opacity="0.08"/>`
+  dibujo += `<path d="${linea}" fill="none" stroke="${AZUL_GRAFICA}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
+  if (sel != null && xy[sel]) {
+    const [cx, cy] = xy[sel]
+    dibujo += `<line x1="${cx}" x2="${cx}" y1="${m.t}" y2="${r1(y(yMin))}" stroke="${AZUL_ANTERIOR}" stroke-width="1"/>`
+    dibujo += `<circle cx="${cx}" cy="${cy}" r="5" stroke="#ffffff" stroke-width="2" fill="${AZUL_GRAFICA}"/>`
+  }
+  return `<svg viewBox="0 0 ${ancho} ${ALTO_GRAFICA}" height="${ALTO_GRAFICA}" role="img" aria-label="${esc(resumenTexto)}">${fondo}${dibujo}${frente}</svg>`
+}
+
+// Sección completa: selector de periodo (fijo) y el cuerpo (se repinta).
+function graficaSeccionHTML(pref) {
+  return `<section class="ow-tarjeta ow-graf" id="dn-grafica" aria-label="Gráfica">
+    <div class="ow-seg" role="group" aria-label="Periodo">
+      ${Object.entries(PERIODOS_GRAFICA).map(([k, p]) => `<button type="button" data-periodo="${k}" aria-pressed="${pref.periodo === k}">${p.boton}</button>`).join('')}
+    </div>
+    <div id="dn-graf-cuerpo">${bloqueEsq(230)}</div>
+  </section>`
+}
+
+function cuerpoGraficaHTML(g, pref, ancho, sel) {
+  if (!g) return `<div style="margin-top:18px">${bloqueEsq(230)}</div>`
+  if (g.error) return `<div style="margin-top:18px"><p style="margin-bottom:12px">${g.error}</p><button class="ow-btn secundario" id="dn-graf-reintentar">Reintentar</button></div>`
+  if (!g.suficiente || !(g.puntos || []).length) return `<p class="ow-vacio" style="margin-top:18px">Tu gráfica aparece cuando tengas una semana de visitas.</p>`
+  // "Mes" compara 4 semanas: con menos de 2 semanas de datos se vería casi vacía.
+  if (pref.periodo === 'mes' && Number(g.dias_de_datos) < DIAS_PARA_MES) return `<p class="ow-vacio" style="margin-top:18px">Disponible con 2 semanas de datos.</p>`
+
+  const P = PERIODOS_GRAFICA[pref.periodo] || PERIODOS_GRAFICA.semana
+  const pts = g.puntos
+  // Sin tocar nada, la lectura muestra el tramo más reciente.
+  const s = sel != null && pts[sel] ? sel : pts.length - 1
+  const p = pts[s]
+  const esUltimo = s === pts.length - 1
+  const conmutador = `<div class="ow-seg chico" role="group" aria-label="Qué ver">
+      <button type="button" data-vista="visitas" aria-pressed="${pref.vista === 'visitas'}">Visitas</button>
+      <button type="button" data-vista="clientes" aria-pressed="${pref.vista === 'clientes'}">Clientes</button>
+    </div>`
+
+  if (pref.vista === 'clientes') {
+    const total = Number(pts[pts.length - 1].clientes) || 0
+    const nuevos = total - (Number(g.clientes_inicio) || 0)
+    const tabla = pts.map((x, i) => `<tr><th scope="row">${etiquetaLarga(pref.periodo, x, i === pts.length - 1)}</th><td>${formatoNumero(x.clientes)}</td></tr>`).join('')
+    return `
+      <div class="ow-graf-cab">
+        <div><div class="ow-graf-num">${formatoNumero(total)} <small>clientes registrados</small></div>
+          <div class="ow-graf-comp">${nuevos > 0 ? `+${formatoNumero(nuevos)} ${nuevos === 1 ? 'nuevo' : 'nuevos'} ${P.nuevos}` : `Sin clientes nuevos ${P.nuevos}`}</div></div>
+        ${conmutador}
+      </div>
+      ${svgClientes(pts, pref.periodo, ancho, s, `Clientes registrados: ${formatoNumero(total)}`)}
+      <p class="ow-graf-lectura" aria-live="polite"><strong>${etiquetaLarga(pref.periodo, p, esUltimo)}</strong> · ${formatoNumero(p.clientes)} ${Number(p.clientes) === 1 ? 'cliente' : 'clientes'} en total</p>
+      <table class="ow-oculto"><caption>Clientes registrados acumulados</caption><tbody>${tabla}</tbody></table>`
+  }
+
+  const total = Number(g.total) || 0
+  const anterior = Number(g.total_anterior) || 0
+  const texto = `Visitas, ${P.actual.toLowerCase()}: ${formatoNumero(total)}. ${P.anterior}: ${formatoNumero(anterior)}.`
+  const tabla = pts.map((x, i) => `<tr><th scope="row">${etiquetaLarga(pref.periodo, x, i === pts.length - 1)}</th><td>${formatoNumero(x.actual)}</td><td>${formatoNumero(x.anterior)}</td></tr>`).join('')
+  return `
+    <div class="ow-graf-cab">
+      <div><div class="ow-graf-num">${formatoNumero(total)} <small>${total === 1 ? 'visita' : 'visitas'}</small></div>
+        <div class="ow-graf-comp">${P.anterior}: ${formatoNumero(anterior)}</div></div>
+      ${conmutador}
+    </div>
+    <div class="ow-graf-leyenda" aria-hidden="true"><span><i></i>${P.actual}</span><span><i class="linea"></i>${P.anterior}</span></div>
+    ${svgVisitas(pts, pref.periodo, ancho, s, texto)}
+    <p class="ow-graf-lectura" aria-live="polite"><strong>${etiquetaLarga(pref.periodo, p, esUltimo)}</strong> · ${formatoNumero(p.actual)} ${Number(p.actual) === 1 ? 'visita' : 'visitas'} · ${P.anterior}: ${formatoNumero(p.anterior)}</p>
+    ${g.bajaron ? '<p class="ow-graf-nota">Las visitas bajaron frente al periodo anterior.</p>' : ''}
+    <table class="ow-oculto"><caption>Visitas por tramo</caption><thead><tr><th scope="col">Tramo</th><th scope="col">${P.actual}</th><th scope="col">${P.anterior}</th></tr></thead><tbody>${tabla}</tbody></table>`
+}
+
 // ── Personalización ──
 // Vista previa de la tarjeta del cliente (mismo acomodo que su pantalla).
-function vistaTarjetaHTML(nd) {
+// logoUrl: el logo guardado o el recién elegido (aún sin guardar); mensaje: el
+// que está escrito en el campo. Así la vista previa cambia en vivo.
+function vistaTarjetaHTML(nd, { logoUrl = null, mensaje = '' } = {}) {
   const meta = Math.max(1, Number(nd.meta_puntos) || 10)
   const puntos = Math.min(meta - 1, Math.max(1, Math.round(meta * 0.4)))
   const sellos = meta <= 10
     ? `<div class="ow-vista-sellos">${Array.from({ length: meta }, (_, i) => `<span class="ow-vista-sello${i < puntos ? ' lleno' : ''}"></span>`).join('')}</div>`
     : ''
+  const ini = esc(inicialNegocio(nd.nombre || 'Tu negocio'))
+  const avatar = logoUrl
+    ? `<span class="ow-vista-avatar con-logo">${ini}<img src="${esc(logoUrl)}" alt="" onerror="this.parentNode.classList.remove('con-logo');this.remove()"></span>`
+    : `<span class="ow-vista-avatar">${ini}</span>`
+  const msj = String(mensaje || '').trim()
   return `
-    <div class="ow-vista-marca"><span class="ow-vista-punto"></span>${esc(nd.nombre || 'Tu negocio')}</div>
+    <div class="ow-vista-sellotop">${logoSVG(11, '#94a3b8')}<span>Sello</span></div>
+    <div class="ow-vista-marca">${avatar}<span><span class="ow-vista-nombre">${esc(nd.nombre || 'Tu negocio')}</span>${msj ? `<span class="ow-vista-mensaje">${esc(msj)}</span>` : ''}</span></div>
     <div class="ow-vista-saludo">Buenas tardes, Ana</div>
     <div class="ow-vista-tarjeta">
       <div><span class="ow-vista-num">${puntos}</span><span class="ow-vista-meta"> / ${meta}</span></div>
       ${sellos}
     </div>
-    <div class="ow-vista-premio"><span>TU PREMIO</span>${esc(nd.premio || 'Tu premio')}</div>`
+    <div class="ow-vista-premio"><span>TU PREMIO</span>${esc(nd.premio || 'Tu premio')}</div>
+    ${MOSTRAR_PIE_SELLO ? '<div class="ow-vista-pie">Hecho con Sello</div>' : ''}`
 }
 
 function ajustesHTML(nd, negocioId) {
@@ -2585,8 +3127,26 @@ function ajustesHTML(nd, negocioId) {
         <div class="ow-colores" role="radiogroup" aria-labelledby="lbl-color-tarjeta">
           ${colores.map(c => `<button type="button" class="ow-color" role="radio" aria-checked="${c.valor === actual}" aria-label="${esc(c.nombre)}" title="${esc(c.nombre)}" data-color="${c.valor}" style="background:${c.valor}"></button>`).join('')}
         </div>
+        <div class="ow-campo">
+          <div class="ow-label">Logo</div>
+          <div class="ow-logo-fila">
+            <span id="logo-muestra"></span>
+            <div class="ow-logo-acciones">
+              <button type="button" class="ow-btn secundario chico" id="logo-elegir">Subir logo</button>
+              <button type="button" class="ow-enlace" id="logo-quitar" hidden>Quitar</button>
+            </div>
+          </div>
+          <input type="file" id="logo-archivo" class="ow-oculto" accept="image/png,image/jpeg,image/webp" tabindex="-1" aria-hidden="true" />
+          <p class="ow-ayuda">PNG, JPG o WebP. Lo ajustamos al tamaño correcto.</p>
+          <div id="msg-logo"></div>
+        </div>
+        <div class="ow-campo">
+          <label class="ow-label" for="tarjeta-mensaje">Mensaje de agradecimiento <span class="ow-nota">(opcional)</span><span class="ow-cuenta" id="tarjeta-mensaje-cuenta" aria-hidden="true"></span></label>
+          <input type="text" id="tarjeta-mensaje" class="ow-input" maxlength="${MENSAJE_GRACIAS_MAX}" value="${esc(nd.mensaje_gracias || '')}" placeholder="Ej: ¡Gracias por tu visita!" autocomplete="off" />
+          <div class="ow-chips">${PLANTILLAS_MENSAJE.map(p => `<button type="button" class="ow-chip" data-mensaje="${esc(p)}">${esc(p)}</button>`).join('')}</div>
+        </div>
         <div class="ow-label">Vista previa</div>
-        <div class="ow-vista" id="vista-tarjeta" style="--vista-color:${actual}">${vistaTarjetaHTML(nd)}</div>
+        <div class="ow-vista" id="vista-tarjeta" style="--vista-color:${actual}">${vistaTarjetaHTML(nd, { logoUrl: urlLogo(nd.logo_ruta), mensaje: nd.mensaje_gracias })}</div>
         <button id="btn-guardar-tarjeta" class="ow-btn primario">Guardar</button>
         <div id="msg-tarjeta"></div>
       </div>
@@ -2623,7 +3183,9 @@ function ajustesHTML(nd, negocioId) {
         </div>
         <div id="msg-landing"></div>
       </div>
-    </section>`
+    </section>
+    <p style="text-align:center"><button type="button" class="ow-enlace" id="ayuda-otra-vez">Ver ayuda otra vez</button></p>
+    <div id="msg-ayuda" style="text-align:center"></div>`
 }
 
 // Sección "Programa": se guarda con la RPC guardar_programa (2G, ampliada en Fase 4).
@@ -2667,27 +3229,106 @@ function initProgramaDueno(alGuardar) {
   })
 }
 
-// Sección "Tarjeta de tus clientes": por ahora solo el color (el logo y el
-// mensaje de agradecimiento necesitan supabase/fase-4b-tarjeta.sql).
-// El ícono del sello y la animación no se eligen: quedan los de siempre.
-function initTarjetaDueno(negocioId) {
+// Sección "Tarjeta de tus clientes" (4E): color, logo y mensaje de
+// agradecimiento, con vista previa en vivo. Se guarda todo junto con la RPC
+// guardar_tarjeta (valida color, logo y mensaje en el servidor).
+// El logo se sube al bucket público "logos", en la carpeta del negocio
+// (Storage solo deja escribir ahí al dueño). Antes de subirlo se vuelve a
+// dibujar en el navegador: queda de máx. 512 px y sin datos ocultos del archivo.
+const LOGO_TIPOS = ['image/png', 'image/jpeg', 'image/webp']   // nunca SVG
+const LOGO_MAX_LADO = 512
+const LOGO_MAX_BYTES = 1024 * 1024          // lo mismo que limita el bucket
+const LOGO_MAX_ORIGINAL = 15 * 1024 * 1024  // foto del celular, antes de reducirla
+const EXT_LOGO = { 'image/webp': 'webp', 'image/png': 'png', 'image/jpeg': 'jpg' }
+
+const lienzoABlob = (lienzo, tipo, calidad) => new Promise(r => { try { lienzo.toBlob(r, tipo, calidad) } catch (e) { r(null) } })
+
+async function prepararLogo(archivo) {
+  if (!archivo || !LOGO_TIPOS.includes(archivo.type)) throw new Error('LOGO_TIPO')
+  if (archivo.size > LOGO_MAX_ORIGINAL) throw new Error('LOGO_PESADO')
+  const url = URL.createObjectURL(archivo)
+  try {
+    const img = new Image()
+    img.src = url
+    try { await img.decode() } catch (e) { throw new Error('LOGO_ILEGIBLE') }
+    const ancho = img.naturalWidth, alto = img.naturalHeight
+    if (!ancho || !alto || ancho * alto > 50e6) throw new Error('LOGO_ILEGIBLE')
+    const escala = Math.min(1, LOGO_MAX_LADO / Math.max(ancho, alto))
+    const lienzo = document.createElement('canvas')
+    lienzo.width = Math.max(1, Math.round(ancho * escala))
+    lienzo.height = Math.max(1, Math.round(alto * escala))
+    const ctx = lienzo.getContext('2d')
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(img, 0, 0, lienzo.width, lienzo.height)
+    // WebP si el navegador lo sabe hacer (Safari a veces no); si no, PNG.
+    let blob = await lienzoABlob(lienzo, 'image/webp', 0.9)
+    if (!blob || blob.type !== 'image/webp') blob = await lienzoABlob(lienzo, 'image/png')
+    // Un PNG con mucho detalle puede pasar de 1 MB: JPG con fondo blanco.
+    if (!blob || blob.size > LOGO_MAX_BYTES) {
+      const plano = document.createElement('canvas')
+      plano.width = lienzo.width; plano.height = lienzo.height
+      const c2 = plano.getContext('2d')
+      c2.fillStyle = '#ffffff'; c2.fillRect(0, 0, plano.width, plano.height); c2.drawImage(lienzo, 0, 0)
+      blob = await lienzoABlob(plano, 'image/jpeg', 0.85)
+    }
+    if (!blob || !EXT_LOGO[blob.type]) throw new Error('LOGO_ILEGIBLE')
+    if (blob.size > LOGO_MAX_BYTES) throw new Error('LOGO_PESADO')
+    return blob
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+function mensajeLogo(e) {
+  const m = e?.message || ''
+  if (m === 'LOGO_TIPO') return 'Usa una imagen PNG, JPG o WebP.'
+  if (m === 'LOGO_PESADO') return 'Esa imagen es muy pesada. Prueba con otra.'
+  if (m === 'LOGO_ILEGIBLE') return 'No pudimos leer esa imagen. Prueba con otra.'
+  return 'No pudimos usar esa imagen. Prueba con otra.'
+}
+
+// Devuelve { actualizar(cambios) } para que la vista previa siga a Programa
+// (meta y premio) sin perder el logo ni el mensaje que se están editando.
+function initTarjetaDueno(negocioId, nd) {
   const $ = id => document.getElementById(id)
   const btn = $('btn-guardar-tarjeta'); const msg = $('msg-tarjeta'); const vista = $('vista-tarjeta')
-  if (!btn) return
+  if (!btn) return { actualizar() {} }
   const opciones = [...document.querySelectorAll('.ow-color')]
-  let elegido = opciones.find(o => o.getAttribute('aria-checked') === 'true')?.dataset.color || COLORES_TARJETA[1].valor
+  const mensaje = $('tarjeta-mensaje'); const cuenta = $('tarjeta-mensaje-cuenta')
+  const archivo = $('logo-archivo'); const elegirLogo = $('logo-elegir'); const quitarLogo = $('logo-quitar')
+  const msgLogo = $('msg-logo'); const muestra = $('logo-muestra')
+  const datos = { ...nd }
+  const estado = {
+    color: opciones.find(o => o.getAttribute('aria-checked') === 'true')?.dataset.color || COLORES_TARJETA[1].valor,
+    logoGuardado: RUTA_LOGO.test(nd.logo_ruta || '') ? nd.logo_ruta : null,
+    logoNuevo: null,      // Blob ya reducido, aún sin subir
+    logoNuevoUrl: null,   // URL local para la vista previa
+    quitar: false,
+    guardando: false,
+  }
 
+  const logoVisible = () => estado.logoNuevoUrl || (estado.quitar ? null : urlLogo(estado.logoGuardado))
+  function pintar() {
+    const url = logoVisible()
+    vista.style.setProperty('--vista-color', estado.color)
+    vista.innerHTML = vistaTarjetaHTML(datos, { logoUrl: url, mensaje: mensaje.value })
+    muestra.innerHTML = `<span class="ow-vista-avatar${url ? ' con-logo' : ''}" style="--vista-color:${estado.color}">${esc(inicialNegocio(datos.nombre || 'Tu negocio'))}${url ? `<img src="${esc(url)}" alt="" onerror="this.parentNode.classList.remove('con-logo');this.remove()">` : ''}</span>`
+    elegirLogo.textContent = url ? 'Cambiar logo' : 'Subir logo'
+    quitarLogo.hidden = !url
+    cuenta.textContent = `${mensaje.value.length}/${MENSAJE_GRACIAS_MAX}`
+  }
+  const cambiado = () => { msg.innerHTML = '' }
+
+  // Color: grupo de opciones accesible (flechas para moverse).
   function elegir(boton, enfocar = false) {
     opciones.forEach(o => { o.setAttribute('aria-checked', String(o === boton)); o.tabIndex = o === boton ? 0 : -1 })
-    elegido = boton.dataset.color
-    vista.style.setProperty('--vista-color', elegido)
-    msg.innerHTML = ''
+    estado.color = boton.dataset.color
+    cambiado(); pintar()
     if (enfocar) boton.focus()
   }
   opciones.forEach(o => { o.tabIndex = o.getAttribute('aria-checked') === 'true' ? 0 : -1 })
   opciones.forEach((o, i) => {
     o.addEventListener('click', () => elegir(o))
-    // Flechas para moverse entre colores (grupo de opciones accesible).
     o.addEventListener('keydown', e => {
       const paso = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
       if (!paso) return
@@ -2696,22 +3337,98 @@ function initTarjetaDueno(negocioId) {
     })
   })
 
-  btn.addEventListener('click', async () => {
-    if (!esColorHex(elegido)) return
-    btn.disabled = true; btn.textContent = 'Guardando...'; msg.innerHTML = ''
+  // Mensaje: en vivo en la vista previa, con plantillas.
+  mensaje.addEventListener('input', () => { cambiado(); pintar() })
+  document.querySelectorAll('.ow-chip[data-mensaje]').forEach(chip => chip.addEventListener('click', () => {
+    mensaje.value = chip.dataset.mensaje.slice(0, MENSAJE_GRACIAS_MAX); cambiado(); pintar(); mensaje.focus()
+  }))
+
+  // Logo: se prepara al elegirlo (vista previa inmediata) y se sube al guardar.
+  const soltarVistaLocal = () => { if (estado.logoNuevoUrl) URL.revokeObjectURL(estado.logoNuevoUrl); estado.logoNuevoUrl = null; estado.logoNuevo = null }
+  elegirLogo.addEventListener('click', () => { if (!estado.guardando) archivo.click() })
+  archivo.addEventListener('change', async () => {
+    const elegido = archivo.files?.[0]
+    archivo.value = ''
+    if (!elegido) return
+    msgLogo.innerHTML = ''
+    elegirLogo.disabled = true
     try {
-      const { error } = await supabase.from('negocios').update({ color_principal: elegido }).eq('id', negocioId)
+      const blob = await prepararLogo(elegido)
+      if (!vista.isConnected) return
+      soltarVistaLocal()
+      estado.logoNuevo = blob
+      estado.logoNuevoUrl = URL.createObjectURL(blob)
+      estado.quitar = false
+      cambiado(); pintar()
+      msgLogo.innerHTML = `<p class="ow-ayuda">Listo. Toca "Guardar" para usarlo.</p>`
+    } catch (e) {
+      msgLogo.innerHTML = avisoError(mensajeLogo(e))
+    } finally {
+      elegirLogo.disabled = false
+    }
+  })
+  quitarLogo.addEventListener('click', () => {
+    soltarVistaLocal()
+    estado.quitar = true
+    msgLogo.innerHTML = ''
+    cambiado(); pintar()
+  })
+
+  const logos = () => supabase.storage.from('logos')
+  // Borrar un archivo que ya no se usa: si falla, solo queda un archivo de sobra.
+  async function borrarArchivo(ruta) {
+    if (!ruta) return
+    try { const { error } = await logos().remove([ruta]); if (error) console.warn('No se borró el logo anterior:', error.message) } catch (e) {}
+  }
+
+  btn.addEventListener('click', async () => {
+    if (estado.guardando || !esColorHex(estado.color)) return
+    const texto = mensaje.value.replace(/\s+/g, ' ').trim()
+    if (texto.length > MENSAJE_GRACIAS_MAX) { msg.innerHTML = avisoError(mensajeDueno({ message: 'MENSAJE_INVALIDO' })); return }
+    estado.guardando = true; btn.disabled = true; btn.textContent = 'Guardando...'; msg.innerHTML = ''
+    let subido = null
+    try {
+      let ruta = estado.quitar ? null : estado.logoGuardado
+      if (estado.logoNuevo) {
+        // Nombre nuevo cada vez: nunca se reemplaza un archivo (ni hay caché vieja).
+        subido = `${negocioId}/logo-${Date.now()}.${EXT_LOGO[estado.logoNuevo.type]}`
+        const { error } = await logos().upload(subido, estado.logoNuevo, {
+          contentType: estado.logoNuevo.type, upsert: false, cacheControl: '31536000',
+        })
+        if (error) { const err = new Error('SUBIDA'); err.causa = error; throw err }
+        ruta = subido
+      }
+      const { data, error } = await supabase.rpc('guardar_tarjeta', {
+        p_color: estado.color, p_logo_ruta: ruta, p_mensaje: texto || null,
+      })
       if (error) throw error
-      aplicarColorNegocio(elegido)
+      const anterior = estado.logoGuardado
+      estado.logoGuardado = data?.logo || null
+      estado.quitar = false
+      soltarVistaLocal()
+      mensaje.value = data?.mensaje || ''
+      subido = null
+      if (anterior && anterior !== estado.logoGuardado) borrarArchivo(anterior)
+      aplicarColorNegocio(estado.color)
+      pintar()
+      msgLogo.innerHTML = ''
       msg.innerHTML = avisoOk('Tarjeta guardada')
       setTimeout(() => { if (msg.isConnected) msg.innerHTML = '' }, 2500)
     } catch (e) {
-      console.error('Error al guardar la tarjeta:', e)
-      msg.innerHTML = avisoError(mensajeDueno(e))
+      console.error('Error al guardar la tarjeta:', e?.causa || e)
+      if (subido) borrarArchivo(subido)
+      msg.innerHTML = avisoError(e?.message === 'SUBIDA'
+        ? (sinInternet(e.causa) ? 'Sin conexión. Revisa tu internet e intenta de nuevo.' : 'No pudimos subir el logo. Intenta de nuevo.')
+        : mensajeDueno(e))
     } finally {
-      btn.disabled = false; btn.textContent = 'Guardar'
+      estado.guardando = false; btn.disabled = false; btn.textContent = 'Guardar'
     }
   })
+
+  pintar()
+  return {
+    actualizar(cambios) { Object.assign(datos, cambios); pintar() },
+  }
 }
 
 // Sección "Personal (no ganan puntos)": lista de numeros_excluidos (el dueño
@@ -2929,7 +3646,7 @@ function mostrarCredenciales(h, datos, negocioNombre, esNueva) {
   ].join('\n')
 
   h.cuerpo.innerHTML = `
-    <p class="ow-aviso-unico">Guárdala o compártela ahora: <strong>no se vuelve a mostrar</strong>.</p>
+    <p class="ow-aviso-unico ow-aviso-fijo" role="note"><strong>Guarda esta contraseña ahora: no se vuelve a mostrar.</strong></p>
     <div class="ow-credencial">
       <div><span class="ow-credencial-lbl">Correo</span><span class="ow-credencial-valor">${esc(datos.correo)}</span></div>
       <div><span class="ow-credencial-lbl">Contraseña</span><span class="ow-contrasena">${esc(datos.contrasena)}</span></div>
@@ -2941,10 +3658,24 @@ function mostrarCredenciales(h, datos, negocioNombre, esNueva) {
     <div id="eq-copiado"></div>
     <button class="ow-btn secundario" id="eq-listo" style="margin-top:16px">Ya la guardé</button>`
 
+  // Sin https (o si el navegador no deja copiar), navigator.clipboard no
+  // existe o falla: se deja la contraseña seleccionada para copiarla a mano.
   h.cuerpo.querySelector('#eq-copiar').addEventListener('click', async () => {
     const aviso = h.cuerpo.querySelector('#eq-copiado')
-    try { await navigator.clipboard.writeText(mensaje); aviso.innerHTML = avisoOk('Copiado. Pégalo donde quieras.') }
-    catch (e) { aviso.innerHTML = avisoError('No se pudo copiar. Usa "Compartir por WhatsApp".') }
+    try {
+      if (!window.isSecureContext || !navigator.clipboard?.writeText) throw new Error('SIN_PORTAPAPELES')
+      await navigator.clipboard.writeText(mensaje)
+      aviso.innerHTML = avisoOk('Copiado. Pégalo donde quieras.')
+    } catch (e) {
+      const clave = h.cuerpo.querySelector('.ow-contrasena')
+      try {
+        const rango = document.createRange()
+        rango.selectNodeContents(clave)
+        const sel = window.getSelection()
+        sel.removeAllRanges(); sel.addRange(rango)
+      } catch (err) {}
+      aviso.innerHTML = `<p class="ow-msg-ok" role="status" style="color:var(--ow-texto-2)">Este navegador no deja copiar. La contraseña quedó seleccionada: cópiala manualmente.</p>`
+    }
   })
   h.cuerpo.querySelector('#eq-whatsapp').addEventListener('click', () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank', 'noopener')
@@ -3083,6 +3814,7 @@ export async function paginaDueno() {
 
 export async function initDueno(negocioId) {
   inyectarEstilosDueno(); initNavDueno()
+  ayudasMotor.activar('dn-root', AYUDAS_DUENO)
   const sesion = ++duenoSesion
   const $ = id => document.getElementById(id)
   const vigente = () => sesion === duenoSesion && !!$('dn-root')
@@ -3101,6 +3833,7 @@ export async function initDueno(negocioId) {
     $('dn-ajustes').hidden = p !== 'ajustes'
     $('dn-equipo').hidden = p !== 'equipo'
     if (p === 'resumen' && estado.resumenViejo) cargarResumen()
+    else if (p === 'resumen') pintarGrafica()  // ya visible: al ancho real
     if (p === 'ajustes' && !estado.ajustesCargados) cargarAjustes()
     if (p === 'equipo' && !estado.equipoCargado) cargarEquipo()
   }
@@ -3139,6 +3872,91 @@ export async function initDueno(negocioId) {
     }
   }
 
+  // Gráfica (4D): una llamada a grafica_dueno por periodo; lo ya traído se
+  // guarda mientras el panel está abierto y se refresca con el resumen.
+  const graf = { pref: leerPrefGrafica(), datos: {}, sel: null, pedido: 0 }
+
+  function pintarGrafica() {
+    const caja = $('dn-graf-cuerpo')
+    if (!caja) return
+    // dias_de_datos llega con cualquier periodo: con menos de 14, "Mes" se ve
+    // apagado y al tocarlo explica cuándo se activa (sin pedir nada al servidor).
+    const dias = graf.datos.semana?.dias_de_datos ?? graf.datos.mes?.dias_de_datos
+    graf.mesApagado = dias != null && Number(dias) < DIAS_PARA_MES
+    $('dn-grafica').querySelectorAll('[data-periodo]').forEach(b => {
+      b.setAttribute('aria-pressed', String(b.dataset.periodo === graf.pref.periodo))
+      if (b.dataset.periodo === 'mes') b.classList.toggle('apagado', graf.mesApagado)
+    })
+    // El SVG se dibuja al ancho real (texto nítido, sin estirarse). Si la
+    // pestaña está oculta se usa un ancho estimado y se repinta al mostrarla.
+    const ancho = Math.max(240, caja.clientWidth || Math.min(608, window.innerWidth - 32) - 40)
+    caja.innerHTML = cuerpoGraficaHTML(graf.datos[graf.pref.periodo], graf.pref, ancho, graf.sel)
+    $('dn-graf-reintentar')?.addEventListener('click', () => { graf.datos[graf.pref.periodo] = null; cargarGrafica() })
+    caja.querySelectorAll('[data-vista]').forEach(b => b.addEventListener('click', () => {
+      if (graf.pref.vista === b.dataset.vista) return
+      graf.pref.vista = b.dataset.vista; guardarPrefGrafica(graf.pref); pintarGrafica()
+    }))
+    const svg = caja.querySelector('svg')
+    if (svg) {
+      const elegir = e => {
+        const i = Number(e.target?.dataset?.i)
+        if (!Number.isInteger(i) || i === graf.sel) return
+        graf.sel = i; pintarGrafica()
+      }
+      svg.addEventListener('click', elegir)
+      svg.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') elegir(e) })
+    }
+  }
+
+  async function cargarGrafica(refrescar = false) {
+    const periodo = graf.pref.periodo
+    // "Mes" apagado: ya se sabe que faltan días, no hace falta preguntar.
+    const sem = graf.datos.semana
+    if (periodo === 'mes' && sem && !sem.error && Number(sem.dias_de_datos) < DIAS_PARA_MES) {
+      graf.datos.mes = { ...sem }
+      graf.sel = null
+      pintarGrafica()
+      return
+    }
+    const hay = graf.datos[periodo] && !graf.datos[periodo].error
+    pintarGrafica()  // lo que ya había (o el esqueleto) al instante
+    if (hay && !refrescar) return
+    const pedido = ++graf.pedido
+    try {
+      const { data, error } = await supabase.rpc('grafica_dueno', { p_periodo: periodo })
+      if (!vigente() || pedido !== graf.pedido) return
+      if (error) throw error
+      graf.datos[periodo] = data || { suficiente: false }
+    } catch (e) {
+      if (!vigente() || pedido !== graf.pedido || await salirSiInactivo(e)) return
+      console.error('Error al cargar la gráfica:', e)
+      // Si ya había una gráfica, se queda; si no, aviso con "Reintentar".
+      if (!hay) graf.datos[periodo] = { error: sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar la gráfica.' }
+    }
+    graf.sel = null
+    pintarGrafica()
+  }
+
+  function initGrafica() {
+    if (!$('dn-grafica')) return
+    // Al refrescar el resumen, los otros periodos se vuelven a pedir cuando se elijan.
+    graf.datos = { [graf.pref.periodo]: graf.datos[graf.pref.periodo] }
+    $('dn-grafica').querySelectorAll('[data-periodo]').forEach(b => b.addEventListener('click', () => {
+      if (graf.pref.periodo === b.dataset.periodo) return
+      graf.pref.periodo = b.dataset.periodo; guardarPrefGrafica(graf.pref)
+      graf.sel = null; cargarGrafica()
+    }))
+    cargarGrafica(true)
+  }
+
+  let esperaAncho = null
+  const alCambiarAncho = () => {
+    if (!vigente()) { window.removeEventListener('resize', alCambiarAncho); return }
+    clearTimeout(esperaAncho)
+    esperaAncho = setTimeout(() => { if (vigente() && !$('dn-resumen').hidden) pintarGrafica() }, 150)
+  }
+  window.addEventListener('resize', alCambiarAncho)
+
   async function cargarResumen() {
     if (estado.cargandoResumen) return
     estado.cargandoResumen = true
@@ -3149,8 +3967,9 @@ export async function initDueno(negocioId) {
       if (!vigente()) return
       if (res.error) throw res.error
       if (mes.error) throw mes.error
-      $('dn-resumen').innerHTML = resumenHTML(res.data || {}, res.data?.clientes_registrados > 0 ? mes.data?.meseros : [])
+      $('dn-resumen').innerHTML = resumenHTML(res.data || {}, res.data?.clientes_registrados > 0 ? mes.data?.meseros : [], graf.pref)
       estado.resumenCargado = Date.now(); estado.resumenViejo = false
+      initGrafica()
       $('dn-ver-inactivos')?.addEventListener('click', abrirInactivos)
       $('dn-ir-cajero')?.addEventListener('click', () => navigate('cajero'))
       $('dn-invita-ticket')?.addEventListener('click', () => {
@@ -3181,7 +4000,7 @@ export async function initDueno(negocioId) {
     $('dn-ajustes').innerHTML = esqueletoAjustes()
     try {
       const { data: nd, error } = await supabase.from('negocios')
-        .select('id,nombre,activo,meta_puntos,color_principal,premio,max_codigos_activos,ticket_promedio,costo_premio')
+        .select('id,nombre,activo,meta_puntos,color_principal,premio,max_codigos_activos,ticket_promedio,costo_premio,logo_ruta,mensaje_gracias')
         .eq('id', negocioId).single()
       if (!vigente()) return
       if (error) throw error
@@ -3191,14 +4010,18 @@ export async function initDueno(negocioId) {
       $('dn-ajustes').innerHTML = ajustesHTML(nd, negocioId)
       estado.ajustesCargados = true
       // Si cambian ticket, costo o premio, el resumen y la vista previa se ponen al día.
+      const tarjeta = initTarjetaDueno(negocioId, nd)
       initProgramaDueno(({ meta, premio }) => {
         estado.resumenViejo = true
-        const vista = $('vista-tarjeta')
-        if (vista) vista.innerHTML = vistaTarjetaHTML({ ...nd, meta_puntos: meta, premio })
+        tarjeta.actualizar({ meta_puntos: meta, premio })
       })
-      initTarjetaDueno(negocioId)
       initPersonalDueno(negocioId)
       initAjustesExtra(negocioId, estado.nombre)
+      // 4F: las ayudas de primera vez vuelven a salir en este celular.
+      $('ayuda-otra-vez')?.addEventListener('click', () => {
+        reiniciarAyudas()
+        $('msg-ayuda').innerHTML = avisoOk('Listo. Las ayudas aparecerán otra vez en tus pantallas.')
+      })
     } catch (e) {
       if (!vigente()) return
       console.error('Error al cargar los ajustes:', e)
