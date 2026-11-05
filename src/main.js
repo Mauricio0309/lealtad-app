@@ -1,6 +1,7 @@
 import './style.css'
 import { getPage } from './router.js'
-import { isLoggedIn, getNegocioActual, getPerfilActual } from './auth.js'
+import { getNegocioActual, getPerfilActual, esAdmin, marcarAdmin, leerAcceso, diag } from './auth.js'
+import { supabase } from './supabase.js'
 import {
   paginaCajero, initCajero,
   paginaLogin, initLogin,
@@ -14,6 +15,7 @@ import {
   MENSAJE_CUENTA_DESACTIVADA,
   paginaReclamar, initReclamar,
   paginaTarjeta, initTarjeta,
+  paginaAdmin, initAdmin,
 } from './pages.js'
 
 // Actualización automática de la PWA:
@@ -47,10 +49,34 @@ if ('serviceWorker' in navigator) {
   })
 }
 
+let turnoRender = 0
+
+// Enlace de "restablecer contraseña": llega con #access_token=...&type=recovery.
+// supabase-js lo procesa y borra el hash; mientras tanto se queda en "Entrar"
+// en modo "nueva contraseña" (aunque ya exista la sesión de recuperación).
+let modoRecuperacion = /type=recovery/.test(window.location.hash)
+
+const cargandoHTML = () => '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
+
+// Sin señal y sin copia local del perfil: no se manda a "Entrar" (la sesión
+// sigue guardada); se ofrece reintentar.
+function mostrarSinConexion(app) {
+  app.innerHTML = `<div style="max-width:360px;margin:0 auto;padding:80px 24px;text-align:center;font-family:system-ui,sans-serif;color:#1c2b25">
+    <p style="font-size:18px;font-weight:700;margin-bottom:8px">Sin conexión</p>
+    <p style="font-size:15px;color:#4d5f57;margin-bottom:20px">Tu sesión sigue guardada. Revisa tu internet e intenta de nuevo.</p>
+    <button id="btn-reintentar-arranque" style="min-height:46px;padding:10px 24px;border:none;border-radius:10px;background:#0a5c47;color:#fff;font:inherit;font-size:15px;font-weight:600">Reintentar</button>
+  </div>`
+  document.getElementById('btn-reintentar-arranque')?.addEventListener('click', render)
+}
+
 async function render() {
   const page = getPage()
   const hash = window.location.hash
   const app = document.querySelector('#app')
+  // Cada render tiene su turno: si cambia la ruta mientras se espera la
+  // sesión, el render viejo ya no pinta nada encima del nuevo.
+  const turno = ++turnoRender
+  if (page !== 'login') modoRecuperacion = false
   // Las pantallas del dueño pintan el fondo de la página (html.ow-pagina) para
   // que no se vea blanco mientras se dibujan. En las demás se quita.
   if (!['login', 'onboarding', 'bienvenida', 'dueno', 'terminos', 'admin'].includes(page)) {
@@ -103,32 +129,69 @@ async function render() {
     return
   }
 
+  // "Entrar" (también la dirección sin ruta "/", que es con la que abre la
+  // PWA instalada, y el enlace #/login que se comparte por WhatsApp).
+  // Si ya hay sesión en este celular, NO se muestra el formulario: se va
+  // directo a su pantalla. Esta era la causa de "pide entrar otra vez".
   if (page === 'login') {
+    if (!modoRecuperacion) {
+      app.innerHTML = cargandoHTML()
+      const acceso = await leerAcceso()
+      if (turno !== turnoRender) return
+      diag('arranque en login', { estado: acceso.estado })
+      if (acceso.estado === 'ok' && acceso.perfil.activo !== false) {
+        window.location.hash = acceso.perfil.role === 'mesero' ? '#/cajero' : '#/bienvenida'
+        return
+      }
+      if (acceso.estado === 'sin_perfil' && await esAdmin()) {
+        if (turno !== turnoRender) return
+        window.location.hash = '#/admin'
+        return
+      }
+      if (acceso.estado === 'sin_red') { mostrarSinConexion(app); return }
+    }
     app.innerHTML = paginaLogin()
-    initLogin()
+    initLogin({ recuperacion: modoRecuperacion })
     return
   }
 
-  // FIX: admin va antes del check de isLoggedIn
+  // Panel del administrador de Sello (5A). Solo se muestra si el servidor
+  // dice que quien tiene la sesión está en admins (es_admin). Aunque alguien
+  // forzara esta pantalla, las funciones admin_* y crear-negocio rechazan a
+  // quien no sea administrador.
   if (page === 'admin') {
-    if (!isLoggedIn()) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
       app.innerHTML = paginaLogin()
       initLogin()
       return
     }
+    if (await esAdmin()) {
+      app.innerHTML = paginaAdmin()
+      initAdmin()
+      return
+    }
+    marcarAdmin(false)
     const profile = await getPerfilActual()
-    window.location.hash = profile?.role === 'owner' ? '#/dueno' : '#/cajero'
+    window.location.hash = profile?.role === 'owner' ? '#/dueno' : profile ? '#/cajero' : '#/login'
     return
   }
 
-  // ── Requieren login ──
-  if (!isLoggedIn()) {
+  // ── Requieren sesión ──
+  // Se decide con la sesión guardada por Supabase (no con copias locales) y
+  // un error de red o de permiso NUNCA se toma como "no hay sesión".
+  app.innerHTML = cargandoHTML()
+  const acceso = await leerAcceso()
+  if (turno !== turnoRender) return
+  diag('arranque', { pagina: page, estado: acceso.estado, desdeCopia: !!acceso.desdeCopia })
+
+  if (acceso.estado === 'sin_red') { mostrarSinConexion(app); return }
+  if (acceso.estado === 'sin_sesion') {
     app.innerHTML = paginaLogin()
     initLogin()
     return
   }
-
-  const profile = await getPerfilActual()
+  const profile = acceso.estado === 'ok' ? acceso.perfil : null
   // El dueño lo desactivó: se cierra la sesión guardada en este celular.
   if (profile?.activo === false) {
     const { logout } = await import('./auth.js')
@@ -137,6 +200,12 @@ async function render() {
     initLogin()
     const msg = document.getElementById('msg')
     if (msg) msg.innerHTML = `<p class="s-error">${MENSAJE_CUENTA_DESACTIVADA}</p>`
+    return
+  }
+  // Administrador de Sello sin negocio propio: su pantalla es #/admin.
+  if (!profile && await esAdmin()) {
+    if (turno !== turnoRender) return
+    window.location.hash = '#/admin'
     return
   }
   if (!profile || !['owner', 'mesero'].includes(profile.role)) {

@@ -553,6 +553,13 @@ function inyectarEstilosDueno() {
     .ow-contrasena { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 22px; font-weight: 700; letter-spacing: 0.04em; user-select: all; word-break: break-all; }
     .ow-cifra-num.sin-corte { white-space: nowrap; }
 
+    /* 5A: panel del administrador de Sello */
+    .ow-admin-cab { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .ow-admin-cab .ow-btn { width: auto; flex-shrink: 0; }
+    .ow-negocio-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 220px; }
+    .ow-negocio-info .ow-persona { overflow-wrap: anywhere; }
+    .ow-negocio-datos { font-size: 13px; color: var(--ow-texto-2); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+
     /* 4D: gráfica del panel */
     .ow-seg { display: flex; gap: 4px; padding: 3px; background: var(--ow-fondo); border: 1px solid var(--ow-borde); border-radius: 10px; }
     .ow-seg button { flex: 1; min-height: 38px; padding: 6px 8px; background: none; border: none; border-radius: 8px; font: inherit; font-size: 14px; font-weight: 600; color: var(--ow-texto-2); cursor: pointer; white-space: nowrap; }
@@ -655,6 +662,7 @@ function navBarDueno(active = 'panel') {
     <nav class="ow-nav" aria-label="Secciones">
       <button id="snav-panel"${active === 'panel' ? ' aria-current="page"' : ''}>Mi panel</button>
       <button id="snav-cajero-d">Cajero</button>
+      <button id="snav-admin" hidden>Admin</button>
       <button id="snav-salir">Salir</button>
     </nav>
   `
@@ -669,6 +677,12 @@ function initNavDueno() {
   document.getElementById('snav-panel')?.addEventListener('click', () => navigate('dueno'))
   document.getElementById('snav-cajero-d')?.addEventListener('click', () => navigate('cajero'))
   document.getElementById('snav-salir')?.addEventListener('click', async () => { const { logout } = await import('./auth.js'); logout() })
+  // 5A: "Admin" solo aparece si el servidor dice que esta cuenta es administradora.
+  const btnAdmin = document.getElementById('snav-admin')
+  if (btnAdmin) {
+    btnAdmin.addEventListener('click', () => navigate('admin'))
+    import('./auth.js').then(({ esAdmin }) => esAdmin()).then(si => { if (si && btnAdmin.isConnected) btnAdmin.hidden = false })
+  }
 }
 
 function onboardingVisto() { return localStorage.getItem('sello_onboarding') === 'done' }
@@ -710,11 +724,16 @@ export function paginaLogin() {
   `
 }
 
-export function initLogin() {
+// Una sola suscripción para todas las veces que se pinta "Entrar" (antes se
+// sumaba una nueva en cada visita).
+let alRecuperarContrasena = null
+let suscritoRecuperacion = false
+
+// recuperacion = true: se llegó con el enlace de "restablecer contraseña".
+export function initLogin({ recuperacion = false } = {}) {
   inyectarEstilos()
   let recoveryMode = false
-  supabase.auth.onAuthStateChange((event) => {
-    if (event !== 'PASSWORD_RECOVERY') return
+  const activarRecuperacion = () => {
     recoveryMode = true
     const btn = document.getElementById('btn-login')
     const password = document.getElementById('password')
@@ -723,8 +742,17 @@ export function initLogin() {
       password.value = ''
       password.placeholder = 'Nueva contraseña'
     }
-    document.getElementById('msg').textContent = 'Escribe tu nueva contraseña.'
-  })
+    const msg = document.getElementById('msg')
+    if (msg) msg.textContent = 'Escribe tu nueva contraseña.'
+  }
+  alRecuperarContrasena = activarRecuperacion
+  if (!suscritoRecuperacion) {
+    suscritoRecuperacion = true
+    supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') alRecuperarContrasena?.()
+    })
+  }
+  if (recuperacion) activarRecuperacion()
   const doLogin = async () => {
     const email = document.getElementById('email').value.trim()
     const password = document.getElementById('password').value.trim()
@@ -743,6 +771,7 @@ export function initLogin() {
       }
       const negocio = await login(email, password)
       if (!negocio) { msg.innerHTML = `<p class="s-error">Correo o contraseña incorrectos</p>`; return }
+      if (negocio.admin) { window.location.hash = '#/admin'; window.dispatchEvent(new Event('hashchange')); return }
       if (negocio.desactivado) { msg.innerHTML = `<p class="s-error">${MENSAJE_CUENTA_DESACTIVADA}</p>`; return }
       if (negocio.activo === false) { msg.innerHTML = `<p class="s-error">Esta cuenta está desactivada. Contacta al administrador.</p>`; const { logout } = await import('./auth.js'); logout(); return }
       const perfil = await getPerfilActual()
@@ -3184,8 +3213,64 @@ function ajustesHTML(nd, negocioId) {
         <div id="msg-landing"></div>
       </div>
     </section>
+
+    <section class="ow-seccion" aria-labelledby="sec-contrasena">
+      <h2 class="ow-seccion-titulo" id="sec-contrasena">Tu contraseña</h2>
+      <p class="ow-seccion-sub">Si te dieron una contraseña temporal, cámbiala aquí.</p>
+      <div class="ow-tarjeta">
+        <div class="ow-campo">
+          <label class="ow-label" for="nueva-contrasena">Nueva contraseña</label>
+          <div class="ow-clave"><input type="password" id="nueva-contrasena" class="ow-input" autocomplete="new-password" minlength="${CONTRASENA_MIN}" placeholder="Mínimo ${CONTRASENA_MIN} caracteres" /><button type="button" id="ver-nueva-contrasena" aria-label="Mostrar contraseña">Mostrar</button></div>
+        </div>
+        <button id="btn-cambiar-contrasena" class="ow-btn secundario">Cambiar contraseña</button>
+        <div id="msg-contrasena"></div>
+      </div>
+    </section>
     <p style="text-align:center"><button type="button" class="ow-enlace" id="ayuda-otra-vez">Ver ayuda otra vez</button></p>
     <div id="msg-ayuda" style="text-align:center"></div>`
+}
+
+// Sección "Tu contraseña" (5A): el dueño cambia la contraseña temporal que
+// le dio Sello. Supabase Auth la guarda; nunca pasa por nuestras tablas.
+const CONTRASENA_MIN = 8
+function initContrasenaDueno() {
+  const campo = document.getElementById('nueva-contrasena')
+  const btn = document.getElementById('btn-cambiar-contrasena')
+  const msg = document.getElementById('msg-contrasena')
+  const ver = document.getElementById('ver-nueva-contrasena')
+  if (!campo || !btn) return
+  ver?.addEventListener('click', () => {
+    const mostrar = campo.type === 'password'
+    campo.type = mostrar ? 'text' : 'password'
+    ver.textContent = mostrar ? 'Ocultar' : 'Mostrar'
+    ver.setAttribute('aria-label', mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña')
+  })
+  async function cambiar() {
+    if (btn.disabled) return
+    const nueva = campo.value
+    if (nueva.trim().length < CONTRASENA_MIN) {
+      msg.innerHTML = avisoError(`Usa al menos ${CONTRASENA_MIN} caracteres.`); campo.focus(); return
+    }
+    btn.disabled = true; btn.textContent = 'Guardando...'; msg.innerHTML = ''
+    try {
+      const { error } = await supabase.auth.updateUser({ password: nueva })
+      if (error) throw error
+      campo.value = ''
+      msg.innerHTML = avisoOk('Listo. Desde ahora entras con tu nueva contraseña.')
+    } catch (e) {
+      const t = `${e?.code || ''} ${e?.message || ''}`
+      msg.innerHTML = avisoError(
+        sinInternet(e) ? 'Sin conexión. Revisa tu internet e intenta de nuevo.'
+          : /same_password|should be different/i.test(t) ? 'Esa ya es tu contraseña. Escribe una distinta.'
+          : /weak_password|weak|at least/i.test(t) ? 'Esa contraseña es muy débil. Usa letras y números.'
+          : /reauthentication|session/i.test(t) ? 'Por seguridad, sal y vuelve a entrar, y cámbiala de nuevo.'
+          : 'No pudimos cambiarla. Intenta de nuevo.')
+    } finally {
+      btn.disabled = false; btn.textContent = 'Cambiar contraseña'
+    }
+  }
+  btn.addEventListener('click', cambiar)
+  campo.addEventListener('keydown', e => { if (e.key === 'Enter') cambiar() })
 }
 
 // Sección "Programa": se guarda con la RPC guardar_programa (2G, ampliada en Fase 4).
@@ -3633,20 +3718,33 @@ function abrirHojaDueno({ titulo, sub = '' }) {
 
 // Muestra correo y contraseña UNA vez, con Copiar y Compartir por WhatsApp.
 function mostrarCredenciales(h, datos, negocioNombre, esNueva) {
+  const direccion = `${location.origin}${location.pathname}#/login`
+  hojaCredenciales(h, {
+    titulo: esNueva ? `Nueva contraseña de ${datos.nombre}` : `Listo, ${datos.nombre} ya tiene cuenta`,
+    correo: datos.correo,
+    contrasena: datos.contrasena,
+    mensaje: [
+      `Hola ${datos.nombre}, ${esNueva ? 'esta es tu nueva contraseña de Sello' : `ya tienes tu cuenta de Sello${negocioNombre ? ` en ${negocioNombre}` : ''}`}.`,
+      `1. Abre: ${direccion}`,
+      `2. Correo: ${datos.correo}`,
+      `3. Contraseña: ${datos.contrasena}`,
+      'Entra una sola vez y tu sesión se queda abierta en tu celular.',
+    ].join('\n'),
+  })
+}
+
+// Hoja con correo y contraseña, que se muestran UNA sola vez. "Copiar" copia
+// el mensaje completo; si el navegador no deja, la contraseña queda
+// seleccionada para copiarla a mano. nota: aviso extra bajo la credencial.
+function hojaCredenciales(h, { titulo, correo, contrasena, mensaje, nota = '' }) {
   h.fija = true
   h.hoja.querySelector('#ow-hoja-cerrar').hidden = true
-  h.titulo(esNueva ? `Nueva contraseña de ${datos.nombre}` : `Listo, ${datos.nombre} ya tiene cuenta`, '')
-  const direccion = `${location.origin}${location.pathname}#/login`
-  const mensaje = [
-    `Hola ${datos.nombre}, ${esNueva ? 'esta es tu nueva contraseña de Sello' : `ya tienes tu cuenta de Sello${negocioNombre ? ` en ${negocioNombre}` : ''}`}.`,
-    `1. Abre: ${direccion}`,
-    `2. Correo: ${datos.correo}`,
-    `3. Contraseña: ${datos.contrasena}`,
-    'Entra una sola vez y tu sesión se queda abierta en tu celular.',
-  ].join('\n')
+  h.titulo(titulo, '')
+  const datos = { correo, contrasena }
 
   h.cuerpo.innerHTML = `
     <p class="ow-aviso-unico ow-aviso-fijo" role="note"><strong>Guarda esta contraseña ahora: no se vuelve a mostrar.</strong></p>
+    ${nota ? `<p class="ow-ayuda" style="margin:0 0 14px">${nota}</p>` : ''}
     <div class="ow-credencial">
       <div><span class="ow-credencial-lbl">Correo</span><span class="ow-credencial-valor">${esc(datos.correo)}</span></div>
       <div><span class="ow-credencial-lbl">Contraseña</span><span class="ow-contrasena">${esc(datos.contrasena)}</span></div>
@@ -4017,6 +4115,7 @@ export async function initDueno(negocioId) {
       })
       initPersonalDueno(negocioId)
       initAjustesExtra(negocioId, estado.nombre)
+      initContrasenaDueno()
       // 4F: las ayudas de primera vez vuelven a salir en este celular.
       $('ayuda-otra-vez')?.addEventListener('click', () => {
         reiniciarAyudas()
@@ -4046,4 +4145,243 @@ export async function initDueno(negocioId) {
   cargarResumen()
   cargarAjustes()
   if (leerPestanaDueno() === 'equipo') cargarEquipo()
+}
+
+// ═══════════════════════════════════════════════════════════
+// ADMINISTRADOR DE SELLO (Fase 5A) — #/admin
+// Lista de negocios con TOTALES (nunca datos de clientes), alta de negocios
+// piloto con su dueño y Desactivar/Activar.
+// - La lista y el cambio de estado: admin_negocios() y admin_cambiar_activo()
+//   (supabase/fase-5a.sql), que rechazan a quien no esté en admins.
+// - El alta: Edge Function crear-negocio (el navegador nunca tiene llaves de
+//   administrador). La contraseña temporal se muestra UNA sola vez.
+// Mismo estilo que el panel del dueño (.ow, verde de Sello).
+// ═══════════════════════════════════════════════════════════
+const MENSAJES_ADMIN = {
+  NOMBRE_INVALIDO: 'Escribe el nombre del negocio (de 2 a 60 letras).',
+  CORREO_INVALIDO: 'Revisa el correo: no parece válido.',
+  CORREO_EN_USO: 'Ese correo ya tiene una cuenta en Sello. Usa otro.',
+  YA_TIENE_PERFIL: 'Esa cuenta ya pertenece a un negocio.',
+  ACCESO_DENEGADO: 'Esta cuenta no es administradora de Sello.',
+  SIN_SESION: 'Tu sesión ya no es válida. Sal y vuelve a entrar.',
+  NEGOCIO_NO_ENCONTRADO: 'Ese negocio ya no existe. Recarga la lista.',
+}
+
+function mensajeAdmin(e) {
+  const m = e?.message || ''
+  if (sinInternet(e)) return 'Sin conexión. Revisa tu internet e intenta de nuevo.'
+  if (e?.sinRespuesta) return 'No pudimos conectar con el servidor. Intenta de nuevo en un momento.'
+  if (MENSAJES_ADMIN[m]) return MENSAJES_ADMIN[m]
+  if (m.includes('Acceso denegado')) return MENSAJES_ADMIN.ACCESO_DENEGADO
+  if (m.includes('NEGOCIO_NO_ENCONTRADO')) return MENSAJES_ADMIN.NEGOCIO_NO_ENCONTRADO
+  return e?.mensaje || 'Algo salió mal. Intenta de nuevo.'
+}
+
+// Llama a la Edge Function. Si responde con error, lee su código y mensaje.
+async function llamarCrearNegocio(cuerpo) {
+  const { data, error } = await supabase.functions.invoke('crear-negocio', { body: cuerpo })
+  if (error) {
+    let info = null
+    try { info = await error.context?.json?.() } catch (e) {}
+    const err = new Error(info?.error || error.name || 'ERROR')
+    err.mensaje = info?.mensaje
+    err.sinRespuesta = !info && /FetchError|RelayError/i.test(error.name || '')
+    throw err
+  }
+  return data
+}
+
+const limpiarNombreNegocio = t => String(t || '').replace(/[\u0000-\u001f\u007f-\u009f]/g, '').replace(/\s+/g, ' ').trim()
+const formatoFechaAlta = f => {
+  const d = new Date(f)
+  return isNaN(d) ? '—' : d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+const plural = (n, uno, varios) => `${formatoNumero(n)} ${Number(n) === 1 ? uno : varios}`
+
+function adminCifrasHTML(negocios) {
+  const activos = negocios.filter(n => n.activo).length
+  const clientes = negocios.reduce((s, n) => s + (Number(n.clientes) || 0), 0)
+  const visitas = negocios.reduce((s, n) => s + (Number(n.visitas_7_dias) || 0), 0)
+  return `<div class="ow-cifras">
+    <div class="ow-cifra"><div class="ow-cifra-num">${formatoNumero(activos)} <span class="ow-cifra-de">de ${formatoNumero(negocios.length)}</span></div><div class="ow-cifra-lbl">Negocios activos</div></div>
+    <div class="ow-cifra"><div class="ow-cifra-num">${formatoNumero(clientes)}</div><div class="ow-cifra-lbl">Clientes registrados</div></div>
+    <div class="ow-cifra"><div class="ow-cifra-num">${formatoNumero(visitas)}</div><div class="ow-cifra-lbl">Visitas, últimos 7 días</div></div>
+  </div>`
+}
+
+function adminListaHTML(negocios) {
+  if (negocios.length === 0) {
+    return `<div class="ow-tarjeta"><div class="ow-vacio">Aún no hay negocios. Crea el primero: toma menos de un minuto.</div></div>`
+  }
+  return `<div class="ow-tarjeta">${negocios.map(n => `
+    <div class="ow-mesero-fila">
+      <div class="ow-negocio-info">
+        <div class="ow-mesero-info">
+          <span class="ow-persona">${esc(n.nombre)}</span>
+          <span class="ow-estado ${n.activo ? 'activo' : 'inactivo'}">${n.activo ? 'Activo' : 'Desactivado'}</span>
+        </div>
+        <span class="ow-negocio-datos">${n.correo ? `${esc(n.correo)} · ` : ''}Alta: ${esc(formatoFechaAlta(n.creado_en))}</span>
+        <span class="ow-negocio-datos">${plural(n.clientes, 'cliente', 'clientes')} · ${plural(n.visitas_7_dias, 'visita', 'visitas')} en 7 días</span>
+      </div>
+      <button class="ow-btn secundario chico${n.activo ? ' ow-texto-atencion' : ''}" data-cambiar="${esc(n.id)}">${n.activo ? 'Desactivar' : 'Activar'}</button>
+    </div>`).join('')}
+  </div>`
+}
+
+function abrirCrearNegocio(alCrear) {
+  const h = abrirHojaDueno({ titulo: 'Crear negocio', sub: 'Creamos el negocio y la cuenta de su dueño.' })
+  h.cuerpo.innerHTML = `
+    <div class="ow-campo"><label class="ow-label" for="ad-nombre">Nombre del negocio</label><input id="ad-nombre" class="ow-input" maxlength="60" autocomplete="off" autocapitalize="words" placeholder="Ej: Café La Esquina" /></div>
+    <div class="ow-campo"><label class="ow-label" for="ad-correo">Correo del dueño</label><input id="ad-correo" type="email" class="ow-input" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="dueno@correo.com" /><p class="ow-ayuda">Con este correo entrará a Sello. Empieza con meta de 10 visitas y "Un café gratis"; lo cambia en su bienvenida.</p></div>
+    <button class="ow-btn primario" id="ad-crear">Crear negocio</button>
+    <div id="ad-msg"></div>`
+  const nombre = h.cuerpo.querySelector('#ad-nombre'); const correo = h.cuerpo.querySelector('#ad-correo')
+  const btn = h.cuerpo.querySelector('#ad-crear'); const msg = h.cuerpo.querySelector('#ad-msg')
+  setTimeout(() => nombre.focus(), 50)
+
+  async function crear() {
+    if (btn.disabled) return
+    const n = limpiarNombreNegocio(nombre.value); const c = correo.value.trim().toLowerCase()
+    if (n.length < 2 || n.length > 60) { msg.innerHTML = avisoError(MENSAJES_ADMIN.NOMBRE_INVALIDO); nombre.focus(); return }
+    if (c.length > 254 || !CORREO_VALIDO.test(c)) { msg.innerHTML = avisoError(MENSAJES_ADMIN.CORREO_INVALIDO); correo.focus(); return }
+    btn.disabled = true; btn.textContent = 'Creando negocio...'; msg.innerHTML = ''
+    try {
+      const datos = await llamarCrearNegocio({ nombre: n, correo: c })
+      alCrear()
+      if (!h.hoja.isConnected) return
+      const direccion = `${location.origin}${location.pathname}#/login`
+      hojaCredenciales(h, {
+        titulo: `Listo, ${datos.nombre} ya está en Sello`,
+        correo: datos.correo,
+        contrasena: datos.contrasena,
+        nota: 'Es una contraseña temporal. Pídele al dueño que la cambie al entrar: Mi panel → Personalización → Tu contraseña.',
+        mensaje: [
+          `Hola, ya está lista la cuenta de ${datos.nombre} en Sello.`,
+          `1. Abre: ${direccion}`,
+          `2. Correo: ${datos.correo}`,
+          `3. Contraseña temporal: ${datos.contrasena}`,
+          'Al entrar, cámbiala en Mi panel → Personalización → Tu contraseña.',
+        ].join('\n'),
+      })
+    } catch (e) {
+      console.error('Error al crear el negocio:', e?.message)
+      msg.innerHTML = avisoError(mensajeAdmin(e))
+      btn.disabled = false; btn.textContent = 'Crear negocio'
+    }
+  }
+  nombre.addEventListener('keydown', e => { if (e.key === 'Enter') correo.focus() })
+  correo.addEventListener('keydown', e => { if (e.key === 'Enter') crear() })
+  btn.addEventListener('click', crear)
+}
+
+function abrirCambiarActivo(negocio, alCambiar) {
+  const desactivar = negocio.activo
+  const h = abrirHojaDueno({
+    titulo: desactivar ? `¿Desactivar ${esc(negocio.nombre)}?` : `¿Activar ${esc(negocio.nombre)}?`,
+    sub: desactivar
+      ? 'Su dueño y sus meseros ya no podrán entrar ni generar códigos, y sus clientes no podrán sumar puntos. No se borra nada: puedes activarlo de nuevo.'
+      : 'Vuelve a funcionar para su dueño, sus meseros y sus clientes, con todos sus datos.',
+  })
+  h.cuerpo.innerHTML = `
+    <button class="ow-btn ${desactivar ? 'ow-btn-atencion' : 'primario'}" id="ad-si">${desactivar ? 'Sí, desactivar' : 'Sí, activar'}</button>
+    <button class="ow-btn secundario" id="ad-no">Cancelar</button>
+    <div id="ad-msg"></div>`
+  const btn = h.cuerpo.querySelector('#ad-si'); const msg = h.cuerpo.querySelector('#ad-msg')
+  const textoBtn = btn.textContent
+  h.cuerpo.querySelector('#ad-no').addEventListener('click', () => h.cerrar())
+  btn.addEventListener('click', async () => {
+    if (btn.disabled) return
+    btn.disabled = true; btn.textContent = desactivar ? 'Desactivando...' : 'Activando...'; msg.innerHTML = ''
+    try {
+      const { error } = await supabase.rpc('admin_cambiar_activo', { p_negocio_id: negocio.id, p_activo: !desactivar })
+      if (error) throw error
+      h.cerrar()
+      alCambiar()
+    } catch (e) {
+      console.error('Error al cambiar el estado del negocio:', e?.message)
+      msg.innerHTML = avisoError(mensajeAdmin(e))
+      btn.disabled = false; btn.textContent = textoBtn
+    }
+  })
+}
+
+let adminSesion = 0
+
+export function paginaAdmin() {
+  inyectarEstilosDueno()
+  return `
+    <div class="ow ow-sello" id="ad-root">
+      <header class="ow-cab">${logoSelloHTML(22)}<span class="ow-cab-negocio">Administración</span></header>
+      <main class="ow-cuerpo">
+        <div id="ad-cifras">${bloqueEsq(88)}</div>
+        <section class="ow-seccion" aria-labelledby="sec-negocios">
+          <div class="ow-admin-cab">
+            <div>
+              <h1 class="ow-seccion-titulo" id="sec-negocios">Negocios</h1>
+              <p class="ow-seccion-sub" style="margin-bottom:0">Solo totales. Aquí nunca se ven datos de clientes.</p>
+            </div>
+            <button class="ow-btn primario chico" id="ad-nuevo">Crear negocio</button>
+          </div>
+          <div id="ad-lista">${bloqueEsq(220)}</div>
+        </section>
+      </main>
+      <nav class="ow-nav" aria-label="Secciones">
+        <button id="ad-nav-negocios" aria-current="page">Negocios</button>
+        <button id="ad-nav-panel" hidden>Mi panel</button>
+        <button id="ad-nav-salir">Salir</button>
+      </nav>
+    </div>`
+}
+
+export function initAdmin() {
+  inyectarEstilosDueno()
+  const sesion = ++adminSesion
+  const $ = id => document.getElementById(id)
+  const vigente = () => sesion === adminSesion && !!$('ad-root')
+  let negocios = []
+  let cargando = false
+  let cargado = false
+
+  // "Mi panel" solo si esta cuenta también es dueña de un negocio.
+  import('./auth.js').then(({ getNegocioActual }) => { if (getNegocioActual() && $('ad-nav-panel')) $('ad-nav-panel').hidden = false })
+  $('ad-nav-negocios')?.addEventListener('click', () => cargar())
+  $('ad-nav-panel')?.addEventListener('click', () => navigate('dueno'))
+  $('ad-nav-salir')?.addEventListener('click', async () => { const { logout } = await import('./auth.js'); logout() })
+  $('ad-nuevo')?.addEventListener('click', () => abrirCrearNegocio(cargar))
+
+  async function cargar() {
+    if (cargando) return
+    cargando = true
+    try {
+      const { data, error } = await supabase.rpc('admin_negocios')
+      if (!vigente()) return
+      if (error) throw error
+      negocios = Array.isArray(data?.negocios) ? data.negocios : []
+      $('ad-cifras').innerHTML = adminCifrasHTML(negocios)
+      $('ad-lista').innerHTML = adminListaHTML(negocios)
+      cargado = true
+      $('ad-lista').querySelectorAll('[data-cambiar]').forEach(b => b.addEventListener('click', () => {
+        const n = negocios.find(x => x.id === b.dataset.cambiar)
+        if (n) abrirCambiarActivo(n, cargar)
+      }))
+    } catch (e) {
+      if (!vigente()) return
+      console.error('Error al cargar los negocios:', e?.message)
+      if (e?.message?.includes('Acceso denegado')) {
+        // Ya no es administrador: fuera de esta pantalla.
+        const { marcarAdmin } = await import('./auth.js'); marcarAdmin(false)
+        window.location.hash = '#/login'; window.dispatchEvent(new Event('hashchange'))
+        return
+      }
+      if (!cargado) {
+        $('ad-cifras').innerHTML = ''
+        $('ad-lista').innerHTML = errorPanelHTML(sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar los negocios.', 'ad-reintentar')
+        $('ad-reintentar')?.addEventListener('click', cargar)
+      }
+    } finally {
+      cargando = false
+    }
+  }
+
+  cargar()
 }
