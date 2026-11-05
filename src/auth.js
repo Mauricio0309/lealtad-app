@@ -40,12 +40,6 @@ function esErrorDeRed(e) {
   return /Failed to fetch|NetworkError|Load failed|fetch|network|timeout/i.test(`${e.name || ''} ${e.message || ''}`)
 }
 
-// Registro de diagnóstico TEMPORAL (sin correos, tokens ni teléfonos).
-// Se ve en la consola como "[sello] ...". Quitar cuando se confirme el arreglo.
-export function diag(evento, datos = {}) {
-  try { console.info('[sello]', evento, datos) } catch (e) {}
-}
-
 export async function login(email, password) {
   const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
     email,
@@ -81,7 +75,6 @@ export async function login(email, password) {
   const { negocios, ...perfil } = profile
   guardarPerfilLocal(perfil)
   guardarJSON('negocio', negocios)
-  diag('login ok', { rol: perfil.role })
   return negocios
 }
 
@@ -92,9 +85,8 @@ export async function login(email, password) {
 //   'sin_perfil'  hay sesión pero la cuenta no tiene negocio (p. ej. un admin)
 //   'sin_red'     no se pudo comprobar y no hay copia local → "Sin conexión"
 export async function leerAcceso() {
-  const conCopia = (motivo) => {
+  const conCopia = () => {
     const perfil = leerJSON(CLAVE_PERFIL)
-    diag('acceso sin red', { motivo, hayCopia: !!perfil })
     return perfil ? { estado: 'ok', perfil, desdeCopia: true } : { estado: 'sin_red' }
   }
 
@@ -105,12 +97,11 @@ export async function leerAcceso() {
     const { data, error } = await supabase.auth.getSession()
     sesion = data?.session || null
     if (!sesion) {
-      if (error && esErrorDeRed(error)) return conCopia('renovar token')
-      diag('acceso sin sesion', { error: error?.code || error?.name || null })
+      if (error && esErrorDeRed(error)) return conCopia()
       return { estado: 'sin_sesion' }
     }
   } catch (e) {
-    return conCopia('getSession')
+    return conCopia()
   }
 
   try {
@@ -121,11 +112,9 @@ export async function leerAcceso() {
       .maybeSingle()
     if (error) {
       // Error de red o de permiso: NO es "sin sesión". Se sigue con la copia.
-      diag('perfil con error', { codigo: error.code || error.name || null })
-      return conCopia('perfil')
+      return conCopia()
     }
     if (!perfil) {
-      diag('sesion sin perfil')
       return { estado: 'sin_perfil' }
     }
     guardarPerfilLocal(perfil)
@@ -134,16 +123,14 @@ export async function leerAcceso() {
     // pantallas del mesero y del dueño la necesitan.
     const negocio = getNegocioActual()
     if (!negocio || negocio.id !== perfil.negocio_id) {
-      const { data: nd, error: errNeg } = await supabase
+      const { data: nd } = await supabase
         .from('negocios').select(COLUMNAS_NEGOCIO).eq('id', perfil.negocio_id).maybeSingle()
       if (nd) guardarJSON('negocio', nd)
-      diag('negocio repuesto', { ok: !!nd, error: errNeg?.code || null })
     }
 
-    diag('acceso ok', { rol: perfil.role, activo: perfil.activo !== false })
     return { estado: 'ok', perfil }
   } catch (e) {
-    return conCopia('perfil (excepción)')
+    return conCopia()
   }
 }
 
@@ -171,7 +158,6 @@ export function marcarAdmin(si) {
 // Único lugar donde la app cierra la sesión: "Salir", cuenta o negocio
 // desactivado. Nunca por un error de red.
 export async function logout() {
-  diag('logout')
   await supabase.auth.signOut().catch(() => {})
   borrar('negocio')
   borrar(CLAVE_PERFIL)

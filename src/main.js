@@ -1,6 +1,6 @@
 import './style.css'
 import { getPage } from './router.js'
-import { getNegocioActual, getPerfilActual, esAdmin, marcarAdmin, leerAcceso, diag } from './auth.js'
+import { getNegocioActual, getPerfilActual, esAdmin, marcarAdmin, leerAcceso } from './auth.js'
 import { supabase } from './supabase.js'
 import {
   paginaCajero, initCajero,
@@ -35,7 +35,11 @@ if ('serviceWorker' in navigator) {
     if (document.visibilityState === 'hidden') recargar()
   })
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') recargar() })
-  window.addEventListener('hashchange', recargar)
+  // Los primeros segundos las rutas cambian solas (p. ej. "/" → #/cajero):
+  // recargar ahí se vería como un destello. Ese caso espera al siguiente
+  // cambio de pantalla o a que la app se oculte.
+  const abiertaEn = Date.now()
+  window.addEventListener('hashchange', () => { if (Date.now() - abiertaEn > 5000) recargar() })
 
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
@@ -56,7 +60,27 @@ let turnoRender = 0
 // en modo "nueva contraseña" (aunque ya exista la sesión de recuperación).
 let modoRecuperacion = /type=recovery/.test(window.location.hash)
 
-const cargandoHTML = () => '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
+// Pantalla de carga: la misma de index.html (logo de Sello sobre #f1f7f4).
+// Si ya está en pantalla no se vuelve a pintar, así no parpadea.
+const ARRANQUE_HTML = document.querySelector('#app .sello-arranque')?.outerHTML
+  || '<div class="sello-arranque" role="status" aria-label="Cargando"></div>'
+function mostrarCargando(app) {
+  if (app.firstElementChild?.classList.contains('sello-arranque') && app.childElementCount === 1) return
+  app.innerHTML = ARRANQUE_HTML
+}
+
+// El acceso (sesión + perfil) se reutiliza unos segundos: al abrir en "/"
+// se lee una vez, se redirige a #/cajero y esa segunda vista ya no vuelve a
+// preguntar al servidor. Cualquier cambio de sesión (entrar, salir, token
+// renovado) lo invalida.
+let accesoMemo = null
+supabase.auth.onAuthStateChange(() => { accesoMemo = null })
+async function accesoActual() {
+  if (accesoMemo && Date.now() - accesoMemo.t < 5000) return accesoMemo.valor
+  const valor = await leerAcceso()
+  accesoMemo = valor.estado === 'ok' && !valor.desdeCopia ? { valor, t: Date.now() } : null
+  return valor
+}
 
 // Sin señal y sin copia local del perfil: no se manda a "Entrar" (la sesión
 // sigue guardada); se ofrece reintentar.
@@ -82,7 +106,8 @@ async function render() {
   if (!['login', 'onboarding', 'bienvenida', 'dueno', 'terminos', 'admin'].includes(page)) {
     document.documentElement.classList.remove('ow-pagina')
   }
-  app.innerHTML = ''
+  // (No se vacía #app aquí: cada rama pinta su vista o la pantalla de carga,
+  // así nunca hay un instante en blanco entre una y otra.)
 
   // ── Páginas públicas ──
   // El QR del mesero abre #/c/<negocio_id>/<codigo>.
@@ -108,9 +133,11 @@ async function render() {
   }
 
   if (page === 'landing') {
-    app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
+    mostrarCargando(app)
     const negocioId = hash.split('/')[2] || ''
-    app.innerHTML = await paginaLanding(negocioId)
+    const html = await paginaLanding(negocioId)
+    if (turno !== turnoRender) return
+    app.innerHTML = html
     initLanding(negocioId)
     return
   }
@@ -135,10 +162,9 @@ async function render() {
   // directo a su pantalla. Esta era la causa de "pide entrar otra vez".
   if (page === 'login') {
     if (!modoRecuperacion) {
-      app.innerHTML = cargandoHTML()
-      const acceso = await leerAcceso()
+      mostrarCargando(app)
+      const acceso = await accesoActual()
       if (turno !== turnoRender) return
-      diag('arranque en login', { estado: acceso.estado })
       if (acceso.estado === 'ok' && acceso.perfil.activo !== false) {
         window.location.hash = acceso.perfil.role === 'mesero' ? '#/cajero' : '#/bienvenida'
         return
@@ -160,13 +186,17 @@ async function render() {
   // forzara esta pantalla, las funciones admin_* y crear-negocio rechazan a
   // quien no sea administrador.
   if (page === 'admin') {
+    mostrarCargando(app)
     const { data: { session } } = await supabase.auth.getSession()
+    if (turno !== turnoRender) return
     if (!session) {
       app.innerHTML = paginaLogin()
       initLogin()
       return
     }
-    if (await esAdmin()) {
+    const admin = await esAdmin()
+    if (turno !== turnoRender) return
+    if (admin) {
       app.innerHTML = paginaAdmin()
       initAdmin()
       return
@@ -180,10 +210,9 @@ async function render() {
   // ── Requieren sesión ──
   // Se decide con la sesión guardada por Supabase (no con copias locales) y
   // un error de red o de permiso NUNCA se toma como "no hay sesión".
-  app.innerHTML = cargandoHTML()
-  const acceso = await leerAcceso()
+  mostrarCargando(app)
+  const acceso = await accesoActual()
   if (turno !== turnoRender) return
-  diag('arranque', { pagina: page, estado: acceso.estado, desdeCopia: !!acceso.desdeCopia })
 
   if (acceso.estado === 'sin_red') { mostrarSinConexion(app); return }
   if (acceso.estado === 'sin_sesion') {
@@ -232,15 +261,17 @@ async function render() {
   }
 
   if (page === 'bienvenida') {
-    app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
-    app.innerHTML = await paginaBienvenida()
+    const html = await paginaBienvenida()
+    if (turno !== turnoRender || getPage() !== 'bienvenida') return
+    app.innerHTML = html
     initBienvenida()
     return
   }
 
   if (page === 'dueno') {
-    app.innerHTML = '<div style="text-align:center;padding:60px;color:#666">Cargando...</div>'
-    app.innerHTML = await paginaDueno()
+    const html = await paginaDueno()
+    if (turno !== turnoRender || getPage() !== 'dueno') return
+    app.innerHTML = html
     const negocio = getNegocioActual()
     if (negocio) initDueno(negocio.id)
     return
