@@ -1,6 +1,6 @@
 import QRCode from 'qrcode'
 import { supabase } from './supabase.js'
-import { navigate } from './router.js'
+import { navigate, getPage } from './router.js'
 
 // ═══════════════════════════════════════════════════════════
 // DESIGN SYSTEM
@@ -646,12 +646,16 @@ function toast({ icon, title, sub, gold = false, nivel = false, autoClose = 2400
   return el
 }
 
-// FIX: cajero solo ve Cajero y Salir, sin Mi Panel
-function navBarCajero() {
+// Barra inferior del Cajero. El mesero solo ve Cajero y Salir. El dueño
+// además ve "Mi panel" para volver a Resumen / Personalización / Equipo sin
+// cerrar sesión. Ya respeta el área segura de abajo del iPhone (.s-nav).
+// El rol solo cambia lo que se ve: el servidor decide los permisos.
+function navBarCajero(esDueno = false) {
   return `
-    <nav class="s-nav">
-      <button class="s-nav-btn active" id="snav-cajero"><span class="s-nav-icon">🧾</span>Cajero</button>
-      <button class="s-nav-btn" id="snav-salir"><span class="s-nav-icon">🚪</span>Salir</button>
+    <nav class="s-nav" aria-label="Secciones">
+      ${esDueno ? `<button class="s-nav-btn" id="snav-panel-c"><span class="s-nav-icon" aria-hidden="true">📊</span>Mi panel</button>` : ''}
+      <button class="s-nav-btn active" id="snav-cajero" aria-current="page"><span class="s-nav-icon" aria-hidden="true">🧾</span>Cajero</button>
+      <button class="s-nav-btn" id="snav-salir"><span class="s-nav-icon" aria-hidden="true">🚪</span>Salir</button>
     </nav>
   `
 }
@@ -670,6 +674,7 @@ function navBarDueno(active = 'panel') {
 
 function initNavCajero() {
   document.getElementById('snav-cajero')?.addEventListener('click', () => navigate('cajero'))
+  document.getElementById('snav-panel-c')?.addEventListener('click', () => { cerrarTiempoRealCajero(); navigate('dueno') })
   document.getElementById('snav-salir')?.addEventListener('click', async () => { cerrarTiempoRealCajero(); const { logout } = await import('./auth.js'); logout() })
 }
 
@@ -729,6 +734,15 @@ export function paginaLogin() {
 let alRecuperarContrasena = null
 let suscritoRecuperacion = false
 
+// Mensaje en rojo de "Entrar" para una cuenta ('cuenta') o un negocio
+// ('negocio') desactivados.
+function mostrarMotivoSalida(motivo) {
+  const msg = document.getElementById('msg')
+  if (!msg) return
+  const texto = motivo === 'negocio' ? MENSAJE_NEGOCIO_DESACTIVADO : MENSAJE_CUENTA_DESACTIVADA
+  msg.innerHTML = `<p class="s-error" role="alert">${texto}</p>`
+}
+
 // recuperacion = true: se llegó con el enlace de "restablecer contraseña".
 export function initLogin({ recuperacion = false } = {}) {
   inyectarEstilos()
@@ -753,6 +767,12 @@ export function initLogin({ recuperacion = false } = {}) {
     })
   }
   if (recuperacion) activarRecuperacion()
+  // Se llegó aquí porque la cuenta o el negocio se desactivaron con la
+  // sesión abierta: se explica en rojo.
+  import('./auth.js').then(({ tomarMotivoSalida }) => {
+    const motivo = tomarMotivoSalida()
+    if (motivo) mostrarMotivoSalida(motivo)
+  })
   const doLogin = async () => {
     const email = document.getElementById('email').value.trim()
     const password = document.getElementById('password').value.trim()
@@ -772,8 +792,8 @@ export function initLogin({ recuperacion = false } = {}) {
       const negocio = await login(email, password)
       if (!negocio) { msg.innerHTML = `<p class="s-error">Correo o contraseña incorrectos</p>`; return }
       if (negocio.admin) { window.location.hash = '#/admin'; window.dispatchEvent(new Event('hashchange')); return }
-      if (negocio.desactivado) { msg.innerHTML = `<p class="s-error">${MENSAJE_CUENTA_DESACTIVADA}</p>`; return }
-      if (negocio.activo === false) { msg.innerHTML = `<p class="s-error">Esta cuenta está desactivada. Contacta al administrador.</p>`; const { logout } = await import('./auth.js'); logout(); return }
+      // login() ya cerró la sesión sin cambiar de pantalla: el mensaje se queda.
+      if (negocio.desactivado) { mostrarMotivoSalida(negocio.desactivado); return }
       const perfil = await getPerfilActual()
       if (perfil?.role === 'mesero') { window.location.hash = '#/cajero'; window.dispatchEvent(new Event('hashchange')); return }
       window.location.hash = onboardingVisto() ? '#/bienvenida' : '#/onboarding'
@@ -937,8 +957,25 @@ function cerrarTiempoRealCajero() {
   canalCajero = null
 }
 
+// Si el servidor rechaza al Cajero porque el negocio o la cuenta ya no están
+// activos, se va a "Entrar" con el motivo en lugar de dejar al mesero con un
+// aviso. "Acceso denegado" también sale por otras causas, así que se confirma
+// con el servidor antes de cerrar la sesión.
+let revisandoDesactivacion = false
+async function salirSiDesactivadoCajero(error) {
+  const m = error?.message || ''
+  if (revisandoDesactivacion || !(m.includes('NEGOCIO_INACTIVO') || m.includes('Acceso denegado'))) return
+  revisandoDesactivacion = true
+  try {
+    const { motivoDesactivacion, logout } = await import('./auth.js')
+    const motivo = m.includes('NEGOCIO_INACTIVO') ? 'negocio' : await motivoDesactivacion()
+    if (motivo && getPage() === 'cajero') { cerrarTiempoRealCajero(); await logout(motivo) }
+  } catch (e) {} finally { revisandoDesactivacion = false }
+}
+
 function mensajeCajero(error, max) {
   const m = error?.message || ''
+  salirSiDesactivadoCajero(error)
   if (navigator.onLine === false || /Failed to fetch|NetworkError|Load failed/i.test(m)) return 'Sin conexión. Revisa tu internet e intenta de nuevo.'
   if (m.includes('LIMITE_CODIGOS')) {
     const tope = max ?? error?.details?.match(/de (\d+)/)?.[1]
@@ -1154,7 +1191,8 @@ const ayudasMotor = (() => {
   }
 })()
 
-export function paginaCajero() {
+// rol = 'owner' muestra "Mi panel" en la barra de abajo; el mesero no lo ve.
+export function paginaCajero(rol = 'mesero') {
   inyectarEstilos()
   return `
     <div id="cj-root" style="padding-bottom:calc(72px + env(safe-area-inset-bottom))">
@@ -1211,7 +1249,7 @@ export function paginaCajero() {
       </div>
       <div class="cj-exito" id="cj-exito" role="alert" hidden></div>
     </div>
-    ${navBarCajero()}
+    ${navBarCajero(rol === 'owner')}
   `
 }
 
@@ -3648,7 +3686,8 @@ function initAjustesExtra(negocioId, nombreNegocio) {
 // sale de equipo_negocio() (supabase/fase-4c.sql).
 // La contraseña se muestra UNA sola vez: al cerrar la hoja se borra de la
 // pantalla y no se puede volver a ver.
-export const MENSAJE_CUENTA_DESACTIVADA = 'Tu cuenta fue desactivada. Habla con el dueño del negocio.'
+export const MENSAJE_CUENTA_DESACTIVADA = 'Tu cuenta está desactivada. Habla con el dueño del negocio.'
+export const MENSAJE_NEGOCIO_DESACTIVADO = 'Este negocio está desactivado. Contacta a Sello.'
 
 const MENSAJES_EQUIPO = {
   NOMBRE_INVALIDO: 'Escribe el nombre del mesero (máximo 30 letras).',
@@ -3920,7 +3959,7 @@ export async function initDueno(negocioId) {
 
   async function salirSiInactivo(e) {
     if (!e?.message?.includes('NEGOCIO_INACTIVO')) return false
-    const { logout } = await import('./auth.js'); logout()
+    const { logout } = await import('./auth.js'); logout('negocio')
     return true
   }
 
@@ -4102,7 +4141,7 @@ export async function initDueno(negocioId) {
         .eq('id', negocioId).single()
       if (!vigente()) return
       if (error) throw error
-      if (nd?.activo === false) { const { logout } = await import('./auth.js'); logout(); return }
+      if (nd?.activo === false) { const { logout } = await import('./auth.js'); logout('negocio'); return }
       estado.nombre = nd.nombre || ''
       aplicarColorNegocio(nd.color_principal)
       $('dn-ajustes').innerHTML = ajustesHTML(nd, negocioId)

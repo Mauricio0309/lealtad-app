@@ -12,6 +12,11 @@ const CLAVE_ADMIN = 'sello_admin'
 // todo se vuelve a comprobar con el servidor en cuanto hay señal.
 const CLAVE_PERFIL = 'sello_perfil'
 
+// Por qué se cerró la sesión ('cuenta' = mesero desactivado, 'negocio' =
+// negocio desactivado). Se guarda antes de ir a "Entrar" para que esa
+// pantalla lo muestre aunque se vuelva a pintar.
+const CLAVE_MOTIVO_SALIDA = 'sello_motivo_salida'
+
 // Columnas del negocio que guarda la app (las mismas que trae el login).
 const COLUMNAS_NEGOCIO = 'id, nombre, activo, meta_puntos, color_principal, emoji_negocio, descripcion'
 
@@ -47,8 +52,9 @@ export async function login(email, password) {
   })
 
   // Cuenta desactivada por el dueño: Auth la tiene bloqueada (Fase 4C).
+  // Solo a los meseros se les bloquea en Auth.
   if (authError && (authError.code === 'user_banned' || /banned/i.test(authError.message || ''))) {
-    return { desactivado: true }
+    return { desactivado: 'cuenta' }
   }
   if (authError || !authData?.user) return null
 
@@ -66,10 +72,18 @@ export async function login(email, password) {
     return { admin: true }
   }
 
+  // La cuenta desactivada se revisa ANTES que el negocio: a un perfil
+  // inactivo las reglas de lectura no le dejan ver su negocio (llega vacío)
+  // y se confundía con "correo o contraseña incorrectos".
+  if (!profileError && profile?.activo === false) {
+    await cerrarSesionLocal()
+    return { desactivado: 'cuenta' }
+  }
   if (profileError || !profile || !profile.negocios) return null
-  if (profile.activo === false) {
-    await supabase.auth.signOut().catch(() => {})
-    return { desactivado: true }
+  // Negocio dado de baja por Sello (aplica al dueño y a sus meseros).
+  if (profile.negocios.activo === false) {
+    await cerrarSesionLocal()
+    return { desactivado: 'negocio' }
   }
 
   const { negocios, ...perfil } = profile
@@ -84,6 +98,8 @@ export async function login(email, password) {
 //   'sin_sesion'  de verdad no hay sesión en este celular → pantalla de entrar
 //   'sin_perfil'  hay sesión pero la cuenta no tiene negocio (p. ej. un admin)
 //   'sin_red'     no se pudo comprobar y no hay copia local → "Sin conexión"
+// Con 'ok' leído del servidor también trae negocioActivo (false = el negocio
+// fue desactivado). Con la copia local eso no se sabe y no se manda.
 export async function leerAcceso() {
   const conCopia = () => {
     const perfil = leerJSON(CLAVE_PERFIL)
@@ -105,30 +121,28 @@ export async function leerAcceso() {
   }
 
   try {
-    const { data: perfil, error } = await supabase
+    // El negocio viene en la misma consulta (sin viaje extra al servidor)
+    // para saber si sigue activo. A un perfil inactivo le llega vacío.
+    const { data: fila, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select(`*, negocios:negocio_id (${COLUMNAS_NEGOCIO})`)
       .eq('user_id', sesion.user.id)
       .maybeSingle()
     if (error) {
       // Error de red o de permiso: NO es "sin sesión". Se sigue con la copia.
       return conCopia()
     }
-    if (!perfil) {
+    if (!fila) {
       return { estado: 'sin_perfil' }
     }
+    const { negocios, ...perfil } = fila
     guardarPerfilLocal(perfil)
 
-    // Si falta (o es de otro negocio) la copia del negocio, se repone: las
-    // pantallas del mesero y del dueño la necesitan.
-    const negocio = getNegocioActual()
-    if (!negocio || negocio.id !== perfil.negocio_id) {
-      const { data: nd } = await supabase
-        .from('negocios').select(COLUMNAS_NEGOCIO).eq('id', perfil.negocio_id).maybeSingle()
-      if (nd) guardarJSON('negocio', nd)
-    }
+    // Se refresca la copia del negocio: las pantallas del mesero y del dueño
+    // la necesitan.
+    if (negocios) guardarJSON('negocio', negocios)
 
-    return { estado: 'ok', perfil }
+    return { estado: 'ok', perfil, negocioActivo: negocios ? negocios.activo !== false : true }
   } catch (e) {
     return conCopia()
   }
@@ -155,15 +169,41 @@ export function marcarAdmin(si) {
   try { si ? localStorage.setItem(CLAVE_ADMIN, '1') : localStorage.removeItem(CLAVE_ADMIN) } catch (e) {}
 }
 
-// Único lugar donde la app cierra la sesión: "Salir", cuenta o negocio
-// desactivado. Nunca por un error de red.
-export async function logout() {
+// Cierra la sesión y borra las copias locales, sin cambiar de pantalla.
+async function cerrarSesionLocal() {
   await supabase.auth.signOut().catch(() => {})
   borrar('negocio')
   borrar(CLAVE_PERFIL)
   marcarAdmin(false)
+}
+
+// Único lugar donde la app cierra la sesión: "Salir", cuenta o negocio
+// desactivado. Nunca por un error de red.
+// motivo: 'cuenta' o 'negocio' → "Entrar" muestra por qué se cerró.
+export async function logout(motivo = null) {
+  if (motivo) { try { sessionStorage.setItem(CLAVE_MOTIVO_SALIDA, motivo) } catch (e) {} }
+  await cerrarSesionLocal()
   window.location.hash = '#/login'
   window.dispatchEvent(new Event('hashchange'))
+}
+
+// Lee (y olvida) el motivo del último cierre de sesión: 'cuenta', 'negocio' o null.
+export function tomarMotivoSalida() {
+  try {
+    const m = sessionStorage.getItem(CLAVE_MOTIVO_SALIDA)
+    sessionStorage.removeItem(CLAVE_MOTIVO_SALIDA)
+    return m
+  } catch (e) { return null }
+}
+
+// Pregunta al servidor si la cuenta o su negocio fueron desactivados.
+// Devuelve 'cuenta', 'negocio' o null (activo, sin red o sin certeza).
+export async function motivoDesactivacion() {
+  const acceso = await leerAcceso()
+  if (acceso.estado !== 'ok' || acceso.desdeCopia) return null
+  if (acceso.perfil.activo === false) return 'cuenta'
+  if (acceso.negocioActivo === false) return 'negocio'
+  return null
 }
 
 export function getNegocioActual() {

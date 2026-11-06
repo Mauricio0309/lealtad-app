@@ -1,6 +1,6 @@
 import './style.css'
 import { getPage } from './router.js'
-import { getNegocioActual, getPerfilActual, esAdmin, marcarAdmin, leerAcceso } from './auth.js'
+import { getNegocioActual, getPerfilActual, esAdmin, marcarAdmin, leerAcceso, logout, motivoDesactivacion } from './auth.js'
 import { supabase } from './supabase.js'
 import {
   paginaCajero, initCajero,
@@ -12,7 +12,6 @@ import {
   paginaLanding, initLanding,
   paginaPrivacidad, initPrivacidad,
   paginaTerminos, initTerminos,
-  MENSAJE_CUENTA_DESACTIVADA,
   paginaReclamar, initReclamar,
   paginaTarjeta, initTarjeta,
   paginaAdmin, initAdmin,
@@ -81,6 +80,31 @@ async function accesoActual() {
   accesoMemo = valor.estado === 'ok' && !valor.desdeCopia ? { valor, t: Date.now() } : null
   return valor
 }
+
+// ¿El acceso leído del servidor dice que la cuenta o el negocio ya no están
+// activos? Devuelve 'cuenta', 'negocio' o null.
+function motivoDeAcceso(acceso) {
+  if (acceso?.estado !== 'ok') return null
+  if (acceso.perfil.activo === false) return 'cuenta'
+  if (acceso.negocioActivo === false) return 'negocio'
+  return null
+}
+
+// Cuenta o negocio desactivados: se cierra la sesión y "Entrar" muestra el
+// motivo (lo guarda logout). Nunca en silencio.
+async function salirPorDesactivacion(motivo) {
+  accesoMemo = null
+  await logout(motivo)
+}
+
+// Si la cuenta se desactiva con la app abierta (p. ej. el mesero la deja en
+// el Cajero todo el turno), se nota al volver a primer plano.
+const PAGINAS_CON_SESION = ['cajero', 'dueno', 'bienvenida', 'onboarding']
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible' || !PAGINAS_CON_SESION.includes(getPage())) return
+  const motivo = await motivoDesactivacion().catch(() => null)
+  if (motivo && PAGINAS_CON_SESION.includes(getPage())) salirPorDesactivacion(motivo)
+})
 
 // Sin señal y sin copia local del perfil: no se manda a "Entrar" (la sesión
 // sigue guardada); se ofrece reintentar.
@@ -165,7 +189,9 @@ async function render() {
       mostrarCargando(app)
       const acceso = await accesoActual()
       if (turno !== turnoRender) return
-      if (acceso.estado === 'ok' && acceso.perfil.activo !== false) {
+      const motivo = motivoDeAcceso(acceso)
+      if (motivo) { await salirPorDesactivacion(motivo); return }
+      if (acceso.estado === 'ok') {
         window.location.hash = acceso.perfil.role === 'mesero' ? '#/cajero' : '#/bienvenida'
         return
       }
@@ -221,16 +247,11 @@ async function render() {
     return
   }
   const profile = acceso.estado === 'ok' ? acceso.perfil : null
-  // El dueño lo desactivó: se cierra la sesión guardada en este celular.
-  if (profile?.activo === false) {
-    const { logout } = await import('./auth.js')
-    await logout()
-    app.innerHTML = paginaLogin()
-    initLogin()
-    const msg = document.getElementById('msg')
-    if (msg) msg.innerHTML = `<p class="s-error">${MENSAJE_CUENTA_DESACTIVADA}</p>`
-    return
-  }
+  // El dueño desactivó al mesero, o Sello desactivó el negocio: se cierra la
+  // sesión guardada en este celular y "Entrar" explica por qué. (Antes se
+  // pintaba el mensaje y logout() volvía a pintar "Entrar" encima, vacío.)
+  const motivo = motivoDeAcceso(acceso)
+  if (motivo) { await salirPorDesactivacion(motivo); return }
   // Administrador de Sello sin negocio propio: su pantalla es #/admin.
   if (!profile && await esAdmin()) {
     if (turno !== turnoRender) return
@@ -278,7 +299,8 @@ async function render() {
   }
 
   if (page === 'cajero') {
-    app.innerHTML = paginaCajero()
+    // El rol solo decide la barra de abajo: el dueño puede volver a Mi panel.
+    app.innerHTML = paginaCajero(profile.role)
     initCajero()
     return
   }
