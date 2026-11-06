@@ -54,6 +54,7 @@ export async function login(email, password) {
   // Cuenta desactivada por el dueño: Auth la tiene bloqueada (Fase 4C).
   // Solo a los meseros se les bloquea en Auth.
   if (authError && (authError.code === 'user_banned' || /banned/i.test(authError.message || ''))) {
+    guardarMotivoSalida('cuenta', email)
     return { desactivado: 'cuenta' }
   }
   if (authError || !authData?.user) return null
@@ -76,12 +77,14 @@ export async function login(email, password) {
   // inactivo las reglas de lectura no le dejan ver su negocio (llega vacío)
   // y se confundía con "correo o contraseña incorrectos".
   if (!profileError && profile?.activo === false) {
+    guardarMotivoSalida('cuenta', email)
     await cerrarSesionLocal()
     return { desactivado: 'cuenta' }
   }
   if (profileError || !profile || !profile.negocios) return null
   // Negocio dado de baja por Sello (aplica al dueño y a sus meseros).
   if (profile.negocios.activo === false) {
+    guardarMotivoSalida('negocio', email)
     await cerrarSesionLocal()
     return { desactivado: 'negocio' }
   }
@@ -181,19 +184,33 @@ async function cerrarSesionLocal() {
 // desactivado. Nunca por un error de red.
 // motivo: 'cuenta' o 'negocio' → "Entrar" muestra por qué se cerró.
 export async function logout(motivo = null) {
-  if (motivo) { try { sessionStorage.setItem(CLAVE_MOTIVO_SALIDA, motivo) } catch (e) {} }
+  if (motivo) {
+    // El correo de la sesión se guarda para dejarlo escrito en "Entrar".
+    let email = ''
+    try { email = (await supabase.auth.getSession()).data?.session?.user?.email || '' } catch (e) {}
+    guardarMotivoSalida(motivo, email)
+  }
   await cerrarSesionLocal()
-  window.location.hash = '#/login'
-  window.dispatchEvent(new Event('hashchange'))
+  // Cambiar el hash ya dispara "hashchange". Lanzarlo también a mano dibujaba
+  // "Entrar" dos veces y el segundo dibujo borraba el mensaje y el correo.
+  if (window.location.hash !== '#/login') window.location.hash = '#/login'
+  else window.dispatchEvent(new Event('hashchange'))
 }
 
-// Lee (y olvida) el motivo del último cierre de sesión: 'cuenta', 'negocio' o null.
-export function tomarMotivoSalida() {
-  try {
-    const m = sessionStorage.getItem(CLAVE_MOTIVO_SALIDA)
-    sessionStorage.removeItem(CLAVE_MOTIVO_SALIDA)
-    return m
-  } catch (e) { return null }
+// Motivo del último cierre por desactivación ({ motivo: 'cuenta'|'negocio',
+// email }). Se queda guardado (aunque "Entrar" se vuelva a dibujar) hasta
+// que la persona escribe o toca algo: entonces se olvida.
+export function guardarMotivoSalida(motivo, email = '') {
+  guardarJSONSesion(CLAVE_MOTIVO_SALIDA, { motivo, email })
+}
+export function leerMotivoSalida() {
+  try { const t = sessionStorage.getItem(CLAVE_MOTIVO_SALIDA); return t ? JSON.parse(t) : null } catch (e) { return null }
+}
+export function olvidarMotivoSalida() {
+  try { sessionStorage.removeItem(CLAVE_MOTIVO_SALIDA) } catch (e) {}
+}
+function guardarJSONSesion(clave, valor) {
+  try { sessionStorage.setItem(clave, JSON.stringify(valor)) } catch (e) {}
 }
 
 // Pregunta al servidor si la cuenta o su negocio fueron desactivados.

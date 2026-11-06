@@ -735,12 +735,28 @@ let alRecuperarContrasena = null
 let suscritoRecuperacion = false
 
 // Mensaje en rojo de "Entrar" para una cuenta ('cuenta') o un negocio
-// ('negocio') desactivados.
-function mostrarMotivoSalida(motivo) {
+// ('negocio') desactivados. salida = { motivo, email } (ver auth.js).
+// Deja el correo escrito y borra solo la contraseña. El mensaje sigue aunque
+// "Entrar" se vuelva a dibujar (está guardado en sessionStorage) y se quita
+// en cuanto la persona escribe o toca algo de la caja.
+function mostrarMotivoSalida(salida) {
   const msg = document.getElementById('msg')
-  if (!msg) return
-  const texto = motivo === 'negocio' ? MENSAJE_NEGOCIO_DESACTIVADO : MENSAJE_CUENTA_DESACTIVADA
-  msg.innerHTML = `<p class="s-error" role="alert">${texto}</p>`
+  if (!msg || !salida?.motivo) return
+  const email = document.getElementById('email')
+  const password = document.getElementById('password')
+  if (email && salida.email && !email.value) email.value = salida.email
+  if (password) password.value = ''
+  const texto = salida.motivo === 'negocio' ? MENSAJE_NEGOCIO_DESACTIVADO : MENSAJE_CUENTA_DESACTIVADA
+  msg.innerHTML = `<p class="s-error" role="alert" data-motivo-salida>${texto}</p>`
+  const caja = msg.closest('.ow-caja') || msg.parentElement
+  const quitar = () => {
+    caja.removeEventListener('input', quitar)
+    caja.removeEventListener('pointerdown', quitar)
+    import('./auth.js').then(({ olvidarMotivoSalida }) => olvidarMotivoSalida())
+    if (msg.querySelector('[data-motivo-salida]')) msg.innerHTML = ''
+  }
+  caja.addEventListener('input', quitar)
+  caja.addEventListener('pointerdown', quitar)
 }
 
 // recuperacion = true: se llegó con el enlace de "restablecer contraseña".
@@ -767,12 +783,14 @@ export function initLogin({ recuperacion = false } = {}) {
     })
   }
   if (recuperacion) activarRecuperacion()
-  // Se llegó aquí porque la cuenta o el negocio se desactivaron con la
-  // sesión abierta: se explica en rojo.
-  import('./auth.js').then(({ tomarMotivoSalida }) => {
-    const motivo = tomarMotivoSalida()
-    if (motivo) mostrarMotivoSalida(motivo)
-  })
+  // Hay un intento o una sesión que terminó por cuenta o negocio
+  // desactivados: se explica en rojo (también si "Entrar" se redibujó).
+  if (!recuperacion) {
+    import('./auth.js').then(({ leerMotivoSalida }) => {
+      const salida = leerMotivoSalida()
+      if (salida && !recoveryMode) mostrarMotivoSalida(salida)
+    })
+  }
   const doLogin = async () => {
     const email = document.getElementById('email').value.trim()
     const password = document.getElementById('password').value.trim()
@@ -780,7 +798,10 @@ export function initLogin({ recuperacion = false } = {}) {
     if (!email || !password) { msg.innerHTML = `<p class="s-error">Llena todos los campos</p>`; return }
     btn.disabled = true; btn.textContent = 'Verificando...'; msg.innerHTML = ''
     try {
-      const { login, getPerfilActual } = await import('./auth.js')
+      const { login, getPerfilActual, olvidarMotivoSalida, leerMotivoSalida } = await import('./auth.js')
+      // Un intento nuevo olvida el motivo anterior; login() lo vuelve a
+      // guardar si la cuenta o el negocio siguen desactivados.
+      olvidarMotivoSalida()
       if (recoveryMode) {
         const { error } = await supabase.auth.updateUser({ password })
         if (error) throw error
@@ -793,7 +814,7 @@ export function initLogin({ recuperacion = false } = {}) {
       if (!negocio) { msg.innerHTML = `<p class="s-error">Correo o contraseña incorrectos</p>`; return }
       if (negocio.admin) { window.location.hash = '#/admin'; window.dispatchEvent(new Event('hashchange')); return }
       // login() ya cerró la sesión sin cambiar de pantalla: el mensaje se queda.
-      if (negocio.desactivado) { mostrarMotivoSalida(negocio.desactivado); return }
+      if (negocio.desactivado) { mostrarMotivoSalida(leerMotivoSalida() || { motivo: negocio.desactivado, email }); return }
       const perfil = await getPerfilActual()
       if (perfil?.role === 'mesero') { window.location.hash = '#/cajero'; window.dispatchEvent(new Event('hashchange')); return }
       window.location.hash = onboardingVisto() ? '#/bienvenida' : '#/onboarding'
