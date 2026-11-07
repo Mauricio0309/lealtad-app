@@ -59,6 +59,20 @@ let turnoRender = 0
 // en modo "nueva contraseña" (aunque ya exista la sesión de recuperación).
 let modoRecuperacion = /type=recovery/.test(window.location.hash)
 
+// Si el enlace venció o ya se usó, Supabase regresa con
+// #error=access_denied&error_code=otp_expired&... (sin sesión). Antes eso se
+// ignoraba y la persona veía "Entrar" sin explicación. Se guarda el código
+// para mostrarlo y se limpia la URL (replaceState no dispara "hashchange";
+// si supabase-js aún no la leyó, simplemente no verá nada que procesar).
+let errorEnlace = null
+{
+  const params = new URLSearchParams(window.location.hash.replace(/^#\/?/, ''))
+  if (!modoRecuperacion && (params.get('error_code') || params.get('error_description'))) {
+    errorEnlace = params.get('error_code') || 'enlace_invalido'
+    try { history.replaceState(history.state, '', `${location.pathname}${location.search}#/login`) } catch (e) {}
+  }
+}
+
 // Pantalla de carga: la misma de index.html (logo de Sello sobre #f1f7f4).
 // Si ya está en pantalla no se vuelve a pintar, así no parpadea.
 const ARRANQUE_HTML = document.querySelector('#app .sello-arranque')?.outerHTML
@@ -203,7 +217,9 @@ async function render() {
       if (acceso.estado === 'sin_red') { mostrarSinConexion(app); return }
     }
     app.innerHTML = paginaLogin()
-    initLogin({ recuperacion: modoRecuperacion })
+    // El aviso del enlace vencido se muestra una sola vez.
+    initLogin({ recuperacion: modoRecuperacion, errorEnlace })
+    errorEnlace = null
     return
   }
 
