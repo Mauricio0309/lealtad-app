@@ -1,0 +1,21 @@
+tipo,objeto,definicion
+extension,pg_stat_statements,1.11 en extensions
+extension,pgcrypto,1.3 en extensions
+extension,plpgsql,1.0 en pg_catalog
+extension,supabase_vault,0.3.1 en vault
+extension,uuid-ossp,1.1 en extensions
+funcion,get_kiosk_progress(text),"{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}"
+funcion,"public_customer_exists(uuid,text)","{postgres=X/postgres,service_role=X/postgres,anon=X/postgres,authenticated=X/postgres}"
+funcion,public_get_business(uuid),"{postgres=X/postgres,service_role=X/postgres,anon=X/postgres,authenticated=X/postgres}"
+funcion,"public_get_customer_card(uuid,text)","{postgres=X/postgres,service_role=X/postgres,anon=X/postgres,authenticated=X/postgres}"
+funcion,public_get_landing(uuid),"{postgres=X/postgres,service_role=X/postgres,anon=X/postgres,authenticated=X/postgres}"
+funcion,"public_register_customer(uuid,text,text)","{postgres=X/postgres,service_role=X/postgres,anon=X/postgres,authenticated=X/postgres}"
+funcion,record_visit_temporary(uuid),"{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}"
+funcion,"user_has_business_role(uuid,text[])","{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}"
+permiso-tabla,clientes → authenticated,SELECT
+permiso-tabla,niveles → authenticated,"DELETE, INSERT, SELECT, UPDATE"
+permiso-tabla,premios → anon,"DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+permiso-tabla,premios → authenticated,"DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE"
+permiso-tabla,profiles → authenticated,SELECT
+permiso-tabla,visitas → authenticated,SELECT
+zona-horaria,sesion,UTC
