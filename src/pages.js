@@ -1,4 +1,5 @@
 import QRCode from 'qrcode'
+import { isAuthRetryableFetchError, isAuthSessionMissingError, isAuthWeakPasswordError } from '@supabase/supabase-js'
 import { supabase } from './supabase.js'
 import { navigate, getPage } from './router.js'
 
@@ -624,6 +625,54 @@ function errMsg(donde = '') {
   return `<p class="s-error">Sin conexión${donde ? ' al ' + donde : ''}. Verifica tu internet e intenta de nuevo.</p>`
 }
 
+// Correo de contacto de Sello (términos, aviso de privacidad y errores que
+// necesitan ayuda).
+const CORREO_CONTACTO = 'misellocontacto@gmail.com'
+
+// ── Errores de Supabase Auth ──
+// Antes, cualquier "no" de Auth (contraseña corta, repetida, enlace vencido)
+// se mostraba como "Sin conexión". Ahora "Sin conexión" es solo cuando de
+// verdad no hubo respuesta: sin señal o fetch fallido (AuthRetryableFetchError
+// con status 0). Un 502/503/504 es el servidor, no el internet.
+const PIDE_ENLACE_NUEVO = 'Pide uno nuevo con "¿Olvidaste tu contraseña?".'
+function esSinConexion(e) {
+  if (navigator.onLine === false) return true
+  if (isAuthRetryableFetchError(e) && !e.status) return true
+  return /Failed to fetch|NetworkError|Load failed/i.test(e?.message || '')
+}
+// recuperacion = true: se está guardando la contraseña desde el enlace del correo.
+function mensajeErrorAuth(e, { recuperacion = false, otro = 'No pudimos completar la acción. Intenta de nuevo.' } = {}) {
+  if (esSinConexion(e)) return 'Sin conexión. Revisa tu internet e intenta de nuevo.'
+  if (isAuthRetryableFetchError(e)) return 'El servidor no respondió. Intenta de nuevo en un momento.'
+  const codigo = e?.code || ''
+  const texto = `${codigo} ${e?.message || ''}`
+  if (codigo === 'same_password' || /should be different/i.test(texto)) return 'Esa ya es tu contraseña. Escribe una distinta.'
+  if (codigo === 'weak_password' || isAuthWeakPasswordError(e)) {
+    const razones = e?.reasons || []
+    if (razones.includes('pwned')) return 'Esa contraseña aparece en filtraciones conocidas. Elige otra.'
+    if (razones.includes('characters')) return 'Esa contraseña es muy simple. Combina mayúsculas, minúsculas y números.'
+    return `Esa contraseña es muy corta. Usa al menos ${CONTRASENA_MIN} caracteres.`
+  }
+  if (['otp_expired', 'flow_state_expired', 'flow_state_not_found'].includes(codigo)) return `El enlace venció o ya se usó. ${PIDE_ENLACE_NUEVO}`
+  if (codigo === 'reauthentication_needed') return 'Por seguridad, sal, vuelve a entrar y cámbiala de nuevo.'
+  if (isAuthSessionMissingError(e) || ['session_not_found', 'session_expired', 'bad_jwt', 'refresh_token_not_found', 'refresh_token_already_used'].includes(codigo) || e?.status === 401 || e?.status === 403) {
+    return recuperacion ? `Tu sesión para cambiar la contraseña ya no es válida. ${PIDE_ENLACE_NUEVO}` : 'Tu sesión ya no es válida. Sal y vuelve a entrar.'
+  }
+  if (codigo === 'over_email_send_rate_limit') return 'Ya te enviamos un correo hace poco. Espera unos minutos y revisa tu bandeja (también spam).'
+  if (codigo === 'over_request_rate_limit' || e?.status === 429) return 'Demasiados intentos. Espera unos minutos e intenta de nuevo.'
+  if (codigo === 'user_banned') return MENSAJE_CUENTA_DESACTIVADA
+  if (codigo === 'email_address_invalid') return 'Revisa el correo: no parece válido.'
+  return otro
+}
+
+// Error que Supabase deja en la URL cuando el enlace del correo no sirve
+// (#error=access_denied&error_code=otp_expired&...).
+export function mensajeErrorEnlace(codigo) {
+  return codigo === 'otp_expired'
+    ? `El enlace para cambiar tu contraseña venció o ya se usó. ${PIDE_ENLACE_NUEVO}`
+    : `Ese enlace no funcionó. ${PIDE_ENLACE_NUEVO}`
+}
+
 function toast({ icon, title, sub, gold = false, nivel = false, autoClose = 2400, onTap = null }) {
   const el = document.createElement('div')
   el.className = 's-toast-overlay'
@@ -655,9 +704,33 @@ function navBarCajero(esDueno = false) {
     <nav class="s-nav" aria-label="Secciones">
       ${esDueno ? `<button class="s-nav-btn" id="snav-panel-c"><span class="s-nav-icon" aria-hidden="true">📊</span>Mi panel</button>` : ''}
       <button class="s-nav-btn active" id="snav-cajero" aria-current="page"><span class="s-nav-icon" aria-hidden="true">🧾</span>Cajero</button>
-      <button class="s-nav-btn" id="snav-salir"><span class="s-nav-icon" aria-hidden="true">🚪</span>Salir</button>
+      <button class="s-nav-btn" id="snav-salir"${esDueno ? '' : ' data-confirmar="1"'}><span class="s-nav-icon" aria-hidden="true">🚪</span>Salir</button>
     </nav>
   `
+}
+
+// El mesero entra una sola vez y su sesión se queda guardada: salir por
+// accidente lo obliga a pedir otra vez su correo y contraseña. Por eso
+// "Salir" pregunta antes. Resuelve true = salir, false = quedarse.
+function confirmarSalidaMesero() {
+  inyectarEstilosDueno()
+  return new Promise(resolver => {
+    const hoja = document.createElement('div')
+    hoja.className = 'ow-hoja-fondo'
+    hoja.innerHTML = `<div class="ow-hoja" role="alertdialog" aria-modal="true" aria-labelledby="salir-texto">
+      <p class="ow-h2" id="salir-texto" style="margin-bottom:20px">Si sales, tendrás que volver a escribir tu correo y contraseña. ¿Salir de todos modos?</p>
+      <button class="ow-btn primario" id="salir-quedarme">Quedarme</button>
+      <button class="ow-btn secundario" id="salir-si">Salir</button>
+    </div>`
+    const terminar = salir => { hoja.remove(); document.removeEventListener('keydown', alTeclear); resolver(salir) }
+    const alTeclear = e => { if (e.key === 'Escape') terminar(false) }
+    document.addEventListener('keydown', alTeclear)
+    hoja.addEventListener('click', e => { if (e.target === hoja) terminar(false) })
+    hoja.querySelector('#salir-quedarme').addEventListener('click', () => terminar(false))
+    hoja.querySelector('#salir-si').addEventListener('click', () => terminar(true))
+    document.body.appendChild(hoja)
+    hoja.querySelector('#salir-quedarme').focus()
+  })
 }
 
 // Barra inferior del dueño: solo texto, sin íconos. Va dentro de .ow.
@@ -675,7 +748,13 @@ function navBarDueno(active = 'panel') {
 function initNavCajero() {
   document.getElementById('snav-cajero')?.addEventListener('click', () => navigate('cajero'))
   document.getElementById('snav-panel-c')?.addEventListener('click', () => { cerrarTiempoRealCajero(); navigate('dueno') })
-  document.getElementById('snav-salir')?.addEventListener('click', async () => { cerrarTiempoRealCajero(); const { logout } = await import('./auth.js'); logout() })
+  const salir = document.getElementById('snav-salir')
+  salir?.addEventListener('click', async () => {
+    if (salir.dataset.confirmar && !(await confirmarSalidaMesero())) return
+    cerrarTiempoRealCajero()
+    const { logout } = await import('./auth.js')
+    logout()
+  })
 }
 
 function initNavDueno() {
@@ -714,10 +793,10 @@ export function paginaLogin() {
       <div class="ow-centro">
         <div class="ow-caja">
           <div class="ow-caja-cab">${logoSelloHTML()}</div>
-          <h1 class="ow-h1">¡Hola de nuevo!</h1>
-          <p class="ow-sub" style="margin-bottom:24px">Entra con tu correo para ver tu negocio o cobrar en caja.</p>
-          <div class="ow-campo"><label class="ow-label" for="email">Correo</label><input type="email" id="email" class="ow-input" placeholder="tu@correo.com" autocomplete="email" /></div>
-          <div class="ow-campo"><label class="ow-label" for="password">Contraseña</label>${pwField('password')}</div>
+          <h1 class="ow-h1" id="login-titulo">¡Hola de nuevo!</h1>
+          <p class="ow-sub" id="login-sub" style="margin-bottom:24px">Entra con tu correo para ver tu negocio o cobrar en caja.</p>
+          <div class="ow-campo" id="campo-email"><label class="ow-label" for="email">Correo</label><input type="email" id="email" class="ow-input" placeholder="tu@correo.com" autocomplete="email" /></div>
+          <div class="ow-campo"><label class="ow-label" for="password" id="login-label-clave">Contraseña</label>${pwField('password')}</div>
           <button class="ow-btn primario" id="btn-login">Entrar</button>
           <div id="msg"></div>
           <button class="ow-enlace" id="btn-olvide" style="margin-top:8px">¿Olvidaste tu contraseña?</button>
@@ -760,20 +839,37 @@ function mostrarMotivoSalida(salida) {
 }
 
 // recuperacion = true: se llegó con el enlace de "restablecer contraseña".
-export function initLogin({ recuperacion = false } = {}) {
+// errorEnlace: código que Supabase dejó en la URL si el enlace no sirvió
+// (p. ej. 'otp_expired'); se explica en rojo.
+export function initLogin({ recuperacion = false, errorEnlace = null } = {}) {
   inyectarEstilos()
   let recoveryMode = false
-  const activarRecuperacion = () => {
-    recoveryMode = true
-    const btn = document.getElementById('btn-login')
-    const password = document.getElementById('password')
-    if (btn) btn.textContent = 'Guardar contraseña'
+  const $ = id => document.getElementById(id)
+  const textoBoton = () => (recoveryMode ? 'Guardar contraseña' : 'Entrar')
+  // Modo "nueva contraseña": la sesión de recuperación ya dice de quién es la
+  // cuenta, así que no se pide el correo (antes era obligatorio escribirlo).
+  const ponerModo = (recuperar) => {
+    recoveryMode = recuperar
+    const password = $('password')
+    // style.display y no "hidden": .ow-enlace define su propio display.
+    if ($('campo-email')) $('campo-email').style.display = recuperar ? 'none' : ''
+    if ($('btn-olvide')) $('btn-olvide').style.display = recuperar ? 'none' : ''
+    if ($('login-titulo')) $('login-titulo').textContent = recuperar ? 'Nueva contraseña' : '¡Hola de nuevo!'
+    if ($('login-sub')) $('login-sub').textContent = recuperar
+      ? `Escribe tu nueva contraseña. Mínimo ${CONTRASENA_MIN} caracteres.`
+      : 'Entra con tu correo para ver tu negocio o cobrar en caja.'
+    if ($('login-label-clave')) $('login-label-clave').textContent = recuperar ? 'Nueva contraseña' : 'Contraseña'
+    if ($('btn-login')) $('btn-login').textContent = textoBoton()
     if (password) {
       password.value = ''
-      password.placeholder = 'Nueva contraseña'
+      password.placeholder = recuperar ? `Mínimo ${CONTRASENA_MIN} caracteres` : '••••••'
+      password.autocomplete = recuperar ? 'new-password' : 'current-password'
     }
-    const msg = document.getElementById('msg')
-    if (msg) msg.textContent = 'Escribe tu nueva contraseña.'
+  }
+  const activarRecuperacion = () => {
+    ponerModo(true)
+    if ($('msg')) $('msg').innerHTML = ''
+    $('password')?.focus()
   }
   alRecuperarContrasena = activarRecuperacion
   if (!suscritoRecuperacion) {
@@ -783,33 +879,58 @@ export function initLogin({ recuperacion = false } = {}) {
     })
   }
   if (recuperacion) activarRecuperacion()
+  // El enlace del correo venció o ya se usó: se dice eso, no "sin conexión".
+  if (!recuperacion && errorEnlace && $('msg')) {
+    $('msg').innerHTML = `<p class="s-error" role="alert">${mensajeErrorEnlace(errorEnlace)}</p>`
+  }
   // Hay un intento o una sesión que terminó por cuenta o negocio
   // desactivados: se explica en rojo (también si "Entrar" se redibujó).
-  if (!recuperacion) {
+  if (!recuperacion && !errorEnlace) {
     import('./auth.js').then(({ leerMotivoSalida }) => {
       const salida = leerMotivoSalida()
       if (salida && !recoveryMode) mostrarMotivoSalida(salida)
     })
   }
-  const doLogin = async () => {
-    const email = document.getElementById('email').value.trim()
-    const password = document.getElementById('password').value.trim()
-    const msg = document.getElementById('msg'); const btn = document.getElementById('btn-login')
-    if (!email || !password) { msg.innerHTML = `<p class="s-error">Llena todos los campos</p>`; return }
-    btn.disabled = true; btn.textContent = 'Verificando...'; msg.innerHTML = ''
+
+  // Guarda la nueva contraseña con la sesión de recuperación del enlace.
+  const guardarNueva = async (password, msg) => {
+    if (password.length < CONTRASENA_MIN) {
+      msg.innerHTML = `<p class="s-error" role="alert">Esa contraseña es muy corta. Usa al menos ${CONTRASENA_MIN} caracteres.</p>`
+      return
+    }
     try {
+      const { error } = await supabase.auth.updateUser({ password })
+      if (error) throw error
+    } catch (e) {
+      console.error('Error al guardar la nueva contraseña:', e?.code || e?.name || e?.message)
+      const texto = mensajeErrorAuth(e, { recuperacion: true, otro: 'No pudimos guardar tu contraseña. Intenta de nuevo.' })
+      // Sesión de recuperación inválida: se vuelve al formulario normal para
+      // poder pedir otro enlace desde aquí mismo.
+      if (isAuthSessionMissingError(e) || e?.status === 401 || e?.status === 403) ponerModo(false)
+      msg.innerHTML = `<p class="s-error" role="alert">${texto}</p>`
+      return
+    }
+    const { getPerfilActual } = await import('./auth.js')
+    const perfil = await getPerfilActual()
+    window.location.hash = perfil?.role === 'owner' ? '#/bienvenida' : '#/cajero'
+    window.dispatchEvent(new Event('hashchange'))
+  }
+
+  const doLogin = async () => {
+    const email = $('email').value.trim()
+    const password = $('password').value.trim()
+    const msg = $('msg'); const btn = $('btn-login')
+    if (recoveryMode ? !password : (!email || !password)) {
+      msg.innerHTML = `<p class="s-error">${recoveryMode ? 'Escribe tu nueva contraseña.' : 'Llena todos los campos'}</p>`
+      return
+    }
+    btn.disabled = true; btn.textContent = recoveryMode ? 'Guardando...' : 'Verificando...'; msg.innerHTML = ''
+    try {
+      if (recoveryMode) { await guardarNueva(password, msg); return }
       const { login, getPerfilActual, olvidarMotivoSalida, leerMotivoSalida } = await import('./auth.js')
       // Un intento nuevo olvida el motivo anterior; login() lo vuelve a
       // guardar si la cuenta o el negocio siguen desactivados.
       olvidarMotivoSalida()
-      if (recoveryMode) {
-        const { error } = await supabase.auth.updateUser({ password })
-        if (error) throw error
-        const perfil = await getPerfilActual()
-        window.location.hash = perfil?.role === 'owner' ? '#/bienvenida' : '#/cajero'
-        window.dispatchEvent(new Event('hashchange'))
-        return
-      }
       const negocio = await login(email, password)
       if (!negocio) { msg.innerHTML = `<p class="s-error">Correo o contraseña incorrectos</p>`; return }
       if (negocio.admin) { window.location.hash = '#/admin'; window.dispatchEvent(new Event('hashchange')); return }
@@ -819,8 +940,10 @@ export function initLogin({ recuperacion = false } = {}) {
       if (perfil?.role === 'mesero') { window.location.hash = '#/cajero'; window.dispatchEvent(new Event('hashchange')); return }
       window.location.hash = onboardingVisto() ? '#/bienvenida' : '#/onboarding'
       window.dispatchEvent(new Event('hashchange'))
-    } catch (e) { msg.innerHTML = errMsg('servidor') }
-    finally { btn.disabled = false; btn.textContent = 'Entrar' }
+    } catch (e) {
+      console.error('Error al entrar:', e?.code || e?.name || e?.message)
+      msg.innerHTML = `<p class="s-error" role="alert">${mensajeErrorAuth(e, { otro: 'No pudimos entrar. Intenta de nuevo.' })}</p>`
+    } finally { btn.disabled = false; btn.textContent = textoBoton() }
   }
   document.getElementById('btn-login').addEventListener('click', doLogin)
   document.getElementById('password')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin() })
@@ -837,7 +960,9 @@ export function initLogin({ recuperacion = false } = {}) {
       })
       if (error) throw error
       msgR.innerHTML = `<p class="s-success">Si existe una cuenta con ese correo, recibirás instrucciones para restablecer la contraseña.</p>`
-    } catch (e) { msgR.innerHTML = `<p class="s-error">Sin conexión. Intenta de nuevo.</p>` }
+    } catch (e) {
+      msgR.innerHTML = `<p class="s-error" role="alert">${mensajeErrorAuth(e, { otro: 'No pudimos enviar el correo. Intenta de nuevo.' })}</p>`
+    }
   })
 }
 
@@ -1921,8 +2046,10 @@ function abrirAvisoPrivacidadCliente() {
         <p style="margin-bottom:12px">Solo tu nombre y número de teléfono. Nada más.</p>
         <p style="font-weight:600;color:#0f172a;margin-bottom:6px">¿Para qué se usan?</p>
         <p style="margin-bottom:12px">Únicamente para identificarte en el programa de lealtad y registrar tus visitas. No se venden ni se comparten con terceros.</p>
-        <p style="font-weight:600;color:#0f172a;margin-bottom:6px">¿Puedo eliminar mis datos?</p>
-        <p style="margin-bottom:12px">Sí. Solicítalo directamente en el negocio donde te registraste.</p>
+        <p style="font-weight:600;color:#0f172a;margin-bottom:6px">¿Puedo ver o eliminar mis datos?</p>
+        <p style="margin-bottom:12px">Sí. Escríbenos a <a href="mailto:${CORREO_CONTACTO}" style="color:#0a5c47;font-weight:600">${CORREO_CONTACTO}</a> para pedir acceso a tus datos o que los borremos. También puedes pedirlo en el negocio donde te registraste.</p>
+        <p style="font-weight:600;color:#0f172a;margin-bottom:6px">¿Dudas?</p>
+        <p style="margin-bottom:12px">Escríbenos a <a href="mailto:${CORREO_CONTACTO}" style="color:#0a5c47;font-weight:600">${CORREO_CONTACTO}</a>.</p>
         <p style="font-size:11px;color:#94a3b8;margin-top:16px">En cumplimiento con la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP) de México.</p>
       </div>
     </div>
@@ -2649,7 +2776,7 @@ export function paginaTerminos() {
           <p>Nada más. No los vende, no los comparte y no los usa para otros fines. Solo tú ves los datos de tus clientes.</p>
 
           <h2>Si un cliente pide ver, corregir o borrar sus datos</h2>
-          <p>Avísale a Sello y lo hacemos por ti.</p>
+          <p>Escríbenos a <a href="mailto:${CORREO_CONTACTO}">${CORREO_CONTACTO}</a> y lo hacemos por ti.</p>
 
           <h2>Tu cuenta</h2>
           <p>Guardamos el nombre de tu negocio y tu correo. Tu contraseña se guarda cifrada.</p>
@@ -3317,13 +3444,7 @@ function initContrasenaDueno() {
       campo.value = ''
       msg.innerHTML = avisoOk('Listo. Desde ahora entras con tu nueva contraseña.')
     } catch (e) {
-      const t = `${e?.code || ''} ${e?.message || ''}`
-      msg.innerHTML = avisoError(
-        sinInternet(e) ? 'Sin conexión. Revisa tu internet e intenta de nuevo.'
-          : /same_password|should be different/i.test(t) ? 'Esa ya es tu contraseña. Escribe una distinta.'
-          : /weak_password|weak|at least/i.test(t) ? 'Esa contraseña es muy débil. Usa letras y números.'
-          : /reauthentication|session/i.test(t) ? 'Por seguridad, sal y vuelve a entrar, y cámbiala de nuevo.'
-          : 'No pudimos cambiarla. Intenta de nuevo.')
+      msg.innerHTML = avisoError(mensajeErrorAuth(e, { otro: 'No pudimos cambiarla. Intenta de nuevo.' }))
     } finally {
       btn.disabled = false; btn.textContent = 'Cambiar contraseña'
     }
@@ -3720,26 +3841,40 @@ const MENSAJES_EQUIPO = {
   ACCESO_DENEGADO: 'Solo el dueño del negocio puede administrar el equipo.',
   SIN_SESION: 'Tu sesión ya no es válida. Sal y vuelve a entrar.',
   NEGOCIO_INACTIVO: 'El negocio está desactivado.',
+  FUNCION_NO_PUBLICADA: `El servicio para administrar tu equipo no está disponible. Escríbenos a ${CORREO_CONTACTO}.`,
+  SIN_RESPUESTA: 'No pudimos conectar con el servidor de Sello. Intenta de nuevo en un momento.',
+  ERROR_SERVIDOR: 'Algo salió mal en el servidor. Intenta de nuevo.',
 }
 
-// Llama a la Edge Function. Si responde con error, lee su código y mensaje.
+// Llama a la Edge Function y convierte su error en un código:
+//   - FunctionsHttpError: la función (o la puerta de Supabase) respondió con
+//     4xx/5xx. Se lee su { error, mensaje }; si no trae código (respuesta de
+//     la puerta, p. ej. "Invalid JWT" o función no publicada) se usa el estado.
+//   - FunctionsFetchError: la petición no llegó (sin señal, CORS o servidor
+//     caído). Solo se dice "Sin conexión" si el celular de verdad está sin red.
+//   - FunctionsRelayError: la puerta de Supabase no pudo llegar a la función.
 async function llamarEquipo(cuerpo) {
   const { data, error } = await supabase.functions.invoke('crear-mesero', { body: cuerpo })
   if (error) {
+    const estado = error.name === 'FunctionsHttpError' ? error.context?.status : null
     let info = null
-    try { info = await error.context?.json?.() } catch (e) {}
-    const err = new Error(info?.error || error.name || 'ERROR')
-    err.mensaje = info?.mensaje
-    err.sinRespuesta = !info && /FetchError|RelayError/i.test(error.name || '')
+    if (estado) { try { info = await error.context.json() } catch (e) {} }
+    const codigo = typeof info?.error === 'string' ? info.error
+      : estado === 401 ? 'SIN_SESION'
+      : estado === 404 ? 'FUNCION_NO_PUBLICADA'
+      : error.name === 'FunctionsFetchError' ? 'SIN_RESPUESTA'
+      : 'ERROR_SERVIDOR'
+    console.error('crear-mesero respondió con error:', error.name, estado ?? '', codigo)
+    const err = new Error(codigo)
+    err.mensaje = typeof info?.mensaje === 'string' ? info.mensaje : null
     throw err
   }
   return data
 }
 
 function mensajeEquipo(e) {
-  if (sinInternet(e)) return 'Sin conexión. Revisa tu internet e intenta de nuevo.'
-  if (e?.sinRespuesta) return 'No pudimos conectar con el servidor. Intenta de nuevo en un momento.'
-  return MENSAJES_EQUIPO[e?.message] || e?.mensaje || mensajeDueno(e)
+  if (navigator.onLine === false || /Failed to fetch|NetworkError|Load failed/i.test(e?.message || '')) return 'Sin conexión. Revisa tu internet e intenta de nuevo.'
+  return MENSAJES_EQUIPO[e?.message] || e?.mensaje || MENSAJES_EQUIPO.ERROR_SERVIDOR
 }
 
 const limpiarNombreMesero = t => String(t || '').replace(/[\u0000-\u001f\u007f]/g, '').replace(/\s+/g, ' ').trim()

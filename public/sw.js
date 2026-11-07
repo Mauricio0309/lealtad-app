@@ -1,6 +1,6 @@
 // Subir esta versión en cada cambio importante: al activarse, el SW nuevo
 // borra los cachés viejos y la app se recarga sola (ver main.js).
-const CACHE_NAME = 'sello-v14'
+const CACHE_NAME = 'sello-v15'
 
 const STATIC_ASSETS = [
   '/',
