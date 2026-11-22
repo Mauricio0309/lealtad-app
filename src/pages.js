@@ -555,6 +555,19 @@ function inyectarEstilosDueno() {
     .ow-contrasena { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 22px; font-weight: 700; letter-spacing: 0.04em; user-select: all; word-break: break-all; }
     .ow-cifra-num.sin-corte { white-space: nowrap; }
 
+    /* 6: visitas recientes y anular visita */
+    .ow-visita { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--ow-borde); }
+    .ow-visita:last-of-type { border-bottom: none; }
+    .ow-visita-info { min-width: 0; }
+    .ow-visita-linea { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+    .ow-visita-dato { font-size: 13px; color: var(--ow-texto-2); margin-top: 3px; font-variant-numeric: tabular-nums; }
+    .ow-visita.anulada .ow-persona { color: var(--ow-texto-3); text-decoration: line-through; }
+    .ow-visita .ow-btn { flex-shrink: 0; }
+    .ow-origen { padding: 1px 7px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; background: #eef1ef; color: var(--ow-texto-2); }
+    .ow-origen.manual { background: var(--ow-atencion-suave); color: var(--ow-atencion); }
+    .ow-textarea { height: auto; min-height: 84px; padding: 10px 12px; resize: vertical; line-height: 1.4; }
+    .ow-resumen-visita { margin-bottom: 16px; padding: 12px 14px; border: 1px solid var(--ow-borde); border-radius: 10px; background: var(--ow-fondo); font-size: 14px; }
+
     /* 5A: panel del administrador de Sello */
     .ow-admin-cab { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
     .ow-admin-cab .ow-btn { width: auto; flex-shrink: 0; }
@@ -3075,7 +3088,8 @@ function resumenHTML(r, meseros, prefGrafica) {
       <div class="ow-cifra"><div class="ow-cifra-num positivo">${formatoNumero(entregados)}</div><div class="ow-cifra-lbl">Premios entregados esta semana</div>${r.costo_premios_semana != null && entregados > 0 ? `<div class="ow-cambio">≈ ${formatoPesos(r.costo_premios_semana)} de costo</div>` : ''}</div>
       <div class="ow-cifra"><div class="ow-cifra-num positivo">${formatoNumero(r.premios_listos)}</div><div class="ow-cifra-lbl">Listos para canjear</div></div>
     </div>
-    ${meserosHTML(meseros)}`
+    ${meserosHTML(meseros)}
+    <section class="ow-tarjeta" id="dn-visitas" aria-labelledby="dn-visitas-titulo">${[52, 52, 52].map(bloqueEsq).join('')}</section>`
 }
 
 // Hoja con la lista de quienes dejaron de venir (primer nombre y ···4821).
@@ -3113,6 +3127,125 @@ async function abrirInactivos() {
     console.error('Error al cargar los clientes inactivos:', e)
     if (hoja.isConnected) lista.innerHTML = `<p class="ow-vacio">${mensajeDueno(e)}</p>`
   }
+}
+
+// ── Visitas recientes y "Anular visita" (Fase 6) ──
+// La lista se lee directo con la sesión del dueño: las políticas
+// visitas_select_owner y clientes_select_owner (fase-4.sql) solo le dejan ver
+// filas de SU negocio. Los nombres de los meseros salen de equipo_negocio()
+// (profiles solo deja leer la fila propia). Anular pasa siempre por la RPC
+// anular_visita (fase-6-anular.sql), que valida todo en el servidor.
+const DIAS_VISITAS_RECIENTES = 7
+const MAX_VISITAS_RECIENTES = 200   // tope de lo que se trae (una semana muy llena)
+const VISITAS_POR_PAGINA = 15
+const MOTIVO_MIN = 3
+const MOTIVO_MAX = 200
+const MOTIVOS_RAPIDOS = ['Se sumó por error', 'No era el cliente', 'Fue una prueba']
+
+const MENSAJES_ANULAR = {
+  VISITA_CANJEADA: 'Esta visita ya se usó para un premio entregado. No se puede anular.',
+  VISITA_YA_ANULADA: 'Esta visita ya estaba anulada.',
+  MOTIVO_INVALIDO: `Escribe el motivo (de ${MOTIVO_MIN} a ${MOTIVO_MAX} letras).`,
+  VISITA_NO_ENCONTRADA: 'Ya no encontramos esta visita. Actualiza la lista.',
+  NEGOCIO_INACTIVO: 'Este negocio está desactivado. Contacta a Sello.',
+}
+function mensajeAnular(e) {
+  if (sinInternet(e)) return 'Sin conexión. Revisa tu internet e intenta de nuevo.'
+  const m = e?.message || ''
+  const clave = Object.keys(MENSAJES_ANULAR).find(k => m.includes(k))
+  return clave ? MENSAJES_ANULAR[clave] : mensajeDueno(e)
+}
+
+// Igual que lo hace el servidor: espacios repetidos se juntan.
+const limpiarMotivo = t => String(t || '').replace(/\s+/g, ' ').trim()
+
+// "Hoy, 3:42 p.m." / "Ayer, 9:05 a.m." / "lun 17 nov, 1:10 p.m." (hora del celular)
+function formatoMomento(iso) {
+  const f = new Date(iso)
+  const hora = f.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' })
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+  const dia = new Date(f); dia.setHours(0, 0, 0, 0)
+  const dif = Math.round((hoy - dia) / 86400000)
+  if (dif === 0) return `Hoy, ${hora}`
+  if (dif === 1) return `Ayer, ${hora}`
+  return `${sinPunto(f.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' }))}, ${hora}`
+}
+
+const ultimos4 = tel => String(tel || '').replace(/\D/g, '').slice(-4)
+const etiquetaOrigen = o => o === 'qr' ? '<span class="ow-origen">QR</span>' : o === 'manual' ? '<span class="ow-origen manual">Manual</span>' : ''
+
+// lista: filas ya preparadas ({ id, nombre, u4, momento, origen, mesero, anulada, motivo })
+function visitasHTML(lista, mostrar, aviso, topado) {
+  const cab = `<h2 class="ow-titulo-sec" id="dn-visitas-titulo" style="margin-bottom:4px">Visitas recientes</h2>
+    <p class="ow-ayuda" style="margin:0 0 10px">Últimos ${DIAS_VISITAS_RECIENTES} días. Si una visita no debió contar, anúlala y se le resta el punto al cliente.</p>
+    ${aviso ? avisoOk(esc(aviso)) : ''}`
+  if (lista.length === 0) return `${cab}<p class="ow-vacio">No hay visitas en los últimos ${DIAS_VISITAS_RECIENTES} días.</p>`
+  const filas = lista.slice(0, mostrar).map(v => `<div class="ow-visita${v.anulada ? ' anulada' : ''}">
+      <div class="ow-visita-info">
+        <div class="ow-visita-linea"><span class="ow-persona">${esc(v.nombre)}</span><span class="ow-nota" style="font-variant-numeric:tabular-nums">···${esc(v.u4)}</span>${etiquetaOrigen(v.origen)}</div>
+        <div class="ow-visita-dato">${esc(v.momento)}${v.mesero ? ` · ${esc(v.mesero)}` : ''}</div>
+        ${v.anulada ? `<div class="ow-visita-dato">Anulada${v.motivo ? `: ${esc(v.motivo)}` : ''}</div>` : ''}
+      </div>
+      ${v.anulada
+        ? '<span class="ow-estado inactivo">Anulada</span>'
+        : `<button class="ow-btn secundario chico ow-texto-atencion" data-anular="${esc(v.id)}" aria-label="Anular la visita de ${esc(v.nombre)} ···${esc(v.u4)}, ${esc(v.momento)}">Anular</button>`}
+    </div>`).join('')
+  const quedan = lista.length - mostrar
+  return `${cab}<div>${filas}</div>
+    ${quedan > 0 ? `<button class="ow-btn secundario" id="dn-visitas-mas" style="margin-top:12px">Ver ${formatoNumero(Math.min(quedan, VISITAS_POR_PAGINA))} más</button>` : ''}
+    ${quedan <= 0 && topado ? `<p class="ow-ayuda" style="text-align:center">Se muestran las ${formatoNumero(MAX_VISITAS_RECIENTES)} más recientes.</p>` : ''}`
+}
+
+// Hoja para anular: motivo obligatorio (3 a 200), "Anular visita" y "Cancelar".
+// alAnular(visita, motivo) se llama solo si el servidor la anuló.
+function abrirAnularVisita(v, alAnular, alFallar) {
+  const h = abrirHojaDueno({ titulo: '¿Anular esta visita?', sub: 'Se le resta el punto al cliente. La visita se queda en tu historial con el motivo.' })
+  h.cuerpo.innerHTML = `
+    <div class="ow-resumen-visita">
+      <div class="ow-visita-linea"><span class="ow-persona">${esc(v.nombre)}</span><span class="ow-nota" style="font-variant-numeric:tabular-nums">···${esc(v.u4)}</span>${etiquetaOrigen(v.origen)}</div>
+      <div class="ow-visita-dato">${esc(v.momento)}${v.mesero ? ` · ${esc(v.mesero)}` : ''}</div>
+    </div>
+    <div class="ow-campo">
+      <label class="ow-label" for="an-motivo">Motivo <span class="ow-cuenta" id="an-cuenta">0/${MOTIVO_MAX}</span></label>
+      <textarea id="an-motivo" class="ow-input ow-textarea" maxlength="${MOTIVO_MAX}" rows="3" autocomplete="off" placeholder="Ej: El cliente no estaba en el negocio"></textarea>
+      <div class="ow-chips">${MOTIVOS_RAPIDOS.map(m => `<button type="button" class="ow-chip" data-motivo="${esc(m)}">${esc(m)}</button>`).join('')}</div>
+    </div>
+    <button class="ow-btn ow-btn-atencion" id="an-si">Anular visita</button>
+    <button class="ow-btn secundario" id="an-no">Cancelar</button>
+    <div id="an-msg"></div>`
+  const campo = h.cuerpo.querySelector('#an-motivo')
+  const cuenta = h.cuerpo.querySelector('#an-cuenta')
+  const btn = h.cuerpo.querySelector('#an-si')
+  const msg = h.cuerpo.querySelector('#an-msg')
+  const contar = () => { cuenta.textContent = `${limpiarMotivo(campo.value).length}/${MOTIVO_MAX}` }
+  campo.addEventListener('input', () => { contar(); if (msg.innerHTML) msg.innerHTML = '' })
+  h.cuerpo.querySelectorAll('[data-motivo]').forEach(b => b.addEventListener('click', () => {
+    campo.value = b.dataset.motivo; contar(); msg.innerHTML = ''; campo.focus()
+  }))
+  h.cuerpo.querySelector('#an-no').addEventListener('click', () => h.cerrar())
+  setTimeout(() => campo.focus(), 50)
+
+  btn.addEventListener('click', async () => {
+    if (btn.disabled) return
+    const motivo = limpiarMotivo(campo.value)
+    if (motivo.length < MOTIVO_MIN || motivo.length > MOTIVO_MAX) {
+      msg.innerHTML = avisoError(MENSAJES_ANULAR.MOTIVO_INVALIDO); campo.focus(); return
+    }
+    btn.disabled = true; btn.textContent = 'Anulando...'; msg.innerHTML = ''
+    h.fija = true  // que no se cierre a medio camino
+    try {
+      const { error } = await supabase.rpc('anular_visita', { p_visita_id: v.id, p_motivo: motivo })
+      if (error) throw error
+      h.cerrar()
+      alAnular(v, motivo)
+    } catch (e) {
+      console.error('Error al anular la visita:', e?.message)
+      h.fija = false
+      btn.disabled = false; btn.textContent = 'Anular visita'
+      msg.innerHTML = avisoError(mensajeAnular(e))
+      alFallar?.(e)
+    }
+  })
 }
 
 // ── Gráfica (4D) ──
@@ -4362,6 +4495,85 @@ export async function initDueno(negocioId) {
     cargarGrafica(true)
   }
 
+  // Visitas recientes (Fase 6). Lo ya traído se guarda para repintar al
+  // instante cuando el resumen se vuelve a dibujar.
+  const vis = { lista: null, mostrar: VISITAS_POR_PAGINA, topado: false, aviso: '', avisoHasta: 0, pedido: 0, error: '' }
+
+  function pintarVisitas() {
+    const caja = $('dn-visitas')
+    if (!caja) return
+    if (!vis.lista) {
+      caja.innerHTML = vis.error
+        ? `<h2 class="ow-titulo-sec" id="dn-visitas-titulo">Visitas recientes</h2><p style="margin-bottom:12px">${vis.error}</p><button class="ow-btn secundario" id="dn-visitas-reintentar">Reintentar</button>`
+        : [52, 52, 52].map(bloqueEsq).join('')
+      $('dn-visitas-reintentar')?.addEventListener('click', () => { vis.error = ''; cargarVisitas() })
+      return
+    }
+    const aviso = Date.now() < vis.avisoHasta ? vis.aviso : ''
+    caja.innerHTML = visitasHTML(vis.lista, vis.mostrar, aviso, vis.topado)
+    $('dn-visitas-mas')?.addEventListener('click', () => { vis.mostrar += VISITAS_POR_PAGINA; pintarVisitas() })
+    caja.querySelectorAll('[data-anular]').forEach(b => b.addEventListener('click', () => {
+      const v = vis.lista.find(x => x.id === b.dataset.anular)
+      if (!v || v.anulada) return
+      abrirAnularVisita(v, (anulada, motivo) => {
+        if (!vigente()) return
+        anulada.anulada = true; anulada.motivo = motivo
+        vis.aviso = `Visita anulada. Se le restó el punto a ${anulada.nombre}.`
+        vis.avisoHasta = Date.now() + 8000
+        pintarVisitas()
+        // Cambian "visitas esta semana", la gráfica y la tabla del equipo.
+        cargarResumen()
+      }, async e => {
+        if (!vigente()) return
+        if (await salirSiInactivo(e)) return
+        if (/VISITA_YA_ANULADA|VISITA_NO_ENCONTRADA/.test(e?.message || '')) cargarVisitas()
+      })
+    }))
+  }
+
+  async function cargarVisitas() {
+    if (!$('dn-visitas')) return
+    const pedido = ++vis.pedido
+    pintarVisitas()
+    try {
+      const desde = new Date(Date.now() - DIAS_VISITAS_RECIENTES * 86400000).toISOString()
+      const [v, eq, ses] = await Promise.all([
+        supabase.from('visitas')
+          .select('id, fecha, origen, mesero_id, anulada_en, anulada_motivo, clientes(nombre, telefono)')
+          .eq('negocio_id', negocioId)
+          .gte('fecha', desde)
+          .order('fecha', { ascending: false })
+          .limit(MAX_VISITAS_RECIENTES),
+        supabase.rpc('equipo_negocio'),
+        supabase.auth.getSession(),
+      ])
+      if (!vigente() || pedido !== vis.pedido) return
+      if (v.error) throw v.error
+      // Si no llegan los nombres del equipo, la lista se muestra igual sin ellos.
+      if (eq.error) console.error('Error al cargar los nombres del equipo:', eq.error)
+      const nombres = new Map((eq.data?.meseros || []).map(m => [m.usuario_id, m.nombre]))
+      const yo = ses.data?.session?.user?.id
+      vis.lista = (v.data || []).map(r => ({
+        id: r.id,
+        nombre: r.clientes?.nombre || 'Cliente',
+        u4: ultimos4(r.clientes?.telefono),
+        momento: formatoMomento(r.fecha),
+        origen: r.origen,
+        mesero: r.mesero_id ? (r.mesero_id === yo ? 'Tú' : nombres.get(r.mesero_id) || 'Mesero') : '',
+        anulada: !!r.anulada_en,
+        motivo: r.anulada_motivo || '',
+      }))
+      vis.topado = (v.data || []).length >= MAX_VISITAS_RECIENTES
+      vis.error = ''
+    } catch (e) {
+      if (!vigente() || pedido !== vis.pedido || await salirSiInactivo(e)) return
+      console.error('Error al cargar las visitas recientes:', e)
+      // Si ya había una lista, se queda; si no, aviso con "Reintentar".
+      if (!vis.lista) vis.error = sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar las visitas.'
+    }
+    pintarVisitas()
+  }
+
   let esperaAncho = null
   const alCambiarAncho = () => {
     if (!vigente()) { window.removeEventListener('resize', alCambiarAncho); return }
@@ -4383,6 +4595,7 @@ export async function initDueno(negocioId) {
       $('dn-resumen').innerHTML = resumenHTML(res.data || {}, res.data?.clientes_registrados > 0 ? mes.data?.meseros : [], graf.pref)
       estado.resumenCargado = Date.now(); estado.resumenViejo = false
       initGrafica()
+      cargarVisitas()
       $('dn-ver-inactivos')?.addEventListener('click', abrirInactivos)
       $('dn-ir-cajero')?.addEventListener('click', () => navigate('cajero'))
       $('dn-invita-ticket')?.addEventListener('click', () => {
