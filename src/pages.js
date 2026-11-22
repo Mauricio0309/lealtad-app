@@ -2,6 +2,7 @@ import QRCode from 'qrcode'
 import { isAuthRetryableFetchError, isAuthSessionMissingError, isAuthWeakPasswordError } from '@supabase/supabase-js'
 import { supabase } from './supabase.js'
 import { navigate, getPage } from './router.js'
+import { getUsuarioIdLocal } from './auth.js'
 
 // ═══════════════════════════════════════════════════════════
 // DESIGN SYSTEM
@@ -769,8 +770,34 @@ function initNavDueno() {
   }
 }
 
-function onboardingVisto() { return localStorage.getItem('sello_onboarding') === 'done' }
-function marcarOnboardingVisto() { localStorage.setItem('sello_onboarding', 'done') }
+// Marcas de "ya lo vio" POR USUARIO en este celular: "<clave>:<user_id>".
+// Antes eran de todo el celular y un mesero nuevo en un celular usado nunca
+// veía sus ayudas. La primera vez, la clave vieja (sin usuario) pasa al
+// primer usuario que entra y se borra: él no vuelve a ver lo que ya cerró y
+// los siguientes empiezan de cero. Sin usuario conocido devuelve null y no
+// se guarda nada en el celular (solo cuenta la sesión).
+function clavePorUsuario(base) {
+  const uid = getUsuarioIdLocal()
+  if (!uid) return null
+  const clave = `${base}:${uid}`
+  try {
+    const vieja = localStorage.getItem(base)
+    if (vieja !== null) {
+      if (localStorage.getItem(clave) === null) localStorage.setItem(clave, vieja)
+      localStorage.removeItem(base)
+    }
+  } catch (e) {}
+  return clave
+}
+
+function onboardingVisto() {
+  const clave = clavePorUsuario('sello_onboarding')
+  try { return !!clave && localStorage.getItem(clave) === 'done' } catch (e) { return false }
+}
+function marcarOnboardingVisto() {
+  const clave = clavePorUsuario('sello_onboarding')
+  try { if (clave) localStorage.setItem(clave, 'done') } catch (e) {}
+}
 
 // Bienvenida del dueño en 3 pasos. También se muestran en el panel mientras
 // el negocio no tiene clientes.
@@ -1141,26 +1168,45 @@ function mensajeCajero(error, max) {
 // Una burbuja corta señala el elemento real (resaltado suave) la primera vez
 // que está a la vista. Una a la vez. "Entendido" (o tocar el elemento) la da
 // por vista; "Saltar todo" da por vistas todas las de esa pantalla.
-// Se recuerdan en localStorage; si falla, al menos no se repiten en la sesión.
+// Se recuerdan en localStorage POR USUARIO ("sello_ayudas_vistas:<user_id>",
+// ver clavePorUsuario); si falla, al menos no se repiten en la sesión.
 // No tapan los botones de "proteger" (se coloca arriba, abajo o más allá).
 // ═══════════════════════════════════════════════════════════
 const CLAVE_AYUDAS = 'sello_ayudas_vistas'
+// Vistas en esta sesión, de UN usuario. Si entra otra persona sin recargar
+// la app (Salir → Entrar), se empieza de cero.
 const ayudasEnSesion = new Set()
+let ayudasEnSesionUsuario = null
+
+function ayudasDeSesion() {
+  const uid = getUsuarioIdLocal()
+  if (uid !== ayudasEnSesionUsuario) {
+    ayudasEnSesion.clear()
+    ayudasEnSesionUsuario = uid
+  }
+  return ayudasEnSesion
+}
 
 function leerAyudasVistas() {
+  const sesion = ayudasDeSesion()
+  const clave = clavePorUsuario(CLAVE_AYUDAS)
   try {
-    const lista = JSON.parse(localStorage.getItem(CLAVE_AYUDAS) || '[]')
-    return new Set([...(Array.isArray(lista) ? lista : []), ...ayudasEnSesion])
-  } catch (e) { return new Set(ayudasEnSesion) }
+    const lista = clave ? JSON.parse(localStorage.getItem(clave) || '[]') : []
+    return new Set([...(Array.isArray(lista) ? lista : []), ...sesion])
+  } catch (e) { return new Set(sesion) }
 }
 function marcarAyudasVistas(ids) {
-  ids.forEach(id => ayudasEnSesion.add(id))
-  try { localStorage.setItem(CLAVE_AYUDAS, JSON.stringify([...leerAyudasVistas()])) } catch (e) {}
+  const sesion = ayudasDeSesion()
+  ids.forEach(id => sesion.add(id))
+  const clave = clavePorUsuario(CLAVE_AYUDAS)
+  try { if (clave) localStorage.setItem(clave, JSON.stringify([...leerAyudasVistas()])) } catch (e) {}
 }
-// "Ver ayuda otra vez" (Personalización): en este celular vuelven a salir todas.
+// "Ver ayuda otra vez" (Personalización): a este usuario, en este celular,
+// le vuelven a salir todas.
 function reiniciarAyudas() {
-  ayudasEnSesion.clear()
-  try { localStorage.removeItem(CLAVE_AYUDAS) } catch (e) {}
+  ayudasDeSesion().clear()
+  const clave = clavePorUsuario(CLAVE_AYUDAS)
+  try { if (clave) localStorage.removeItem(clave) } catch (e) {}
   ayudasMotor.ocultar()
 }
 
@@ -3453,11 +3499,81 @@ function initContrasenaDueno() {
   campo.addEventListener('keydown', e => { if (e.key === 'Enter') cambiar() })
 }
 
+// Mismo arreglo que guardar_programa en el servidor ("  café   gratis " →
+// "café gratis"), para no avisar de un premio "nuevo" que solo cambió espacios.
+const normalizarPremio = t => String(t || '').replace(/\s+/g, ' ').trim()
+
+// 6B: antes de guardar un cambio de meta o premio, pregunta a
+// impacto_programa (supabase/fase-6b-impacto.sql) cuántos clientes cambian.
+// Devuelve las líneas del aviso, o [] si no hay clientes afectados (por
+// ejemplo en la configuración inicial, sin clientes todavía).
+// Si la consulta falla (sin internet, función aún no aplicada), devuelve []
+// y se guarda sin aviso: el aviso informa, no debe impedir guardar.
+async function lineasImpactoPrograma({ metaAntes, premioAntes, meta, premio }) {
+  const cambiaMeta = meta !== metaAntes
+  const cambiaPremio = normalizarPremio(premio) !== normalizarPremio(premioAntes)
+  if (!cambiaMeta && !cambiaPremio) return []
+  let r
+  try {
+    const { data, error } = await supabase.rpc('impacto_programa', { p_meta: meta })
+    if (error) throw error
+    r = data
+  } catch (e) {
+    console.warn('No se pudo calcular el impacto del cambio:', e?.message)
+    return []
+  }
+  const clientes = Number(r?.clientes) || 0
+  const yaAlcanzan = Number(r?.ya_alcanzan) || 0
+  const masLejos = Number(r?.mas_lejos) || 0
+  const lineas = []
+  if (cambiaMeta && meta < metaAntes && yaAlcanzan > 0) {
+    lineas.push(yaAlcanzan === 1
+      ? 'Con la nueva meta, 1 cliente ya podrá canjear su premio hoy'
+      : `Con la nueva meta, ${formatoNumero(yaAlcanzan)} clientes ya podrán canjear su premio hoy`)
+  }
+  if (cambiaMeta && meta > metaAntes && masLejos > 0) {
+    lineas.push(masLejos === 1
+      ? 'Con la nueva meta, 1 cliente quedará más lejos de su premio'
+      : `Con la nueva meta, ${formatoNumero(masLejos)} clientes quedarán más lejos de su premio`)
+  }
+  if (cambiaPremio && clientes > 0) lineas.push('Tus clientes verán el premio nuevo. Los canjes ya entregados no cambian')
+  if (lineas.length === 0) return []
+  lineas.push('Los puntos de tus clientes se conservan')
+  return lineas
+}
+
+// Hoja "Vas a cambiar tu programa". Resuelve true con "Guardar cambios" y
+// false con "Cancelar", "Cerrar", Escape o tocando fuera.
+function confirmarCambioPrograma(lineas) {
+  return new Promise(resolver => {
+    const h = abrirHojaDueno({ titulo: 'Vas a cambiar tu programa' })
+    h.cuerpo.innerHTML = `
+      ${lineas.map(l => `<p class="ow-sub" style="margin:0 0 12px">${esc(l)}.</p>`).join('')}
+      <button class="ow-btn primario" id="prog-si" style="margin-top:8px">Guardar cambios</button>
+      <button class="ow-btn secundario" id="prog-no">Cancelar</button>`
+    const cerrarHoja = h.cerrar
+    let respondido = false
+    const responder = valor => {
+      if (respondido) return
+      respondido = true
+      cerrarHoja.call(h)
+      resolver(valor)
+    }
+    h.cerrar = () => responder(false)
+    h.cuerpo.querySelector('#prog-si').addEventListener('click', () => responder(true))
+    h.cuerpo.querySelector('#prog-no').addEventListener('click', () => responder(false))
+    setTimeout(() => h.cuerpo.querySelector('#prog-si')?.focus(), 50)
+  })
+}
+
 // Sección "Programa": se guarda con la RPC guardar_programa (2G, ampliada en Fase 4).
-function initProgramaDueno(alGuardar) {
+// guardado: la meta y el premio que ya están guardados (para saber qué cambió).
+function initProgramaDueno(guardado, alGuardar) {
   const $ = id => document.getElementById(id)
   const btn = $('btn-guardar-programa'); const msg = $('msg-programa')
   if (!btn) return
+  let metaGuardada = Number(guardado?.meta) || 10
+  let premioGuardado = guardado?.premio || ''
   document.querySelectorAll('.ow-chip[data-premio]').forEach(chip => {
     chip.addEventListener('click', () => { $('prog-premio').value = chip.dataset.premio; $('prog-premio').focus() })
   })
@@ -3475,13 +3591,17 @@ function initProgramaDueno(alGuardar) {
     else if (costo !== null && !(costo >= 0 && costo <= COSTO_MAX)) error = 'COSTO_INVALIDO'
     else if (!(max >= 1 && max <= 50)) error = 'MAX_CODIGOS_INVALIDO'
     if (error) { msg.innerHTML = avisoError(mensajeDueno({ message: error })); return }
+    if (btn.disabled) return
     btn.disabled = true; btn.textContent = 'Guardando...'; msg.innerHTML = ''
     try {
+      const lineas = await lineasImpactoPrograma({ metaAntes: metaGuardada, premioAntes: premioGuardado, meta, premio })
+      if (lineas.length > 0 && !(await confirmarCambioPrograma(lineas))) return
       const { error: e } = await supabase.rpc('guardar_programa', {
         p_meta_puntos: meta, p_premio: premio, p_max_codigos_activos: max,
         p_ticket_promedio: ticket, p_costo_premio: costo,
       })
       if (e) throw e
+      metaGuardada = meta; premioGuardado = premio
       msg.innerHTML = avisoOk('Programa guardado')
       setTimeout(() => { if (msg.isConnected) msg.innerHTML = '' }, 2500)
       alGuardar?.({ meta, premio })
@@ -4304,7 +4424,7 @@ export async function initDueno(negocioId) {
       estado.ajustesCargados = true
       // Si cambian ticket, costo o premio, el resumen y la vista previa se ponen al día.
       const tarjeta = initTarjetaDueno(negocioId, nd)
-      initProgramaDueno(({ meta, premio }) => {
+      initProgramaDueno({ meta: nd.meta_puntos, premio: nd.premio }, ({ meta, premio }) => {
         estado.resumenViejo = true
         tarjeta.actualizar({ meta_puntos: meta, premio })
       })
