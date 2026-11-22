@@ -429,7 +429,7 @@ function inyectarEstilosDueno() {
     .ow-cifra-lbl { font-size: 13px; line-height: 1.3; color: var(--ow-texto-2); margin-top: 6px; }
     .ow-cambio { display: inline-block; font-size: 12px; font-weight: 600; margin-top: 8px; color: var(--ow-texto-3); font-variant-numeric: tabular-nums; }
     .ow-cambio.sube { color: var(--ow-ok); }
-    .ow-cambio.baja { color: var(--ow-atencion); }
+    .ow-cambio.baja { color: var(--ow-texto-3); }  /* nunca rojo ni alarma */
 
     .ow-fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; margin-bottom: 16px; padding: 18px 20px; background: var(--ow-superficie); border: 1px solid var(--ow-borde); border-radius: 12px; font: inherit; color: inherit; text-align: left; cursor: pointer; }
     .ow-fila:disabled { cursor: default; }
@@ -609,27 +609,40 @@ function inyectarEstilosDueno() {
     .ow-negocio-info .ow-persona { overflow-wrap: anywhere; }
     .ow-negocio-datos { font-size: 13px; color: var(--ow-texto-2); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 
-    /* 4D: gráfica del panel */
+    /* Selector de periodo (ow-seg) */
     .ow-seg { display: flex; gap: 4px; padding: 3px; background: var(--ow-fondo); border: 1px solid var(--ow-borde); border-radius: 10px; }
     .ow-seg button { flex: 1; min-height: 38px; padding: 6px 8px; background: none; border: none; border-radius: 8px; font: inherit; font-size: 14px; font-weight: 600; color: var(--ow-texto-2); cursor: pointer; white-space: nowrap; }
     .ow-seg button[aria-pressed="true"] { background: var(--ow-superficie); color: var(--ow-texto); box-shadow: 0 0 0 1px var(--ow-borde); }
     .ow-seg button.apagado { color: var(--ow-texto-3); font-weight: 500; }
     .ow-seg.chico { display: inline-flex; }
     .ow-seg.chico button { flex: 0 0 auto; min-height: 32px; padding: 4px 12px; font-size: 13px; }
-    .ow-graf-cab { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px; margin: 18px 0 10px; }
-    .ow-graf-num { font-size: 28px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; font-variant-numeric: tabular-nums; }
-    .ow-graf-num small { font-size: 14px; font-weight: 500; color: var(--ow-texto-2); letter-spacing: 0; }
-    .ow-graf-comp { font-size: 13px; color: var(--ow-texto-2); margin-top: 2px; font-variant-numeric: tabular-nums; }
-    .ow-graf-leyenda { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ow-texto-2); margin-bottom: 6px; }
-    .ow-graf-leyenda span { display: inline-flex; align-items: center; gap: 6px; }
-    .ow-graf-leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: #065FD4; }
-    .ow-graf-leyenda i.linea { width: 14px; height: 3px; border-radius: 2px; background: #C3D0E0; }
-    .ow-graf svg { display: block; width: 100%; overflow: visible; touch-action: pan-y; }
-    .ow-graf svg text { font-family: inherit; font-size: 11px; fill: var(--ow-texto-3); font-variant-numeric: tabular-nums; }
-    .ow-graf-lectura { min-height: 20px; margin-top: 6px; font-size: 13px; color: var(--ow-texto-2); font-variant-numeric: tabular-nums; }
-    .ow-graf-lectura strong { color: var(--ow-texto); font-weight: 600; }
-    .ow-graf-nota { margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: var(--ow-info-suave); font-size: 14px; color: var(--ow-info); }
-    .ow-graf-nota .ow-enlace { min-height: 0; padding: 0; font-size: 14px; color: var(--ow-texto); font-weight: 600; }
+    /* Resumen (Fase B) */
+    .ow-principal-arranque { font-size: 21px; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em; color: var(--ow-ok); margin-bottom: 4px; }
+    .ow-logro { margin-top: 16px; }
+    .ow-logro-barra { height: 8px; border-radius: 4px; background: #c5e6d6; overflow: hidden; }
+    .ow-logro-barra span { display: block; height: 100%; border-radius: 4px; background: var(--ow-ok); }
+    .ow-logro-texto { margin-top: 6px; font-size: 13px; color: var(--ow-texto-2); font-variant-numeric: tabular-nums; }
+    .ow-periodo-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 0 10px; }
+    .ow-fila.atencion .ow-fila-titulo { color: var(--ow-atencion); }
+    .ow-fila.info { background: var(--ow-info-suave); border-color: var(--ow-info-borde); }
+    .ow-fila.info .ow-fila-titulo, .ow-fila.info .ow-fila-ver { color: var(--ow-info); }
+    .ow-act { list-style: none; margin: 0; padding: 0; }
+    .ow-act-fila { display: flex; align-items: baseline; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--ow-borde); }
+    .ow-act-fila:first-child { padding-top: 0; }
+    .ow-act-fila:last-child { border-bottom: none; padding-bottom: 0; }
+    .ow-act-punto { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--ow-ok); transform: translateY(-1px); }
+    .ow-act-punto.nuevo { background: var(--ow-info); }
+    .ow-act-punto.canje { background: var(--ow-atencion); }
+    .ow-act-texto { flex: 1; min-width: 0; font-size: 15px; color: var(--ow-texto-2); overflow-wrap: anywhere; }
+    .ow-act-texto strong { color: var(--ow-texto); font-weight: 600; }
+    .ow-act-hora { flex-shrink: 0; font-size: 13px; color: var(--ow-texto-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .ow-barras { display: flex; align-items: stretch; gap: 12px; height: 150px; }
+    .ow-barra-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+    .ow-barra-num { font-size: 13px; font-weight: 700; color: var(--ow-texto); font-variant-numeric: tabular-nums; }
+    .ow-barra-pista { flex: 1; width: 100%; max-width: 56px; display: flex; align-items: flex-end; margin-top: 4px; border-bottom: 1px solid var(--ow-borde); }
+    .ow-barra { width: 100%; border-radius: 6px 6px 0 0; background: #8fcdb3; }
+    .ow-barra.actual { background: var(--ow-ok); }
+    .ow-barra-lbl { margin-top: 6px; font-size: 12px; color: var(--ow-texto-3); white-space: nowrap; }
     .ow-oculto { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
     @media (prefers-reduced-motion: reduce) {
@@ -2940,10 +2953,12 @@ export function initLanding(negocioId) {
 // ═══════════════════════════════════════════════════════════
 // PANEL DEL DUEÑO (Fase 4)
 // Pestaña "Resumen": en 3 segundos, si Sello le está trayendo clientes de
-// vuelta. Todo lo calcula el servidor (resumen_dueno, resumen_meseros,
-// clientes_inactivos); el navegador solo pinta.
-// Pestaña "Personalización": programa, tarjeta de los clientes, personal y
-// exportar (con la página pública).
+// vuelta. Todo lo calcula el servidor (Fase B: resumen_inicio,
+// resumen_periodo, clientes_cerca_premio, actividad_reciente,
+// grafica_regresos y clientes_inactivos); el navegador solo pinta.
+// Pestaña "Personalización": programa, ventas, tarjeta de los clientes y
+// exportar (con la página pública). Pestaña "Equipo": cómo va el equipo,
+// visitas recientes, meseros, personal y QR abiertos.
 // Estilos: inyectarEstilosDueno (todo dentro de .ow).
 // ═══════════════════════════════════════════════════════════
 const PLANTILLAS_PREMIO = ['Un postre gratis', 'Una bebida gratis', '10% de descuento', '2×1']
@@ -3028,29 +3043,57 @@ function errorPanelHTML(texto, idBoton) {
   </div>`
 }
 
-// ── Resumen ──
-function cambioSemanaHTML(actual, anterior) {
-  const dif = (Number(actual) || 0) - (Number(anterior) || 0)
-  if (!actual && !anterior) return ''
-  if (dif > 0) return `<div class="ow-cambio sube">▲ ${formatoNumero(dif)} vs. la anterior</div>`
-  if (dif < 0) return `<div class="ow-cambio baja">▼ ${formatoNumero(-dif)} vs. la anterior</div>`
-  return `<div class="ow-cambio">Igual que la anterior</div>`
+// ── Resumen (Fase B) ──
+// Todo sale de supabase/fase-7-resumen.sql (resumen_inicio, resumen_periodo,
+// clientes_cerca_premio, actividad_reciente, grafica_regresos) y de
+// clientes_inactivos (Fase 4). Colores con significado: verde = crecimiento,
+// ámbar = oportunidad, gris azulado = información. Nada en rojo: si un número
+// baja, su comparación se ve en gris.
+const PERIODOS_RESUMEN = {
+  mes: { boton: 'Mes', titulo: 'Este mes', anterior: 'mes pasado' },
+  semana: { boton: 'Semana', titulo: 'Esta semana', anterior: 'semana pasada' },
 }
 
-function principalHTML(r) {
-  const n = Number(r.visitas_repetidas_semana) || 0
-  if (r.negocio?.ticket_promedio != null) {
-    return `<section class="ow-tarjeta ow-principal">
-      <div class="ow-principal-lbl">Esta semana tus clientes volvieron</div>
-      <div class="ow-principal-num">${n === 1 ? '1 vez' : `${formatoNumero(n)} veces`}</div>
-      <div class="ow-principal-sub" id="dn-ventas">≈ ${formatoPesos(r.ventas_estimadas)} en ventas <span class="ow-nota">(estimado)</span></div>
-    </section>`
+// Mes por defecto; Semana si el mes anterior no tiene con qué comparar y la
+// semana anterior sí.
+function periodoInicialResumen(d) {
+  return d?.mes?.anterior_con_datos !== true && d?.semana?.anterior_con_datos === true ? 'semana' : 'mes'
+}
+
+// Comparación contra el periodo anterior: sube = verde; baja o igual = gris.
+// Sin periodo anterior con datos, o si el anterior fue 0, no se compara:
+// solo se ve el número actual.
+function cambioPeriodoHTML(dato, conDatos, anterior) {
+  if (!conDatos || !dato || !(Number(dato.anterior) > 0)) return ''
+  const dif = (Number(dato.actual) || 0) - Number(dato.anterior)
+  if (dif > 0) return `<div class="ow-cambio sube">▲ ${formatoNumero(dif)} vs. ${anterior}</div>`
+  if (dif < 0) return `<div class="ow-cambio">▼ ${formatoNumero(-dif)} vs. ${anterior}</div>`
+  return `<div class="ow-cambio">Igual que ${anterior === 'mes pasado' ? 'el' : 'la'} ${anterior}</div>`
+}
+
+// Tarjeta verde protagonista. Nunca un "0" grande ni "$0".
+function principalInicioHTML(r) {
+  const regresaron = Number(r.clientes_regresaron) || 0
+  const registrados = Number(r.clientes_registrados) || 0
+  const logro = r.proximo_logro == null ? null : Number(r.proximo_logro)
+  const cabeza = regresaron > 0
+    ? `<div class="ow-principal-num">${formatoNumero(regresaron)}</div>
+       <div class="ow-principal-lbl">${regresaron === 1 ? 'cliente ya regresó' : 'clientes ya regresaron'}</div>`
+    : `<div class="ow-principal-arranque">Tu primer cliente que regrese aparecerá aquí</div>
+       <div class="ow-principal-lbl">Cuenta desde su segunda visita.</div>`
+  let ventas = ''
+  if (r.ticket_promedio == null) {
+    ventas = '<button type="button" class="ow-enlace" id="dn-invita-ticket">Agrega en Personalización cuánto gasta un cliente para ver tus ventas estimadas</button>'
+  } else if (regresaron > 0 && r.ventas_estimadas_total != null) {
+    ventas = `<div class="ow-principal-sub" id="dn-ventas">≈ ${formatoPesos(r.ventas_estimadas_total)} en ventas <span class="ow-nota">(estimado)</span></div>`
   }
-  return `<section class="ow-tarjeta ow-principal">
-    <div class="ow-principal-num">${formatoNumero(n)}</div>
-    <div class="ow-principal-lbl">${n === 1 ? 'visita de un cliente que regresó' : 'visitas de clientes que regresaron'} esta semana</div>
-    <button type="button" class="ow-enlace" id="dn-invita-ticket">Agrega cuánto gasta un cliente para ver tus ventas estimadas</button>
-  </section>`
+  const barra = logro
+    ? `<div class="ow-logro">
+        <div class="ow-logro-barra" role="progressbar" aria-label="Clientes registrados" aria-valuemin="0" aria-valuemax="${logro}" aria-valuenow="${registrados}"><span style="width:${Math.min(100, Math.round(registrados / logro * 100))}%"></span></div>
+        <div class="ow-logro-texto">${formatoNumero(registrados)} de ${formatoNumero(logro)} clientes registrados · próximo logro</div>
+      </div>`
+    : `<div class="ow-logro"><div class="ow-logro-texto">${formatoNumero(registrados)} clientes registrados</div></div>`
+  return `<section class="ow-tarjeta ow-principal" aria-label="Clientes que regresaron">${cabeza}${ventas}${barra}</section>`
 }
 
 // Negocio nuevo: en vez de ceros, qué hacer para empezar.
@@ -3092,71 +3135,111 @@ function equipoSemanaHTML(meseros) {
   return `${cab}${filas}`
 }
 
-// "Dejaron de venir" (tarjeta y lista) queda oculto hasta la fase de WhatsApp:
-// sin un mensaje para invitarlos de vuelta, la lista no le da al dueño nada
-// que hacer. El código (abrirInactivos) y la función SQL clientes_inactivos()
-// siguen listos; para reactivarlo basta con poner esto en true.
-const MOSTRAR_INACTIVOS = false
-
-function resumenHTML(r, prefGrafica) {
-  if (!(Number(r.clientes_registrados) > 0)) return vacioResumenHTML()
-  const deCada10 = Math.round((Number(r.porcentaje_regresan) || 0) / 10)
-  const entregados = Number(r.premios_entregados_semana) || 0
-  const inactivos = Number(r.inactivos) || 0
-  return `
-    ${principalHTML(r)}
+// "Este mes" / "Esta semana": selector y 3 números grandes.
+function periodoHTML(d, periodo) {
+  const P = PERIODOS_RESUMEN[periodo] || PERIODOS_RESUMEN.mes
+  const r = d?.[periodo] || {}
+  const con = r.anterior_con_datos === true
+  const cifra = (dato, lbl) => `<div class="ow-cifra">
+      <div class="ow-cifra-num">${formatoNumero(dato?.actual)}</div>
+      <div class="ow-cifra-lbl">${lbl}</div>
+      ${cambioPeriodoHTML(dato, con, P.anterior)}
+    </div>`
+  return `<div class="ow-periodo-cab">
+      <h2 class="ow-titulo-sec" id="dn-periodo-titulo" style="margin:0">${P.titulo}</h2>
+      <div class="ow-seg chico" role="group" aria-label="Periodo">
+        ${Object.entries(PERIODOS_RESUMEN).map(([k, p]) => `<button type="button" data-periodo="${k}" aria-pressed="${k === periodo}">${p.boton}</button>`).join('')}
+      </div>
+    </div>
     <div class="ow-cifras">
-      <div class="ow-cifra"><div class="ow-cifra-num">${formatoNumero(r.clientes_registrados)}</div><div class="ow-cifra-lbl">Clientes registrados</div></div>
-      <div class="ow-cifra"><div class="ow-cifra-num">${formatoNumero(r.visitas_semana)}</div><div class="ow-cifra-lbl">Visitas esta semana</div>${cambioSemanaHTML(r.visitas_semana, r.visitas_semana_anterior)}</div>
-      <div class="ow-cifra"><div class="ow-cifra-num positivo sin-corte">${deCada10}<span class="ow-cifra-de"> de 10</span></div><div class="ow-cifra-lbl">Clientes que regresaron</div></div>
-    </div>
-    ${graficaSeccionHTML(prefGrafica)}
-    ${MOSTRAR_INACTIVOS ? `<button type="button" class="ow-fila${inactivos > 0 ? ' atencion' : ''}" id="dn-ver-inactivos"${inactivos > 0 ? '' : ' disabled'}>
-      <span><span class="ow-fila-titulo">Dejaron de venir</span><span class="ow-fila-sub">Más de 21 días sin venir</span></span>
-      <span class="ow-fila-der"><span class="ow-fila-num">${formatoNumero(inactivos)}</span>${inactivos > 0 ? '<span class="ow-fila-ver">Ver</span>' : ''}</span>
-    </button>` : ''}
-    <div class="ow-cifras dos">
-      <div class="ow-cifra"><div class="ow-cifra-num positivo">${formatoNumero(entregados)}</div><div class="ow-cifra-lbl">Premios entregados esta semana</div>${r.costo_premios_semana != null && entregados > 0 ? `<div class="ow-cambio">≈ ${formatoPesos(r.costo_premios_semana)} de costo</div>` : ''}</div>
-      <div class="ow-cifra"><div class="ow-cifra-num positivo">${formatoNumero(r.premios_listos)}</div><div class="ow-cifra-lbl">Listos para canjear</div></div>
-    </div>
-`
+      ${cifra(r.clientes_nuevos, 'Clientes nuevos')}
+      ${cifra(r.visitas_regreso, 'Visitas de regreso')}
+      ${cifra(r.premios_entregados, 'Premios entregados')}
+    </div>`
 }
 
-// Hoja con la lista de quienes dejaron de venir (primer nombre y ···4821).
-async function abrirInactivos() {
-  inyectarEstilosDueno()
-  const hoja = document.createElement('div')
-  hoja.className = 'ow-hoja-fondo'
-  hoja.innerHTML = `<div class="ow-hoja" role="dialog" aria-modal="true" aria-labelledby="dn-hoja-titulo">
-    <div class="ow-hoja-cab">
-      <div><h2 class="ow-h2" id="dn-hoja-titulo">Dejaron de venir</h2><p class="ow-sub">Más de 21 días sin venir. Los más recientes primero.</p></div>
-      <button class="ow-btn secundario chico" id="dn-hoja-cerrar">Cerrar</button>
-    </div>
-    <div id="dn-hoja-lista">${[52, 52, 52, 52].map(bloqueEsq).join('')}</div>
-  </div>`
-  document.body.appendChild(hoja)
-  const cerrar = () => { hoja.remove(); document.removeEventListener('keydown', alTeclear) }
-  const alTeclear = e => { if (e.key === 'Escape') cerrar() }
-  document.addEventListener('keydown', alTeclear)
-  hoja.querySelector('#dn-hoja-cerrar').addEventListener('click', cerrar)
-  hoja.addEventListener('click', e => { if (e.target === hoja) cerrar() })
-  const lista = hoja.querySelector('#dn-hoja-lista')
-  try {
-    const { data, error } = await supabase.rpc('clientes_inactivos')
-    if (error) throw error
-    if (!hoja.isConnected) return
-    const clientes = data?.clientes || []
-    lista.innerHTML = clientes.length === 0
-      ? `<p class="ow-vacio">Nadie. Todos tus clientes vinieron en las últimas 3 semanas.</p>`
-      : clientes.map(c => `<div class="ow-lista-fila">
-          <div><div><span class="ow-persona">${esc(c.nombre)}</span> <span class="ow-nota" style="font-variant-numeric:tabular-nums">···${esc(c.ultimos4)}</span></div>
-          <div class="ow-ayuda" style="margin-top:2px">Última visita hace ${formatoNumero(c.dias)} días</div></div>
-          <div class="ow-nota" style="white-space:nowrap">${formatoNumero(c.visitas)} ${c.visitas === 1 ? 'visita' : 'visitas'}</div>
-        </div>`).join('')
-  } catch (e) {
-    console.error('Error al cargar los clientes inactivos:', e)
-    if (hoja.isConnected) lista.innerHTML = `<p class="ow-vacio">${mensajeDueno(e)}</p>`
+// Tarjeta ámbar (oportunidad): solo si hay alguien a 1 visita de su premio.
+function cercaPremioHTML(c) {
+  const total = Number(c?.total) || 0
+  const lista = c?.clientes || []
+  if (total === 0 || lista.length === 0) return ''
+  const nombres = lista.slice(0, 3).map(x => esc(x.nombre))
+  const resto = total - nombres.length
+  return `<button type="button" class="ow-fila atencion" id="dn-ver-cerca">
+    <span><span class="ow-fila-titulo">${total === 1 ? '1 cliente está a 1 visita de su premio' : `${formatoNumero(total)} clientes están a 1 visita de su premio`}</span>
+      <span class="ow-fila-sub">${nombres.join(', ')}${resto > 0 ? ` y ${formatoNumero(resto)} más` : ''}</span></span>
+    <span class="ow-fila-ver">Ver</span>
+  </button>`
+}
+
+// Tarjeta gris azulada (información): solo si hay clientes que no vienen.
+// Solo informativa: el botón para invitarlos llega con WhatsApp (la hoja ya
+// acepta una acción por fila, ver abrirListaClientes).
+function inactivosHTML(i) {
+  const n = (i?.clientes || []).length
+  if (n === 0) return ''
+  const cuantos = n >= 300 ? 'Más de 300 clientes no vienen' : n === 1 ? '1 cliente no viene' : `${formatoNumero(n)} clientes no vienen`
+  return `<button type="button" class="ow-fila info" id="dn-ver-inactivos">
+    <span><span class="ow-fila-titulo">${cuantos} desde hace 21 días</span>
+      <span class="ow-fila-sub">Para que sepas quiénes son.</span></span>
+    <span class="ow-fila-ver">Ver</span>
+  </button>`
+}
+
+// Hoja con una lista de clientes (primer nombre y ···4821).
+// detalle(cliente): texto opcional bajo el nombre.
+// accion (para después, hoy nadie la pasa): { texto, alTocar(cliente, hoja) }
+// agrega un botón a cada fila.
+function abrirListaClientes({ titulo, sub = '', clientes = [], nota = '', detalle = null, accion = null }) {
+  const h = abrirHojaDueno({ titulo: esc(titulo), sub: esc(sub) })
+  h.cuerpo.innerHTML = clientes.length === 0
+    ? '<p class="ow-vacio">Nadie por ahora.</p>'
+    : clientes.map((c, i) => `<div class="ow-lista-fila">
+        <div><div><span class="ow-persona">${esc(c.nombre)}</span> <span class="ow-nota" style="font-variant-numeric:tabular-nums">···${esc(c.ultimos4)}</span></div>
+          ${detalle ? `<div class="ow-ayuda" style="margin-top:2px">${esc(detalle(c))}</div>` : ''}</div>
+        ${accion ? `<button type="button" class="ow-btn secundario chico" data-fila="${i}">${esc(accion.texto)}</button>` : ''}
+      </div>`).join('') + (nota ? `<p class="ow-ayuda" style="text-align:center">${esc(nota)}</p>` : '')
+  if (accion) {
+    h.cuerpo.querySelectorAll('[data-fila]').forEach(b => b.addEventListener('click', () => accion.alTocar(clientes[Number(b.dataset.fila)], h)))
   }
+  return h
+}
+
+// "Lo que está pasando": 5 actividades en lenguaje humano, sin botones.
+const ORDINALES = ['', 'primera', 'segunda', 'tercera', 'cuarta', 'quinta', 'sexta', 'séptima', 'octava', 'novena', 'décima']
+function textoActividad(a) {
+  const quien = `<strong>${esc(a.nombre)}</strong>`
+  if (a.tipo === 'canje') return `${quien} recibió su premio`
+  if (a.tipo === 'nuevo') return `${quien} vino por primera vez`
+  const n = Number(a.numero) || 0
+  return ORDINALES[n] ? `${quien} regresó: es su ${ORDINALES[n]} visita` : `${quien} regresó: es su visita número ${formatoNumero(n)}`
+}
+function actividadHTML(act) {
+  if (!act) return ''
+  const lista = act.actividad || []
+  return `<section class="ow-tarjeta" aria-labelledby="dn-act-titulo">
+    <h2 class="ow-titulo-sec" id="dn-act-titulo">Lo que está pasando</h2>
+    ${lista.length === 0
+      ? '<p class="ow-vacio">Aquí verás cada visita y cada premio entregado.</p>'
+      : `<ul class="ow-act">${lista.map(a => `<li class="ow-act-fila">
+          <span class="ow-act-punto ${a.tipo === 'canje' ? 'canje' : a.tipo === 'nuevo' ? 'nuevo' : 'regreso'}" aria-hidden="true"></span>
+          <span class="ow-act-texto">${textoActividad(a)}</span>
+          <span class="ow-act-hora">${esc(formatoMomento(a.fecha))}</span>
+        </li>`).join('')}</ul>`}
+  </section>`
+}
+
+// La pestaña completa. Sin clientes todavía: los pasos para empezar.
+function resumenHTML(d, periodo) {
+  const inicio = d?.inicio || {}
+  if (!(Number(inicio.clientes_registrados) > 0)) return vacioResumenHTML()
+  return `
+    ${principalInicioHTML(inicio)}
+    <section class="ow-periodo" id="dn-periodo" aria-labelledby="dn-periodo-titulo">${periodoHTML(d, periodo)}</section>
+    ${cercaPremioHTML(d.cerca)}
+    ${inactivosHTML(d.inactivos)}
+    ${actividadHTML(d.actividad)}
+    ${graficaRegresosHTML(d.grafica)}`
 }
 
 // ── Visitas recientes y "Anular visita" (Fase 6) ──
@@ -3278,199 +3361,41 @@ function abrirAnularVisita(v, alAnular, alFallar) {
   })
 }
 
-// ── Gráfica (4D) ──
-// Las series llegan YA agregadas de grafica_dueno(periodo) (solo conteos,
-// nunca clientes). Aquí solo se dibujan con SVG propio, sin librerías:
-//   Visitas  = barras azules del periodo actual y una raya azul grisáceo
-//              claro con el periodo anterior en el mismo tramo.
-//   Clientes = línea azul de clientes registrados acumulados.
-// Solo la gráfica usa este azul; el resto del panel sigue igual.
-// Sin rojo ni alarma: si las visitas bajan, un texto neutro y nada más.
-const AZUL_GRAFICA = '#065FD4'
-const AZUL_ANTERIOR = '#C3D0E0'   // periodo anterior: azul grisáceo muy claro
-const AZUL_RESALTE = '#EEF3FB'    // fondo de la columna tocada
-const PERIODOS_GRAFICA = {
-  semana: { boton: 'Semana', actual: 'Esta semana', anterior: 'Semana anterior', nuevos: 'esta semana' },
-  mes: { boton: 'Mes', actual: 'Últimas 4 semanas', anterior: 'Las 4 anteriores', nuevos: 'en 4 semanas' },
-}
-const DIAS_PARA_MES = 14
-const CLAVE_GRAFICA = 'sello_grafica_dueno'
-function leerPrefGrafica() {
-  try {
-    const p = JSON.parse(sessionStorage.getItem(CLAVE_GRAFICA) || '{}')
-    return { periodo: PERIODOS_GRAFICA[p.periodo] ? p.periodo : 'semana', vista: p.vista === 'clientes' ? 'clientes' : 'visitas' }
-  } catch (e) { return { periodo: 'semana', vista: 'visitas' } }
-}
-function guardarPrefGrafica(p) { try { sessionStorage.setItem(CLAVE_GRAFICA, JSON.stringify(p)) } catch (e) {} }
-
+// ── Fechas cortas ──
 // "2026-11-04" → fecha local (sin que el navegador la corra por zona horaria).
 const fechaLocal = d => { const [a, m, dd] = String(d).split('-').map(Number); return new Date(a, (m || 1) - 1, dd || 1) }
 const sinPunto = t => t.replace(/\./g, '')
-const formatoDiaSemana = d => sinPunto(fechaLocal(d).toLocaleDateString('es-MX', { weekday: 'short' }))
 const formatoFechaCorta = d => sinPunto(fechaLocal(d).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }))
 
-// Etiqueta corta del eje (cabe en celular) y la larga de la lectura.
-function etiquetaCorta(periodo, p, ultimo) {
-  if (periodo === 'semana') return ultimo ? 'Hoy' : formatoDiaSemana(p.dia)
-  return formatoFechaCorta(p.dia)
-}
-function etiquetaLarga(periodo, p, ultimo) {
-  if (periodo === 'semana') return ultimo ? 'Hoy' : sinPunto(fechaLocal(p.dia).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric' }))
-  if (ultimo) return 'Últimos 7 días'
-  const fin = fechaLocal(p.dia); fin.setDate(fin.getDate() + 6)
-  return `Del ${formatoFechaCorta(p.dia)} al ${sinPunto(fin.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }))}`
-}
-
-// Tope del eje: un número redondo y par (para que la línea de en medio sea entera).
-function topeEje(max) {
-  if (!(max > 0)) return 2
-  const k = Math.pow(10, Math.floor(Math.log10(max / 2)))
-  for (const f of [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) {
-    const paso = f * k
-    if (Number.isInteger(paso) && paso * 2 >= max) return paso * 2
+// ── Gráfica compacta (Fase B): visitas de regreso por semana ──
+// 4 barras verdes (bloques de 7 días que terminan hoy), sin librerías. Para
+// lectores de pantalla, una tabla oculta con los mismos números.
+function graficaRegresosHTML(g) {
+  if (!g) return ''
+  const cab = '<h2 class="ow-titulo-sec" id="dn-graf-titulo">Visitas de regreso por semana</h2>'
+  const semanas = g.semanas || []
+  if (!g.suficiente || semanas.length === 0) {
+    return `<section class="ow-tarjeta" aria-labelledby="dn-graf-titulo">${cab}<p class="ow-vacio">Con una semana de visitas verás aquí tu gráfica.</p></section>`
   }
-  return Math.ceil(max)
-}
-
-// Barra con las esquinas de arriba redondeadas, apoyada en la base.
-function barraPath(x, y, w, h, r = 4) {
-  r = Math.min(r, w / 2, h)
-  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`
-}
-
-const ALTO_GRAFICA = 170
-const MARGEN_GRAFICA = { l: 32, r: 4, t: 10, b: 22 }
-const r1 = n => Math.round(n * 10) / 10
-
-// Lo común a las dos: rejilla, etiquetas del eje x, resaltado y zonas para tocar.
-function marcoGrafica(pts, periodo, ancho, sel, ticks, y) {
-  const m = MARGEN_GRAFICA, pw = ancho - m.l - m.r, ph = ALTO_GRAFICA - m.t - m.b
-  const banda = pw / pts.length
-  const cadaN = Math.max(1, Math.ceil(pts.length / Math.max(2, Math.floor(pw / 38))))
-  let fondo = ''
-  let frente = ''
-  if (sel != null && pts[sel]) fondo += `<rect x="${r1(m.l + banda * sel)}" y="${m.t}" width="${r1(banda)}" height="${ph}" rx="6" fill="${AZUL_RESALTE}"/>`
-  for (const t of ticks) {
-    fondo += `<line x1="${m.l}" x2="${ancho - m.r}" y1="${r1(y(t.v))}" y2="${r1(y(t.v))}" stroke="${t.base ? '#c9d6cf' : '#e6eee9'}" stroke-width="1"/>`
-    fondo += `<text x="${m.l - 6}" y="${r1(y(t.v) + 4)}" text-anchor="end">${formatoNumero(t.v)}</text>`
-  }
-  pts.forEach((p, i) => {
-    const cx = m.l + banda * i + banda / 2
-    if ((pts.length - 1 - i) % cadaN === 0) {
-      frente += `<text x="${r1(cx)}" y="${ALTO_GRAFICA - 5}" text-anchor="middle"${i === sel ? ' style="fill:var(--ow-texto);font-weight:600"' : ''}>${etiquetaCorta(periodo, p, i === pts.length - 1)}</text>`
-    }
-    // Zona para tocar: toda la columna, más grande que la barra.
-    frente += `<rect data-i="${i}" x="${r1(m.l + banda * i)}" y="0" width="${r1(banda)}" height="${ALTO_GRAFICA}" fill="transparent" style="cursor:pointer"/>`
-  })
-  return { fondo, frente, banda }
-}
-
-function svgVisitas(pts, periodo, ancho, sel, resumenTexto) {
-  const max = topeEje(Math.max(1, ...pts.map(p => Math.max(p.actual || 0, p.anterior || 0))))
-  const m = MARGEN_GRAFICA, ph = ALTO_GRAFICA - m.t - m.b
-  const y = v => m.t + ph - (v / max) * ph
-  const ticks = [{ v: 0, base: true }, { v: max / 2 }, { v: max }]
-  const { fondo, frente, banda } = marcoGrafica(pts, periodo, ancho, sel, ticks, y)
-  const bw = Math.max(3, Math.min(28, banda * 0.62))
-  const rw = Math.min(banda * 0.86, bw + 10)
-  let barras = '', rayas = ''
-  pts.forEach(p => {
-    const cx = m.l + banda * p.i + banda / 2
-    if (p.actual > 0) {
-      barras += `<path d="${barraPath(r1(cx - bw / 2), r1(y(p.actual)), r1(bw), r1(y(0) - y(p.actual)))}" fill="${AZUL_GRAFICA}"/>`
-    }
-    if (p.anterior > 0) {
-      const yy = r1(y(p.anterior))
-      // Anillo blanco para que la raya se lea encima de la barra.
-      rayas += `<line x1="${r1(cx - rw / 2)}" x2="${r1(cx + rw / 2)}" y1="${yy}" y2="${yy}" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>`
-      rayas += `<line x1="${r1(cx - rw / 2)}" x2="${r1(cx + rw / 2)}" y1="${yy}" y2="${yy}" stroke="${AZUL_ANTERIOR}" stroke-width="3" stroke-linecap="round"/>`
-    }
-  })
-  return `<svg viewBox="0 0 ${ancho} ${ALTO_GRAFICA}" height="${ALTO_GRAFICA}" role="img" aria-label="${esc(resumenTexto)}">${fondo}${barras}${rayas}${frente}</svg>`
-}
-
-function svgClientes(pts, periodo, ancho, sel, resumenTexto) {
-  const vals = pts.map(p => Number(p.clientes) || 0)
-  const min = Math.min(...vals), max = Math.max(...vals)
-  // Si crecieron poco, el eje no empieza en 0 para que se note la subida;
-  // las etiquetas siempre dicen los números reales.
-  const tramo = Math.max(1, max - min)
-  const yMin = min > tramo * 2 ? Math.max(0, Math.floor(min - tramo)) : 0
-  const yMax = Math.max(yMin + 2, Math.ceil(max + tramo * 0.15))
-  const m = MARGEN_GRAFICA, ph = ALTO_GRAFICA - m.t - m.b
-  const y = v => m.t + ph - ((v - yMin) / (yMax - yMin)) * ph
-  const ticks = [{ v: yMin, base: true }, { v: max }]
-  const { fondo, frente, banda } = marcoGrafica(pts, periodo, ancho, sel, ticks, y)
-  const xy = vals.map((v, i) => [r1(m.l + banda * i + banda / 2), r1(y(v))])
-  const linea = xy.map((c, i) => `${i ? 'L' : 'M'}${c[0]},${c[1]}`).join('')
-  let dibujo = `<path d="${linea}L${xy[xy.length - 1][0]},${r1(y(yMin))}L${xy[0][0]},${r1(y(yMin))}Z" fill="${AZUL_GRAFICA}" fill-opacity="0.08"/>`
-  dibujo += `<path d="${linea}" fill="none" stroke="${AZUL_GRAFICA}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
-  if (sel != null && xy[sel]) {
-    const [cx, cy] = xy[sel]
-    dibujo += `<line x1="${cx}" x2="${cx}" y1="${m.t}" y2="${r1(y(yMin))}" stroke="${AZUL_ANTERIOR}" stroke-width="1"/>`
-    dibujo += `<circle cx="${cx}" cy="${cy}" r="5" stroke="#ffffff" stroke-width="2" fill="${AZUL_GRAFICA}"/>`
-  }
-  return `<svg viewBox="0 0 ${ancho} ${ALTO_GRAFICA}" height="${ALTO_GRAFICA}" role="img" aria-label="${esc(resumenTexto)}">${fondo}${dibujo}${frente}</svg>`
-}
-
-// Sección completa: selector de periodo (fijo) y el cuerpo (se repinta).
-function graficaSeccionHTML(pref) {
-  return `<section class="ow-tarjeta ow-graf" id="dn-grafica" aria-label="Gráfica">
-    <div class="ow-seg" role="group" aria-label="Periodo">
-      ${Object.entries(PERIODOS_GRAFICA).map(([k, p]) => `<button type="button" data-periodo="${k}" aria-pressed="${pref.periodo === k}">${p.boton}</button>`).join('')}
-    </div>
-    <div id="dn-graf-cuerpo">${bloqueEsq(230)}</div>
-  </section>`
-}
-
-function cuerpoGraficaHTML(g, pref, ancho, sel) {
-  if (!g) return `<div style="margin-top:18px">${bloqueEsq(230)}</div>`
-  if (g.error) return `<div style="margin-top:18px"><p style="margin-bottom:12px">${g.error}</p><button class="ow-btn secundario" id="dn-graf-reintentar">Reintentar</button></div>`
-  if (!g.suficiente || !(g.puntos || []).length) return `<p class="ow-vacio" style="margin-top:18px">Tu gráfica aparece cuando tengas una semana de visitas.</p>`
-  // "Mes" compara 4 semanas: con menos de 2 semanas de datos se vería casi vacía.
-  if (pref.periodo === 'mes' && Number(g.dias_de_datos) < DIAS_PARA_MES) return `<p class="ow-vacio" style="margin-top:18px">Disponible con 2 semanas de datos.</p>`
-
-  const P = PERIODOS_GRAFICA[pref.periodo] || PERIODOS_GRAFICA.semana
-  const pts = g.puntos
-  // Sin tocar nada, la lectura muestra el tramo más reciente.
-  const s = sel != null && pts[sel] ? sel : pts.length - 1
-  const p = pts[s]
-  const esUltimo = s === pts.length - 1
-  const conmutador = `<div class="ow-seg chico" role="group" aria-label="Qué ver">
-      <button type="button" data-vista="visitas" aria-pressed="${pref.vista === 'visitas'}">Visitas</button>
-      <button type="button" data-vista="clientes" aria-pressed="${pref.vista === 'clientes'}">Clientes</button>
+  const valores = semanas.map(s => Number(s.visitas_regreso) || 0)
+  const max = Math.max(1, ...valores)
+  const etiqueta = (s, i) => i === semanas.length - 1 ? 'Esta semana' : `Desde ${formatoFechaCorta(s.desde)}`
+  const corta = (s, i) => i === semanas.length - 1 ? 'Esta sem.' : formatoFechaCorta(s.desde)
+  const columnas = semanas.map((s, i) => {
+    const v = valores[i]
+    const alto = v > 0 ? Math.max(4, Math.round(v / max * 100)) : 0
+    return `<div class="ow-barra-col">
+      <span class="ow-barra-num">${formatoNumero(v)}</span>
+      <div class="ow-barra-pista"><div class="ow-barra${i === semanas.length - 1 ? ' actual' : ''}" style="height:${alto}%"></div></div>
+      <span class="ow-barra-lbl">${corta(s, i)}</span>
     </div>`
-
-  if (pref.vista === 'clientes') {
-    const total = Number(pts[pts.length - 1].clientes) || 0
-    const nuevos = total - (Number(g.clientes_inicio) || 0)
-    const tabla = pts.map((x, i) => `<tr><th scope="row">${etiquetaLarga(pref.periodo, x, i === pts.length - 1)}</th><td>${formatoNumero(x.clientes)}</td></tr>`).join('')
-    return `
-      <div class="ow-graf-cab">
-        <div><div class="ow-graf-num">${formatoNumero(total)} <small>clientes registrados</small></div>
-          <div class="ow-graf-comp">${nuevos > 0 ? `+${formatoNumero(nuevos)} ${nuevos === 1 ? 'nuevo' : 'nuevos'} ${P.nuevos}` : `Sin clientes nuevos ${P.nuevos}`}</div></div>
-        ${conmutador}
-      </div>
-      ${svgClientes(pts, pref.periodo, ancho, s, `Clientes registrados: ${formatoNumero(total)}`)}
-      <p class="ow-graf-lectura" aria-live="polite"><strong>${etiquetaLarga(pref.periodo, p, esUltimo)}</strong> · ${formatoNumero(p.clientes)} ${Number(p.clientes) === 1 ? 'cliente' : 'clientes'} en total</p>
-      <table class="ow-oculto"><caption>Clientes registrados acumulados</caption><tbody>${tabla}</tbody></table>`
-  }
-
-  const total = Number(g.total) || 0
-  const anterior = Number(g.total_anterior) || 0
-  const texto = `Visitas, ${P.actual.toLowerCase()}: ${formatoNumero(total)}. ${P.anterior}: ${formatoNumero(anterior)}.`
-  const tabla = pts.map((x, i) => `<tr><th scope="row">${etiquetaLarga(pref.periodo, x, i === pts.length - 1)}</th><td>${formatoNumero(x.actual)}</td><td>${formatoNumero(x.anterior)}</td></tr>`).join('')
-  return `
-    <div class="ow-graf-cab">
-      <div><div class="ow-graf-num">${formatoNumero(total)} <small>${total === 1 ? 'visita' : 'visitas'}</small></div>
-        <div class="ow-graf-comp">${P.anterior}: ${formatoNumero(anterior)}</div></div>
-      ${conmutador}
-    </div>
-    <div class="ow-graf-leyenda" aria-hidden="true"><span><i></i>${P.actual}</span><span><i class="linea"></i>${P.anterior}</span></div>
-    ${svgVisitas(pts, pref.periodo, ancho, s, texto)}
-    <p class="ow-graf-lectura" aria-live="polite"><strong>${etiquetaLarga(pref.periodo, p, esUltimo)}</strong> · ${formatoNumero(p.actual)} ${Number(p.actual) === 1 ? 'visita' : 'visitas'} · ${P.anterior}: ${formatoNumero(p.anterior)}</p>
-    ${g.bajaron ? '<p class="ow-graf-nota">Las visitas bajaron frente al periodo anterior.</p>' : ''}
-    <table class="ow-oculto"><caption>Visitas por tramo</caption><thead><tr><th scope="col">Tramo</th><th scope="col">${P.actual}</th><th scope="col">${P.anterior}</th></tr></thead><tbody>${tabla}</tbody></table>`
+  }).join('')
+  const tabla = semanas.map((s, i) => `<tr><th scope="row">${etiqueta(s, i)}</th><td>${formatoNumero(valores[i])}</td></tr>`).join('')
+  return `<section class="ow-tarjeta" aria-labelledby="dn-graf-titulo">
+    ${cab}
+    <div class="ow-barras" aria-hidden="true">${columnas}</div>
+    <table class="ow-oculto"><caption>Visitas de regreso por semana</caption><tbody>${tabla}</tbody></table>
+  </section>`
 }
 
 // ── Personalización ──
@@ -4539,7 +4464,6 @@ export async function initDueno(negocioId) {
     $('dn-equipo').hidden = p !== 'equipo'
     $('dn-cab-titulo').textContent = TITULOS_PESTANA[p] || ''
     if (p === 'resumen' && estado.resumenViejo) cargarResumen()
-    else if (p === 'resumen') pintarGrafica()  // ya visible: al ancho real
     if (p === 'ajustes' && !estado.ajustesCargados) cargarAjustes()
     if (p === 'equipo' && !estado.equipoCargado) cargarEquipo()
   }
@@ -4580,81 +4504,60 @@ export async function initDueno(negocioId) {
     }
   }
 
-  // Gráfica (4D): una llamada a grafica_dueno por periodo; lo ya traído se
-  // guarda mientras el panel está abierto y se refresca con el resumen.
-  const graf = { pref: leerPrefGrafica(), datos: {}, sel: null, pedido: 0 }
+  // Resumen (Fase B): todo llega en una sola carga; el selector Mes/Semana
+  // cambia sin volver a pedir nada. "elegido": el dueño tocó el selector en
+  // esta visita al panel (si no, cada carga vuelve a decidir con la regla).
+  const res = { datos: null, periodo: 'mes', elegido: false }
 
-  function pintarGrafica() {
-    const caja = $('dn-graf-cuerpo')
-    if (!caja) return
-    // dias_de_datos llega con cualquier periodo: con menos de 14, "Mes" se ve
-    // apagado y al tocarlo explica cuándo se activa (sin pedir nada al servidor).
-    const dias = graf.datos.semana?.dias_de_datos ?? graf.datos.mes?.dias_de_datos
-    graf.mesApagado = dias != null && Number(dias) < DIAS_PARA_MES
-    $('dn-grafica').querySelectorAll('[data-periodo]').forEach(b => {
-      b.setAttribute('aria-pressed', String(b.dataset.periodo === graf.pref.periodo))
-      if (b.dataset.periodo === 'mes') b.classList.toggle('apagado', graf.mesApagado)
-    })
-    // El SVG se dibuja al ancho real (texto nítido, sin estirarse). Si la
-    // pestaña está oculta se usa un ancho estimado y se repinta al mostrarla.
-    const ancho = Math.max(240, caja.clientWidth || Math.min(608, window.innerWidth - 32) - 40)
-    caja.innerHTML = cuerpoGraficaHTML(graf.datos[graf.pref.periodo], graf.pref, ancho, graf.sel)
-    $('dn-graf-reintentar')?.addEventListener('click', () => { graf.datos[graf.pref.periodo] = null; cargarGrafica() })
-    caja.querySelectorAll('[data-vista]').forEach(b => b.addEventListener('click', () => {
-      if (graf.pref.vista === b.dataset.vista) return
-      graf.pref.vista = b.dataset.vista; guardarPrefGrafica(graf.pref); pintarGrafica()
+  function pintarPeriodo() {
+    const caja = $('dn-periodo')
+    if (!caja || !res.datos) return
+    caja.innerHTML = periodoHTML(res.datos, res.periodo)
+    caja.querySelectorAll('[data-periodo]').forEach(b => b.addEventListener('click', () => {
+      if (res.periodo === b.dataset.periodo) return
+      res.periodo = b.dataset.periodo; res.elegido = true
+      pintarPeriodo()
+      caja.querySelector(`[data-periodo="${res.periodo}"]`)?.focus()
     }))
-    const svg = caja.querySelector('svg')
-    if (svg) {
-      const elegir = e => {
-        const i = Number(e.target?.dataset?.i)
-        if (!Number.isInteger(i) || i === graf.sel) return
-        graf.sel = i; pintarGrafica()
+  }
+
+  function pintarResumen() {
+    const d = res.datos
+    if (!d) return
+    if (!res.elegido) res.periodo = periodoInicialResumen(d)
+    $('dn-resumen').innerHTML = resumenHTML(d, res.periodo)
+    pintarPeriodo()
+    $('dn-ir-cajero')?.addEventListener('click', () => navigate('cajero'))
+    $('dn-invita-ticket')?.addEventListener('click', () => {
+      mostrarPestana('ajustes')
+      // Cuando Personalización termine de cargar, el campo del ticket queda a la vista.
+      const enfocar = (intentos = 20) => {
+        const campo = $('prog-ticket')
+        if (campo) { campo.scrollIntoView({ behavior: 'smooth', block: 'center' }); campo.focus({ preventScroll: true }) }
+        else if (intentos > 0 && vigente()) setTimeout(() => enfocar(intentos - 1), 150)
       }
-      svg.addEventListener('click', elegir)
-      svg.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') elegir(e) })
-    }
-  }
-
-  async function cargarGrafica(refrescar = false) {
-    const periodo = graf.pref.periodo
-    // "Mes" apagado: ya se sabe que faltan días, no hace falta preguntar.
-    const sem = graf.datos.semana
-    if (periodo === 'mes' && sem && !sem.error && Number(sem.dias_de_datos) < DIAS_PARA_MES) {
-      graf.datos.mes = { ...sem }
-      graf.sel = null
-      pintarGrafica()
-      return
-    }
-    const hay = graf.datos[periodo] && !graf.datos[periodo].error
-    pintarGrafica()  // lo que ya había (o el esqueleto) al instante
-    if (hay && !refrescar) return
-    const pedido = ++graf.pedido
-    try {
-      const { data, error } = await supabase.rpc('grafica_dueno', { p_periodo: periodo })
-      if (!vigente() || pedido !== graf.pedido) return
-      if (error) throw error
-      graf.datos[periodo] = data || { suficiente: false }
-    } catch (e) {
-      if (!vigente() || pedido !== graf.pedido || await salirSiInactivo(e)) return
-      console.error('Error al cargar la gráfica:', e)
-      // Si ya había una gráfica, se queda; si no, aviso con "Reintentar".
-      if (!hay) graf.datos[periodo] = { error: sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar la gráfica.' }
-    }
-    graf.sel = null
-    pintarGrafica()
-  }
-
-  function initGrafica() {
-    if (!$('dn-grafica')) return
-    // Al refrescar el resumen, los otros periodos se vuelven a pedir cuando se elijan.
-    graf.datos = { [graf.pref.periodo]: graf.datos[graf.pref.periodo] }
-    $('dn-grafica').querySelectorAll('[data-periodo]').forEach(b => b.addEventListener('click', () => {
-      if (graf.pref.periodo === b.dataset.periodo) return
-      graf.pref.periodo = b.dataset.periodo; guardarPrefGrafica(graf.pref)
-      graf.sel = null; cargarGrafica()
-    }))
-    cargarGrafica(true)
+      enfocar()
+    })
+    $('dn-ver-cerca')?.addEventListener('click', () => {
+      const c = d.cerca || {}
+      const total = Number(c.total) || 0
+      const lista = c.clientes || []
+      abrirListaClientes({
+        titulo: total === 1 ? '1 cliente está a 1 visita de su premio' : `${formatoNumero(total)} clientes están a 1 visita de su premio`,
+        sub: 'Su próxima visita les da el premio',
+        clientes: lista,
+        nota: total > lista.length ? `Se muestran ${formatoNumero(lista.length)} de ${formatoNumero(total)}.` : '',
+      })
+    })
+    $('dn-ver-inactivos')?.addEventListener('click', () => {
+      const lista = d.inactivos?.clientes || []
+      abrirListaClientes({
+        titulo: 'No vienen desde hace 21 días',
+        sub: 'Los que vinieron más recientemente, primero.',
+        clientes: lista,
+        detalle: c => `Última visita hace ${formatoNumero(c.dias)} días · ${formatoNumero(c.visitas)} ${Number(c.visitas) === 1 ? 'visita' : 'visitas'}`,
+      })
+    })
   }
 
   // Visitas recientes (Fase 6). Lo ya traído se guarda para repintar al
@@ -4736,41 +4639,51 @@ export async function initDueno(negocioId) {
     pintarVisitas()
   }
 
-  let esperaAncho = null
-  const alCambiarAncho = () => {
-    if (!vigente()) { window.removeEventListener('resize', alCambiarAncho); return }
-    clearTimeout(esperaAncho)
-    esperaAncho = setTimeout(() => { if (vigente() && !$('dn-resumen').hidden) pintarGrafica() }, 150)
-  }
-  window.addEventListener('resize', alCambiarAncho)
-
+  // Resumen y "Cómo va tu equipo" (pestaña Equipo) se cargan juntos.
+  // Obligatorias: resumen_inicio y resumen_periodo (mes y semana). Las demás
+  // tarjetas, si fallan, simplemente no aparecen (el error queda en consola).
   async function cargarResumen() {
     if (estado.cargandoResumen) return
     estado.cargandoResumen = true
     // Si ya había datos, se quedan en pantalla mientras se actualizan.
     if (!estado.resumenCargado) $('dn-resumen').innerHTML = esqueletoResumen()
     try {
-      const [res, mes] = await Promise.all([supabase.rpc('resumen_dueno'), supabase.rpc('resumen_meseros')])
+      const [ini, mes, sem, cerca, inact, act, graf, meseros] = await Promise.all([
+        supabase.rpc('resumen_inicio'),
+        supabase.rpc('resumen_periodo', { p_periodo: 'mes' }),
+        supabase.rpc('resumen_periodo', { p_periodo: 'semana' }),
+        supabase.rpc('clientes_cerca_premio'),
+        supabase.rpc('clientes_inactivos'),
+        supabase.rpc('actividad_reciente', { p_limite: 5 }),
+        supabase.rpc('grafica_regresos'),
+        supabase.rpc('resumen_meseros'),
+      ])
       if (!vigente()) return
-      if (res.error) throw res.error
-      if (mes.error) throw mes.error
-      $('dn-resumen').innerHTML = resumenHTML(res.data || {}, graf.pref)
-      $('dn-eq-semana').innerHTML = equipoSemanaHTML(res.data?.clientes_registrados > 0 ? mes.data?.meseros : [])
+      for (const r of [ini, mes, sem]) if (r.error) throw r.error
+      const opcional = (r, que) => {
+        if (!r.error) return r.data
+        console.error(`Error al cargar ${que}:`, r.error)
+        return null
+      }
+      res.datos = {
+        inicio: ini.data || {},
+        mes: mes.data || {},
+        semana: sem.data || {},
+        cerca: opcional(cerca, 'los clientes cerca del premio'),
+        inactivos: opcional(inact, 'los clientes que no vienen'),
+        actividad: opcional(act, 'la actividad reciente'),
+        grafica: opcional(graf, 'la gráfica de regresos'),
+      }
+      pintarResumen()
+      if (meseros.error) {
+        console.error('Error al cargar el equipo de la semana:', meseros.error)
+        $('dn-eq-semana').innerHTML = `<h2 class="ow-titulo-sec">Cómo va tu equipo esta semana</h2><p style="margin-bottom:12px">${sinInternet(meseros.error) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar esta semana.'}</p><button class="ow-btn secundario" id="dn-reintentar-semana">Reintentar</button>`
+        $('dn-reintentar-semana')?.addEventListener('click', cargarResumen)
+      } else {
+        $('dn-eq-semana').innerHTML = equipoSemanaHTML(Number(ini.data?.clientes_registrados) > 0 ? meseros.data?.meseros : [])
+      }
       estado.resumenCargado = Date.now(); estado.resumenViejo = false
-      initGrafica()
       cargarVisitas()
-      $('dn-ver-inactivos')?.addEventListener('click', abrirInactivos)
-      $('dn-ir-cajero')?.addEventListener('click', () => navigate('cajero'))
-      $('dn-invita-ticket')?.addEventListener('click', () => {
-        mostrarPestana('ajustes')
-        // Cuando Personalización termine de cargar, el campo del ticket queda a la vista.
-        const enfocar = (intentos = 20) => {
-          const campo = $('prog-ticket')
-          if (campo) { campo.scrollIntoView({ behavior: 'smooth', block: 'center' }); campo.focus({ preventScroll: true }) }
-          else if (intentos > 0 && vigente()) setTimeout(() => enfocar(intentos - 1), 150)
-        }
-        enfocar()
-      })
     } catch (e) {
       if (!vigente() || await salirSiInactivo(e)) return
       console.error('Error al cargar el resumen:', e)

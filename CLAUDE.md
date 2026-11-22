@@ -99,6 +99,12 @@ Ni el mesero puede canjear sin el teléfono del cliente, ni el cliente sin el me
 - **Cliente:** escanea → confirmación de un toque o registro (número y primer nombre) → "¡Ganaste 1 punto!" → tarjeta con progreso y premio visible. Botón "Canjear mi premio" cuando aplica.
 - **Dueño:** 3 números (clientes registrados, visitas de la semana, clientes que regresaron). Tabla por mesero. Premios canjeados. Configuración del programa (meta, premio, límite de códigos).
 
+## Panel del dueño (estado actual)
+
+- **Resumen** (Fase B, `supabase/fase-7-resumen.sql`): usa `resumen_inicio`, `resumen_periodo` ('mes' y 'semana'), `clientes_cerca_premio`, `actividad_reciente` y `grafica_regresos`, más `clientes_inactivos`. `resumen_dueno` y `grafica_dueno` siguen en la base, pero ya no se usan desde la app.
+- **"Dejaron de venir"** se muestra en el Resumen como tarjeta informativa gris azulada ("N clientes no vienen desde hace 21 días", con su lista al tocar), solo si hay alguno. Ya no existe `MOSTRAR_INACTIVOS`. No tiene botón: la hoja (`abrirListaClientes` en `src/pages.js`) ya acepta una acción por fila para cuando llegue WhatsApp.
+- **Service worker:** `sello-v21` (`public/sw.js`). Subirlo en cada cambio importante.
+
 ## Pendiente de decidir
 
 - Negocio piloto (cafetería o barbería; Quinta Juanes no sirve) y cómo cobra hoy (nota a mano, caja o terminal portátil).
@@ -120,7 +126,7 @@ Orden sugerido; el orden real lo decide qué frene más las ventas.
 - Cómo se verifica: en la tarjeta del cliente un botón "Recibe tu premio por WhatsApp" abre un chat con el número del negocio y un mensaje prellenado con un código. Al recibir ese mensaje entrante (webhook), el servidor confirma que el número es real y que su dueño aceptó. Variante a probar: pedirlo desde el registro en vez de después del primer punto.
 - A los clientes que ya existían se les pide consentimiento y verificación con un toque la siguiente vez que abran su tarjeta.
 - Cobro: por mensaje enviado (alrededor de 4-5 pesos; el costo de Meta para marketing en México bajó en 2025-2026 y una fuente de terceros lo ubica en ~0.04 USD, así que VERIFICAR la tarifa oficial vigente de Meta, que ya publica en pesos, antes de fijar el precio). Sugerido: saldo prepago que el negocio recarga, para no fiar mensajes.
-- **"Dejaron de venir" vuelve con esta fase.** Desde la 4D la tarjeta y su lista están ocultas en el panel del dueño (`MOSTRAR_INACTIVOS = false` en `src/pages.js`): sin un mensaje para invitarlos de vuelta, la lista no le da al dueño nada que hacer. La función `clientes_inactivos()` y la hoja siguen listas; al reactivarlas, que cada cliente de la lista tenga la acción de mandarle el mensaje de 21 días.
+- **"Dejaron de venir" se vuelve accionable con esta fase.** Hoy es una tarjeta solo informativa (gris azulada) en el Resumen. Al llegar WhatsApp, pasar a `abrirListaClientes` la acción por fila para mandarle a cada cliente el mensaje de 21 días.
 
 ## 2. QR en el ticket (solo para negocios con caja integrable)
 
