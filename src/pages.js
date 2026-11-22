@@ -17,6 +17,20 @@ const DS = {
 
 function aplicarColorNegocio(color) {
   document.documentElement.style.setProperty('--negocio-color', color || DS.green800)
+  // Texto que se lee sobre ese color (panel del dueño: pestaña activa y botones).
+  document.documentElement.style.setProperty('--negocio-texto', textoSobreColor(color || DS.green800))
+}
+
+// Blanco si contrasta al menos 4.5:1 con el color; si no, casi negro.
+function textoSobreColor(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''))
+  if (!m) return '#ffffff'
+  const canal = i => {
+    const c = parseInt(m[1].slice(i, i + 2), 16) / 255
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+  }
+  const lum = 0.2126 * canal(0) + 0.7152 * canal(2) + 0.0722 * canal(4)
+  return 1.05 / (lum + 0.05) >= 4.5 ? '#ffffff' : '#1c2b25'
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -362,14 +376,18 @@ function inyectarEstilosDueno() {
       --ow-texto: #1c2b25; --ow-texto-2: #4d5f57; --ow-texto-3: #7b8a83;
       --ow-sello: ${VERDE_SELLO}; --ow-sello-suave: #e2f1ea;
       --ow-acento: var(--negocio-color, ${VERDE_SELLO});
+      --ow-acento-texto: var(--negocio-texto, #ffffff);
+      /* Colores con significado: verde = crecimiento, ámbar = oportunidad,
+         gris azulado = información. Nunca rojo para malas noticias. */
       --ow-ok: #0d7a5f; --ow-ok-suave: #e3f3ec;
       --ow-atencion: #a45a06; --ow-atencion-suave: #fdf3e1; --ow-atencion-borde: #f3d9a8;
-      --ow-mal: #b42318;
+      --ow-info: #475b70; --ow-info-suave: #eef2f6; --ow-info-borde: #d6dee8;
+      --ow-mal: #8f4d05;
       color: var(--ow-texto); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
       font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased;
     }
     .ow { min-height: 100vh; background: var(--ow-fondo); }
-    .ow.ow-sello { --ow-acento: var(--ow-sello); }
+    .ow.ow-sello { --ow-acento: var(--ow-sello); --ow-acento-texto: #ffffff; }
     .ow *:focus-visible { outline: 2px solid var(--ow-acento); outline-offset: 2px; }
 
     .ow-logo { display: inline-flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; color: var(--ow-sello); }
@@ -380,7 +398,7 @@ function inyectarEstilosDueno() {
 
     .ow-tabs { display: flex; gap: 6px; padding: 4px; margin: 4px 0 20px; background: var(--ow-superficie); border: 1px solid var(--ow-borde); border-radius: 12px; }
     .ow-tab { flex: 1; min-height: 42px; padding: 8px 10px; background: none; border: none; border-radius: 9px; font: inherit; font-size: 15px; font-weight: 600; color: var(--ow-texto-2); cursor: pointer; transition: background 0.15s, color 0.15s; }
-    .ow-tab[aria-selected="true"] { background: var(--ow-acento); color: #ffffff; }
+    .ow-tab[aria-selected="true"] { background: var(--ow-acento); color: var(--ow-acento-texto); }
     .ow [role="tabpanel"][hidden] { display: none; }
 
     .ow-tarjeta { background: var(--ow-superficie); border: 1px solid var(--ow-borde); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
@@ -432,7 +450,7 @@ function inyectarEstilosDueno() {
     .ow-persona { font-weight: 600; }
     .ow-revisar { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 6px; background: var(--ow-atencion-suave); border: 1px solid var(--ow-atencion-borde); font-size: 12px; font-weight: 600; color: var(--ow-atencion); text-align: left; }
 
-    .ow-vacio { padding: 14px 16px; border-radius: 10px; background: var(--ow-sello-suave); font-size: 14px; color: var(--ow-texto-2); }
+    .ow-vacio { padding: 14px 16px; border-radius: 10px; background: var(--ow-info-suave); font-size: 14px; color: var(--ow-info); }
     .ow-vacio-tarjeta { background: var(--ow-sello-suave); border-color: #c7e3d6; }
     .ow-pasos { list-style: none; display: flex; flex-direction: column; gap: 16px; margin: 18px 0 20px; }
     .ow-pasos li { display: flex; gap: 12px; }
@@ -441,7 +459,7 @@ function inyectarEstilosDueno() {
     .ow-paso-desc { display: block; font-size: 14px; color: var(--ow-texto-2); }
 
     .ow-btn { display: inline-flex; align-items: center; justify-content: center; width: 100%; min-height: 46px; padding: 10px 16px; border: 1px solid transparent; border-radius: 10px; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; transition: filter 0.15s, background 0.15s; }
-    .ow-btn.primario { background: var(--ow-acento); color: #ffffff; }
+    .ow-btn.primario { background: var(--ow-acento); color: var(--ow-acento-texto); }
     .ow-btn.primario:hover { filter: brightness(1.08); }
     .ow-btn.secundario { background: var(--ow-superficie); color: var(--ow-texto); border-color: var(--ow-borde); }
     .ow-btn.secundario:hover { background: var(--ow-fondo); }
@@ -566,6 +584,22 @@ function inyectarEstilosDueno() {
     .ow-origen { padding: 1px 7px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; background: #eef1ef; color: var(--ow-texto-2); }
     .ow-origen.manual { background: var(--ow-atencion-suave); color: var(--ow-atencion); }
     .ow-textarea { height: auto; min-height: 84px; padding: 10px 12px; resize: vertical; line-height: 1.4; }
+    /* Panel v2: encabezado con el negocio, menú ☰ y equipo por persona */
+    .ow-cab-id { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .ow-cab-logo { width: 40px; height: 40px; font-size: 18px; }
+    .ow-cab-textos { min-width: 0; }
+    .ow-cab-hola { font-size: 13px; color: var(--ow-texto-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ow-cab-titulo { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
+    .ow-menu-caja { position: relative; flex-shrink: 0; }
+    .ow-menu-btn { width: 44px; height: 44px; border: 1px solid var(--ow-borde); border-radius: 10px; background: var(--ow-superficie); font: inherit; font-size: 20px; line-height: 1; color: var(--ow-texto); cursor: pointer; }
+    .ow-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 200; min-width: 210px; padding: 6px; background: var(--ow-superficie); border: 1px solid var(--ow-borde); border-radius: 12px; box-shadow: 0 10px 30px rgba(16,32,26,0.14); }
+    .ow-menu button { display: block; width: 100%; min-height: 44px; padding: 8px 12px; border: none; border-radius: 8px; background: none; font: inherit; font-size: 15px; font-weight: 500; color: var(--ow-texto); text-align: left; cursor: pointer; }
+    .ow-menu button:hover, .ow-menu button:focus-visible { background: var(--ow-fondo); }
+    .ow-eq-persona { padding: 12px 0; border-bottom: 1px solid var(--ow-borde); }
+    .ow-eq-persona:first-of-type { padding-top: 0; }
+    .ow-eq-persona:last-of-type { border-bottom: none; padding-bottom: 0; }
+    .ow-eq-linea { font-size: 15px; color: var(--ow-texto-2); font-variant-numeric: tabular-nums; }
+    .ow-eq-aviso { margin-top: 8px; padding: 8px 12px; border-radius: 8px; background: var(--ow-atencion-suave); border: 1px solid var(--ow-atencion-borde); font-size: 14px; color: var(--ow-atencion); }
     .ow-resumen-visita { margin-bottom: 16px; padding: 12px 14px; border: 1px solid var(--ow-borde); border-radius: 10px; background: var(--ow-fondo); font-size: 14px; }
 
     /* 5A: panel del administrador de Sello */
@@ -594,7 +628,7 @@ function inyectarEstilosDueno() {
     .ow-graf svg text { font-family: inherit; font-size: 11px; fill: var(--ow-texto-3); font-variant-numeric: tabular-nums; }
     .ow-graf-lectura { min-height: 20px; margin-top: 6px; font-size: 13px; color: var(--ow-texto-2); font-variant-numeric: tabular-nums; }
     .ow-graf-lectura strong { color: var(--ow-texto); font-weight: 600; }
-    .ow-graf-nota { margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: var(--ow-fondo); font-size: 14px; color: var(--ow-texto-2); }
+    .ow-graf-nota { margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: var(--ow-info-suave); font-size: 14px; color: var(--ow-info); }
     .ow-graf-nota .ow-enlace { min-height: 0; padding: 0; font-size: 14px; color: var(--ow-texto); font-weight: 600; }
     .ow-oculto { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
@@ -748,13 +782,13 @@ function confirmarSalidaMesero() {
 }
 
 // Barra inferior del dueño: solo texto, sin íconos. Va dentro de .ow.
+// "Salir" vive en el menú ☰ del encabezado.
 function navBarDueno(active = 'panel') {
   return `
     <nav class="ow-nav" aria-label="Secciones">
       <button id="snav-panel"${active === 'panel' ? ' aria-current="page"' : ''}>Mi panel</button>
       <button id="snav-cajero-d">Cajero</button>
       <button id="snav-admin" hidden>Admin</button>
-      <button id="snav-salir">Salir</button>
     </nav>
   `
 }
@@ -816,7 +850,7 @@ function marcarOnboardingVisto() {
 // el negocio no tiene clientes.
 const PASOS_ONBOARDING = [
   { titulo: 'Elige tu premio y tu meta', desc: 'Por ejemplo: un café gratis a las 10 visitas. Lo cambias cuando quieras en Mi panel → Personalización.' },
-  { titulo: 'Da de alta a tus meseros', desc: 'Cada mesero entra a Sello desde su celular con su propia cuenta. Agrega sus números en Personalización → Personal para que no ganen puntos.' },
+  { titulo: 'Da de alta a tus meseros', desc: 'Cada mesero entra a Sello desde su celular con su propia cuenta. Agrega sus números en Equipo → Números del personal para que no ganen puntos.' },
   { titulo: 'Haz una visita de prueba', desc: 'Toca "Cobré una cuenta", escanea el QR con tu celular y suma tu primer punto. Así verás lo mismo que tus clientes.' },
 ]
 
@@ -1237,7 +1271,7 @@ const AYUDAS_DUENO = [
   { id: 'dueno-ventas', elemento: '#dn-ventas', texto: 'Estimado: visitas de clientes que regresaron por lo que gasta un cliente.',
     proteger: ['.ow-tabs', '.ow-nav'] },
   { id: 'dueno-ticket', elemento: '#prog-ticket', texto: 'Opcional. Con esto calculamos tus ventas estimadas.',
-    proteger: ['#btn-guardar-programa', '.ow-nav'] },
+    proteger: ['#btn-guardar-ventas', '.ow-nav'] },
   { id: 'dueno-excluidos', elemento: '#excl-tel', texto: 'Agrega tu número y el de tu equipo: no ganan puntos.',
     proteger: ['#btn-agregar-excl', '.ow-nav'] },
 ]
@@ -2912,10 +2946,11 @@ export function initLanding(negocioId) {
 // exportar (con la página pública).
 // Estilos: inyectarEstilosDueno (todo dentro de .ow).
 // ═══════════════════════════════════════════════════════════
-const PLANTILLAS_PREMIO = [
-  'Un café gratis', 'Un postre gratis', 'Un corte gratis', 'Un taco gratis',
-  '20% de descuento en tu cuenta', '10% de descuento', '2x1',
-]
+const PLANTILLAS_PREMIO = ['Un postre gratis', 'Una bebida gratis', '10% de descuento', '2×1']
+
+// Exportar la lista de clientes solo en el plan Pro (aún no existe el plan:
+// se queda en false; no depende de la base de datos).
+const PLAN_EXPORTAR_SOLO_PRO = false
 
 // Mensaje de agradecimiento de la tarjeta (4E): máx. 40 caracteres, como el servidor.
 const MENSAJE_GRACIAS_MAX = 40
@@ -2963,7 +2998,7 @@ function mensajeDueno(error) {
   if (sinInternet(error)) return 'Sin conexión. Revisa tu internet e intenta de nuevo.'
   if (m.includes('META_INVALIDA')) return 'Las visitas para el premio deben ser de 1 a 100.'
   if (m.includes('PREMIO_INVALIDO')) return 'Escribe el premio (máximo 80 letras).'
-  if (m.includes('MAX_CODIGOS_INVALIDO')) return 'Los códigos activos deben ser de 1 a 50.'
+  if (m.includes('MAX_CODIGOS_INVALIDO')) return 'Los QR abiertos deben ser de 1 a 50.'
   if (m.includes('TICKET_INVALIDO')) return `Lo que gasta un cliente debe ser de $1 a ${formatoPesos(TICKET_MAX)}, o déjalo vacío.`
   if (m.includes('COSTO_INVALIDO')) return `El costo del premio debe ser de $0 a ${formatoPesos(COSTO_MAX)}, o déjalo vacío.`
   if (m.includes('TELEFONO_INVALIDO')) return 'Escribe los 10 dígitos del número.'
@@ -3030,35 +3065,31 @@ function vacioResumenHTML() {
   </section>`
 }
 
-function meserosHTML(meseros) {
+// "Cómo va tu equipo esta semana" (pestaña Equipo): una línea por persona con
+// lo que devuelve resumen_meseros. Sumó = reclamados + manuales. El aviso
+// ámbar sale solo si revisar es verdadero; la frase se elige según las reglas
+// que marcó el servidor en "motivo".
+const AVISOS_EQUIPO = [
+  { patron: /c[oó]digos sin usar/i, texto: 'Tiene muchos códigos sin usar. Pregúntale si los clientes no alcanzan a escanear.' },
+  { patron: /a mano/i, texto: 'Suma muchas visitas a mano. Pregúntale si el QR le está fallando.' },
+  { patron: /c[oó]digo de canje/i, texto: 'Se equivocó varias veces al escribir el código de canje.' },
+]
+function equipoSemanaHTML(meseros) {
   const lista = meseros || []
+  const cab = '<h2 class="ow-titulo-sec">Cómo va tu equipo esta semana</h2>'
   if (lista.length === 0) {
-    return `<section class="ow-tarjeta">
-      <h2 class="ow-titulo-sec">Tu equipo esta semana</h2>
-      <p class="ow-vacio">Cuando tu equipo cobre con "Cobré una cuenta", aquí verás a cada mesero.</p>
-    </section>`
+    return `${cab}<p class="ow-vacio">Cuando tu equipo cobre con "Cobré una cuenta", aquí verás a cada mesero.</p>`
   }
-  const filas = lista.map(m => `<tr>
-      <td><span class="ow-persona">${esc(m.nombre)}</span>${m.rol === 'owner' ? ' <span class="ow-nota">(tú)</span>' : ''}
-        ${m.revisar ? `<span class="ow-revisar">Revisar${m.motivo ? `: ${esc(m.motivo)}` : ''}</span>` : ''}</td>
-      <td>${formatoNumero(m.generados)}</td>
-      <td>${formatoNumero(m.reclamados)}</td>
-      <td>${formatoNumero(m.manuales)}</td>
-      <td>${formatoNumero(m.bloqueos_canje)}</td>
-    </tr>`).join('')
-  return `<section class="ow-tarjeta">
-    <h2 class="ow-titulo-sec">Tu equipo esta semana</h2>
-    <div class="ow-tabla-wrap">
-      <table class="ow-tabla">
-        <thead><tr>
-          <th scope="col">Persona</th><th scope="col">Códigos</th><th scope="col">Usados</th>
-          <th scope="col">A mano</th><th scope="col">Bloqueos</th>
-        </tr></thead>
-        <tbody>${filas}</tbody>
-      </table>
-    </div>
-    <p class="ow-ayuda" style="margin-top:12px">Bloqueos: veces que escribió mal el código de canje (total, no solo esta semana).</p>
-  </section>`
+  const filas = lista.map(m => {
+    const sumo = (Number(m.reclamados) || 0) + (Number(m.manuales) || 0)
+    const manuales = Number(m.manuales) || 0
+    const avisos = m.revisar ? AVISOS_EQUIPO.filter(a => a.patron.test(m.motivo || '')) : []
+    return `<div class="ow-eq-persona">
+      <div class="ow-eq-linea"><span class="ow-persona" style="color:var(--ow-texto)">${m.rol === 'owner' ? 'Tú' : esc(m.nombre)}</span> · sumó ${formatoNumero(sumo)} ${sumo === 1 ? 'visita' : 'visitas'}${manuales > 0 ? ` · ${formatoNumero(manuales)} a mano` : ''}</div>
+      ${avisos.map(a => `<p class="ow-eq-aviso">${a.texto}</p>`).join('')}
+    </div>`
+  }).join('')
+  return `${cab}${filas}`
 }
 
 // "Dejaron de venir" (tarjeta y lista) queda oculto hasta la fase de WhatsApp:
@@ -3067,7 +3098,7 @@ function meserosHTML(meseros) {
 // siguen listos; para reactivarlo basta con poner esto en true.
 const MOSTRAR_INACTIVOS = false
 
-function resumenHTML(r, meseros, prefGrafica) {
+function resumenHTML(r, prefGrafica) {
   if (!(Number(r.clientes_registrados) > 0)) return vacioResumenHTML()
   const deCada10 = Math.round((Number(r.porcentaje_regresan) || 0) / 10)
   const entregados = Number(r.premios_entregados_semana) || 0
@@ -3088,8 +3119,7 @@ function resumenHTML(r, meseros, prefGrafica) {
       <div class="ow-cifra"><div class="ow-cifra-num positivo">${formatoNumero(entregados)}</div><div class="ow-cifra-lbl">Premios entregados esta semana</div>${r.costo_premios_semana != null && entregados > 0 ? `<div class="ow-cambio">≈ ${formatoPesos(r.costo_premios_semana)} de costo</div>` : ''}</div>
       <div class="ow-cifra"><div class="ow-cifra-num positivo">${formatoNumero(r.premios_listos)}</div><div class="ow-cifra-lbl">Listos para canjear</div></div>
     </div>
-    ${meserosHTML(meseros)}
-    <section class="ow-tarjeta" id="dn-visitas" aria-labelledby="dn-visitas-titulo">${[52, 52, 52].map(bloqueEsq).join('')}</section>`
+`
 }
 
 // Hoja con la lista de quienes dejaron de venir (primer nombre y ···4821).
@@ -3470,6 +3500,9 @@ function vistaTarjetaHTML(nd, { logoUrl = null, mensaje = '' } = {}) {
     ${MOSTRAR_PIE_SELLO ? '<div class="ow-vista-pie">Hecho con Sello</div>' : ''}`
 }
 
+// Personalización, en este orden: Tu programa, Para calcular tus ventas,
+// Tarjeta de tus clientes y Exportar. Cada sección guarda con su propio
+// botón (programa, ventas y QR abiertos usan la misma RPC guardar_programa).
 function ajustesHTML(nd, negocioId) {
   const landingUrl = `${window.location.origin}/#/landing/${negocioId}`
   const pesos = v => v == null ? '' : String(Number(v))
@@ -3480,7 +3513,7 @@ function ajustesHTML(nd, negocioId) {
     : [{ nombre: 'Tu color actual', valor: actual }, ...COLORES_TARJETA]
   return `
     <section class="ow-seccion" aria-labelledby="sec-programa">
-      <h2 class="ow-seccion-titulo" id="sec-programa">Programa</h2>
+      <h2 class="ow-seccion-titulo" id="sec-programa">Tu programa</h2>
       <p class="ow-seccion-sub">Qué gana tu cliente y cuándo.</p>
       <div class="ow-tarjeta">
         <div class="ow-campo">
@@ -3492,14 +3525,15 @@ function ajustesHTML(nd, negocioId) {
           <input type="text" id="prog-premio" class="ow-input" maxlength="80" value="${esc(nd.premio || '')}" placeholder="Ej: Un café gratis" />
           <div class="ow-chips">${PLANTILLAS_PREMIO.map(p => `<button type="button" class="ow-chip" data-premio="${esc(p)}">${esc(p)}</button>`).join('')}</div>
         </div>
-        <div class="ow-campo">
-          <label class="ow-label" for="prog-max">Códigos activos por mesero</label>
-          <input type="number" inputmode="numeric" id="prog-max" class="ow-input" min="1" max="50" value="${nd.max_codigos_activos ?? 3}" />
-          <p class="ow-ayuda">Cuántos QR puede tener abiertos un mesero a la vez. Súbelo si hay mucha gente.</p>
-        </div>
-        <div class="ow-separador"></div>
-        <p class="ow-titulo-sec" style="margin-bottom:4px">Para calcular tus ventas <span class="ow-nota">(opcional)</span></p>
-        <p class="ow-ayuda" style="margin:0 0 14px">Con esto te decimos cuánto te dejan los clientes que regresan.</p>
+        <button id="btn-guardar-programa" class="ow-btn primario">Guardar programa</button>
+        <div id="msg-programa"></div>
+      </div>
+    </section>
+
+    <section class="ow-seccion" aria-labelledby="sec-ventas">
+      <h2 class="ow-seccion-titulo" id="sec-ventas">Para calcular tus ventas <span class="ow-nota">(opcional)</span></h2>
+      <p class="ow-seccion-sub">Con esto te decimos cuánto te dejan los clientes que regresan.</p>
+      <div class="ow-tarjeta">
         <div class="ow-campo">
           <label class="ow-label" for="prog-ticket">¿Cuánto gasta en promedio un cliente?</label>
           <div class="ow-pesos"><span>$</span><input type="text" inputmode="decimal" id="prog-ticket" class="ow-input" value="${pesos(nd.ticket_promedio)}" placeholder="Ej: 120" autocomplete="off" /></div>
@@ -3508,8 +3542,8 @@ function ajustesHTML(nd, negocioId) {
           <label class="ow-label" for="prog-costo">¿Cuánto te cuesta el premio?</label>
           <div class="ow-pesos"><span>$</span><input type="text" inputmode="decimal" id="prog-costo" class="ow-input" value="${pesos(nd.costo_premio)}" placeholder="Ej: 25" autocomplete="off" /></div>
         </div>
-        <button id="btn-guardar-programa" class="ow-btn primario">Guardar programa</button>
-        <div id="msg-programa"></div>
+        <button id="btn-guardar-ventas" class="ow-btn primario">Guardar</button>
+        <div id="msg-ventas"></div>
       </div>
     </section>
 
@@ -3546,19 +3580,6 @@ function ajustesHTML(nd, negocioId) {
       </div>
     </section>
 
-    <section class="ow-seccion" aria-labelledby="sec-personal">
-      <h2 class="ow-seccion-titulo" id="sec-personal">Personal</h2>
-      <p class="ow-seccion-sub">Los números de tu equipo no suman puntos.</p>
-      <div class="ow-tarjeta">
-        <div class="ow-agregar">
-          <input type="tel" inputmode="numeric" id="excl-tel" class="ow-input" placeholder="10 dígitos" autocomplete="off" aria-label="Número de 10 dígitos" />
-          <button id="btn-agregar-excl" class="ow-btn secundario">Agregar</button>
-        </div>
-        <div id="msg-excl"></div>
-        <div id="lista-excl" style="margin-top:12px">${bloqueEsq(44)}</div>
-      </div>
-    </section>
-
     <section class="ow-seccion" aria-labelledby="sec-exportar">
       <h2 class="ow-seccion-titulo" id="sec-exportar">Exportar</h2>
       <p class="ow-seccion-sub">Tu lista de clientes y tu página para compartir.</p>
@@ -3578,21 +3599,54 @@ function ajustesHTML(nd, negocioId) {
         <div id="msg-landing"></div>
       </div>
     </section>
-
-    <section class="ow-seccion" aria-labelledby="sec-contrasena">
-      <h2 class="ow-seccion-titulo" id="sec-contrasena">Tu contraseña</h2>
-      <p class="ow-seccion-sub">Si te dieron una contraseña temporal, cámbiala aquí.</p>
-      <div class="ow-tarjeta">
-        <div class="ow-campo">
-          <label class="ow-label" for="nueva-contrasena">Nueva contraseña</label>
-          <div class="ow-clave"><input type="password" id="nueva-contrasena" class="ow-input" autocomplete="new-password" minlength="${CONTRASENA_MIN}" placeholder="Mínimo ${CONTRASENA_MIN} caracteres" /><button type="button" id="ver-nueva-contrasena" aria-label="Mostrar contraseña">Mostrar</button></div>
-        </div>
-        <button id="btn-cambiar-contrasena" class="ow-btn secundario">Cambiar contraseña</button>
-        <div id="msg-contrasena"></div>
-      </div>
-    </section>
     <p style="text-align:center"><button type="button" class="ow-enlace" id="ayuda-otra-vez">Ver ayuda otra vez</button></p>
     <div id="msg-ayuda" style="text-align:center"></div>`
+}
+
+// Pestaña Equipo, al final: Números del personal y QR abiertos por mesero.
+// Salen de los mismos datos del negocio que Personalización.
+function equipoAjustesHTML(nd) {
+  return `
+    <section class="ow-seccion" aria-labelledby="sec-personal">
+      <h2 class="ow-seccion-titulo" id="sec-personal">Números del personal</h2>
+      <p class="ow-seccion-sub">Los números de tu equipo no suman puntos.</p>
+      <div class="ow-tarjeta">
+        <div class="ow-agregar">
+          <input type="tel" inputmode="numeric" id="excl-tel" class="ow-input" placeholder="10 dígitos" autocomplete="off" aria-label="Número de 10 dígitos" />
+          <button id="btn-agregar-excl" class="ow-btn secundario">Agregar</button>
+        </div>
+        <div id="msg-excl"></div>
+        <div id="lista-excl" style="margin-top:12px">${bloqueEsq(44)}</div>
+      </div>
+    </section>
+
+    <section class="ow-seccion" aria-labelledby="sec-qr-abiertos">
+      <h2 class="ow-seccion-titulo" id="sec-qr-abiertos">QR abiertos por mesero</h2>
+      <p class="ow-seccion-sub">Cuántos QR puede tener abiertos un mesero a la vez. Súbelo si hay mucha gente.</p>
+      <div class="ow-tarjeta">
+        <div class="ow-campo">
+          <label class="ow-label" for="prog-max">QR abiertos por mesero</label>
+          <input type="number" inputmode="numeric" id="prog-max" class="ow-input" min="1" max="50" value="${nd.max_codigos_activos ?? 3}" />
+        </div>
+        <button id="btn-guardar-qr" class="ow-btn primario">Guardar</button>
+        <div id="msg-qr"></div>
+      </div>
+    </section>`
+}
+
+// Cambiar contraseña (5A), ahora desde el menú ☰. Supabase Auth la guarda;
+// nunca pasa por nuestras tablas.
+function abrirCambiarContrasena() {
+  const h = abrirHojaDueno({ titulo: 'Cambiar contraseña', sub: 'Si te dieron una contraseña temporal, cámbiala aquí.' })
+  h.cuerpo.innerHTML = `
+    <div class="ow-campo">
+      <label class="ow-label" for="nueva-contrasena">Nueva contraseña</label>
+      <div class="ow-clave"><input type="password" id="nueva-contrasena" class="ow-input" autocomplete="new-password" minlength="${CONTRASENA_MIN}" placeholder="Mínimo ${CONTRASENA_MIN} caracteres" /><button type="button" id="ver-nueva-contrasena" aria-label="Mostrar contraseña">Mostrar</button></div>
+    </div>
+    <button id="btn-cambiar-contrasena" class="ow-btn primario">Cambiar contraseña</button>
+    <div id="msg-contrasena"></div>`
+  initContrasenaDueno()
+  setTimeout(() => h.cuerpo.querySelector('#nueva-contrasena')?.focus(), 50)
 }
 
 // Sección "Tu contraseña" (5A): el dueño cambia la contraseña temporal que
@@ -3699,52 +3753,76 @@ function confirmarCambioPrograma(lineas) {
   })
 }
 
-// Sección "Programa": se guarda con la RPC guardar_programa (2G, ampliada en Fase 4).
-// guardado: la meta y el premio que ya están guardados (para saber qué cambió).
-function initProgramaDueno(guardado, alGuardar) {
+/// "Tu programa", "Para calcular tus ventas" (Personalización) y "QR abiertos
+// por mesero" (Equipo) se guardan con la MISMA RPC guardar_programa, que
+// recibe los cinco valores juntos. Cada botón manda lo que se escribió en SU
+// sección y, para lo demás, lo último guardado: así un cambio a medias en otra
+// sección no se guarda sin querer.
+// nd: los datos guardados del negocio. alGuardar({ meta, premio }) al guardar.
+function initProgramaDueno(nd, alGuardar) {
   const $ = id => document.getElementById(id)
-  const btn = $('btn-guardar-programa'); const msg = $('msg-programa')
-  if (!btn) return
-  let metaGuardada = Number(guardado?.meta) || 10
-  let premioGuardado = guardado?.premio || ''
+  const guardado = {
+    meta: Number(nd?.meta_puntos) || 10,
+    premio: nd?.premio || '',
+    max: Number(nd?.max_codigos_activos) || 3,
+    ticket: nd?.ticket_promedio == null ? null : Number(nd.ticket_promedio),
+    costo: nd?.costo_premio == null ? null : Number(nd.costo_premio),
+  }
   document.querySelectorAll('.ow-chip[data-premio]').forEach(chip => {
     chip.addEventListener('click', () => { $('prog-premio').value = chip.dataset.premio; $('prog-premio').focus() })
   })
-  btn.addEventListener('click', async () => {
-    const meta = parseInt($('prog-meta').value, 10)
-    const premio = $('prog-premio').value.trim()
-    const max = parseInt($('prog-max').value, 10)
-    const ticket = leerPesos($('prog-ticket').value)
-    const costo = leerPesos($('prog-costo').value)
+
+  let guardando = false
+  async function guardar({ btn, msg, textoBoton, textoOk, cambios, conAviso = false }) {
+    if (!btn || !msg) return
+    const d = { ...guardado, ...cambios() }
     // Las mismas reglas que revisa el servidor, para avisar antes de mandar.
     let error = ''
-    if (!(meta >= 1 && meta <= 100)) error = 'META_INVALIDA'
-    else if (!premio || premio.length > 80) error = 'PREMIO_INVALIDO'
-    else if (ticket !== null && !(ticket >= 1 && ticket <= TICKET_MAX)) error = 'TICKET_INVALIDO'
-    else if (costo !== null && !(costo >= 0 && costo <= COSTO_MAX)) error = 'COSTO_INVALIDO'
-    else if (!(max >= 1 && max <= 50)) error = 'MAX_CODIGOS_INVALIDO'
+    if (!(d.meta >= 1 && d.meta <= 100)) error = 'META_INVALIDA'
+    else if (!d.premio || d.premio.length > 80) error = 'PREMIO_INVALIDO'
+    else if (d.ticket !== null && !(d.ticket >= 1 && d.ticket <= TICKET_MAX)) error = 'TICKET_INVALIDO'
+    else if (d.costo !== null && !(d.costo >= 0 && d.costo <= COSTO_MAX)) error = 'COSTO_INVALIDO'
+    else if (!(d.max >= 1 && d.max <= 50)) error = 'MAX_CODIGOS_INVALIDO'
     if (error) { msg.innerHTML = avisoError(mensajeDueno({ message: error })); return }
-    if (btn.disabled) return
+    if (guardando || btn.disabled) return
+    guardando = true
     btn.disabled = true; btn.textContent = 'Guardando...'; msg.innerHTML = ''
     try {
-      const lineas = await lineasImpactoPrograma({ metaAntes: metaGuardada, premioAntes: premioGuardado, meta, premio })
-      if (lineas.length > 0 && !(await confirmarCambioPrograma(lineas))) return
+      // 6B: el aviso de impacto solo aplica a meta y premio.
+      if (conAviso) {
+        const lineas = await lineasImpactoPrograma({ metaAntes: guardado.meta, premioAntes: guardado.premio, meta: d.meta, premio: d.premio })
+        if (lineas.length > 0 && !(await confirmarCambioPrograma(lineas))) return
+      }
       const { error: e } = await supabase.rpc('guardar_programa', {
-        p_meta_puntos: meta, p_premio: premio, p_max_codigos_activos: max,
-        p_ticket_promedio: ticket, p_costo_premio: costo,
+        p_meta_puntos: d.meta, p_premio: d.premio, p_max_codigos_activos: d.max,
+        p_ticket_promedio: d.ticket, p_costo_premio: d.costo,
       })
       if (e) throw e
-      metaGuardada = meta; premioGuardado = premio
-      msg.innerHTML = avisoOk('Programa guardado')
+      Object.assign(guardado, d)
+      msg.innerHTML = avisoOk(textoOk)
       setTimeout(() => { if (msg.isConnected) msg.innerHTML = '' }, 2500)
-      alGuardar?.({ meta, premio })
+      alGuardar?.({ meta: d.meta, premio: d.premio })
     } catch (e) {
       console.error('Error al guardar el programa:', e)
       msg.innerHTML = avisoError(mensajeDueno(e))
     } finally {
-      btn.disabled = false; btn.textContent = 'Guardar programa'
+      guardando = false
+      btn.disabled = false; btn.textContent = textoBoton
     }
-  })
+  }
+
+  $('btn-guardar-programa')?.addEventListener('click', () => guardar({
+    btn: $('btn-guardar-programa'), msg: $('msg-programa'), textoBoton: 'Guardar programa', textoOk: 'Programa guardado', conAviso: true,
+    cambios: () => ({ meta: parseInt($('prog-meta').value, 10), premio: $('prog-premio').value.trim() }),
+  }))
+  $('btn-guardar-ventas')?.addEventListener('click', () => guardar({
+    btn: $('btn-guardar-ventas'), msg: $('msg-ventas'), textoBoton: 'Guardar', textoOk: 'Guardado',
+    cambios: () => ({ ticket: leerPesos($('prog-ticket').value), costo: leerPesos($('prog-costo').value) }),
+  }))
+  $('btn-guardar-qr')?.addEventListener('click', () => guardar({
+    btn: $('btn-guardar-qr'), msg: $('msg-qr'), textoBoton: 'Guardar', textoOk: 'Guardado',
+    cambios: () => ({ max: parseInt($('prog-max').value, 10) }),
+  }))
 }
 
 // Sección "Tarjeta de tus clientes" (4E): color, logo y mensaje de
@@ -3807,7 +3885,7 @@ function mensajeLogo(e) {
 
 // Devuelve { actualizar(cambios) } para que la vista previa siga a Programa
 // (meta y premio) sin perder el logo ni el mensaje que se están editando.
-function initTarjetaDueno(negocioId, nd) {
+function initTarjetaDueno(negocioId, nd, alGuardar) {
   const $ = id => document.getElementById(id)
   const btn = $('btn-guardar-tarjeta'); const msg = $('msg-tarjeta'); const vista = $('vista-tarjeta')
   if (!btn) return { actualizar() {} }
@@ -3928,6 +4006,7 @@ function initTarjetaDueno(negocioId, nd) {
       subido = null
       if (anterior && anterior !== estado.logoGuardado) borrarArchivo(anterior)
       aplicarColorNegocio(estado.color)
+      alGuardar?.({ color: estado.color, logo_ruta: estado.logoGuardado })
       pintar()
       msgLogo.innerHTML = ''
       msg.innerHTML = avisoOk('Tarjeta guardada')
@@ -4048,8 +4127,29 @@ function exportarCSV(clientes, negocioNombre) {
 function initAjustesExtra(negocioId, nombreNegocio) {
   const $ = id => document.getElementById(id)
 
-  $('btn-exportar-csv')?.addEventListener('click', async () => {
+  // Antes de descargar, un recordatorio de que son datos de sus clientes.
+  // Con PLAN_EXPORTAR_SOLO_PRO = true, en vez de descargar avisa que es de Pro.
+  $('btn-exportar-csv')?.addEventListener('click', () => {
+    if ($('btn-exportar-csv').disabled) return
+    if (PLAN_EXPORTAR_SOLO_PRO) {
+      const h = abrirHojaDueno({ titulo: 'Exportar es parte del plan Pro', sub: `Escríbenos a ${CORREO_CONTACTO} para activarlo.` })
+      h.cuerpo.innerHTML = '<button class="ow-btn secundario" id="exp-cerrar">Entendido</button>'
+      h.cuerpo.querySelector('#exp-cerrar').addEventListener('click', () => h.cerrar())
+      return
+    }
+    const h = abrirHojaDueno({ titulo: 'Descargar tus clientes' })
+    h.cuerpo.innerHTML = `
+      <p class="ow-sub" style="margin:0 0 20px">Estos datos son de tus clientes. Úsalos solo para tu programa de lealtad.</p>
+      <button class="ow-btn primario" id="exp-si">Continuar</button>
+      <button class="ow-btn secundario" id="exp-no">Cancelar</button>`
+    h.cuerpo.querySelector('#exp-no').addEventListener('click', () => h.cerrar())
+    h.cuerpo.querySelector('#exp-si').addEventListener('click', () => { h.cerrar(); descargarCSV() })
+    setTimeout(() => h.cuerpo.querySelector('#exp-si')?.focus(), 50)
+  })
+
+  async function descargarCSV() {
     const btn = $('btn-exportar-csv'); const msg = $('msg-exportar')
+    if (!btn) return
     btn.textContent = 'Preparando...'; btn.disabled = true
     try {
       const { data: clientes, error } = await supabase.from('clientes')
@@ -4061,7 +4161,7 @@ function initAjustesExtra(negocioId, nombreNegocio) {
       setTimeout(() => { if (msg.isConnected) msg.innerHTML = '' }, 3000)
     } catch (e) { msg.innerHTML = avisoError(mensajeDueno(e)) }
     finally { btn.textContent = 'Descargar clientes (.csv)'; btn.disabled = false }
-  })
+  }
 
   $('btn-copiar-landing')?.addEventListener('click', () => {
     const url = `${window.location.origin}/#/landing/${negocioId}`
@@ -4321,7 +4421,7 @@ function equipoHTML(eq) {
       </div>`).join('')
   return `
     <section class="ow-seccion" aria-labelledby="sec-equipo">
-      <h2 class="ow-seccion-titulo" id="sec-equipo">Tu equipo</h2>
+      <h2 class="ow-seccion-titulo" id="sec-equipo">Meseros</h2>
       <p class="ow-seccion-sub">Cada mesero entra una sola vez en su celular y su sesión se queda abierta.</p>
       <div class="ow-tarjeta">
         ${lista}
@@ -4335,6 +4435,16 @@ function equipoHTML(eq) {
 // de una visita anterior se ignoran.
 let duenoSesion = 0
 
+// Título del encabezado según la pestaña.
+const TITULOS_PESTANA = { resumen: 'Resumen', ajustes: 'Personalización', equipo: 'Equipo' }
+
+// Logo del negocio en el encabezado (o su inicial sobre su color).
+function cabLogoHTML(nombre, logoRuta) {
+  const url = urlLogo(logoRuta)
+  const ini = esc(inicialNegocio(nombre || 'Tu negocio'))
+  return `<span class="ow-vista-avatar ow-cab-logo${url ? ' con-logo' : ''}" style="--vista-color:var(--ow-acento)" aria-hidden="true">${ini}${url ? `<img src="${esc(url)}" alt="" onerror="this.parentNode.classList.remove('con-logo');this.remove()">` : ''}</span>`
+}
+
 export async function paginaDueno() {
   inyectarEstilosDueno()
   const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
@@ -4342,7 +4452,22 @@ export async function paginaDueno() {
   const pestana = leerPestanaDueno()
   return `
     <div class="ow" id="dn-root">
-      <header class="ow-cab">${logoSelloHTML(22)}<span class="ow-cab-negocio">${esc(negocio.nombre || '')}</span></header>
+      <header class="ow-cab">
+        <div class="ow-cab-id">
+          <span id="dn-cab-logo">${cabLogoHTML(negocio.nombre, negocio.logo_ruta)}</span>
+          <div class="ow-cab-textos">
+            <div class="ow-cab-hola" id="dn-cab-hola">Hola, ${esc(negocio.nombre || '')}</div>
+            <h1 class="ow-cab-titulo" id="dn-cab-titulo">${TITULOS_PESTANA[pestana]}</h1>
+          </div>
+        </div>
+        <div class="ow-menu-caja">
+          <button type="button" class="ow-menu-btn" id="dn-menu-btn" aria-label="Menú" aria-haspopup="true" aria-expanded="false" aria-controls="dn-menu">☰</button>
+          <div class="ow-menu" id="dn-menu" hidden>
+            <button type="button" id="dn-menu-contrasena">Cambiar contraseña</button>
+            <button type="button" id="dn-menu-salir">Salir</button>
+          </div>
+        </div>
+      </header>
       <main class="ow-cuerpo">
         <div class="ow-tabs" role="tablist" aria-label="Mi panel">
           <button class="ow-tab" role="tab" id="tab-resumen" aria-controls="dn-resumen" data-pestana="resumen" aria-selected="${pestana === 'resumen'}">Resumen</button>
@@ -4351,15 +4476,49 @@ export async function paginaDueno() {
         </div>
         <div id="dn-resumen" role="tabpanel" aria-labelledby="tab-resumen"${pestana === 'resumen' ? '' : ' hidden'}>${esqueletoResumen()}</div>
         <div id="dn-ajustes" role="tabpanel" aria-labelledby="tab-ajustes"${pestana === 'ajustes' ? '' : ' hidden'}>${esqueletoAjustes()}</div>
-        <div id="dn-equipo" role="tabpanel" aria-labelledby="tab-equipo"${pestana === 'equipo' ? '' : ' hidden'}>${[160, 60].map(bloqueEsq).join('')}</div>
+        <div id="dn-equipo" role="tabpanel" aria-labelledby="tab-equipo"${pestana === 'equipo' ? '' : ' hidden'}>
+          <section class="ow-tarjeta" id="dn-eq-semana">${[52, 52].map(bloqueEsq).join('')}</section>
+          <section class="ow-tarjeta" id="dn-visitas" aria-labelledby="dn-visitas-titulo">${[52, 52, 52].map(bloqueEsq).join('')}</section>
+          <div id="dn-eq-meseros">${[160].map(bloqueEsq).join('')}</div>
+          <div id="dn-eq-ajustes">${[120, 120].map(bloqueEsq).join('')}</div>
+        </div>
       </main>
       ${navBarDueno('panel')}
     </div>
   `
 }
 
+// Menú ☰ del encabezado: Cambiar contraseña y Salir.
+function initMenuDueno() {
+  const btn = document.getElementById('dn-menu-btn')
+  const menu = document.getElementById('dn-menu')
+  if (!btn || !menu) return
+  const abierto = () => !menu.hidden
+  function cerrar(devolverFoco = false) {
+    if (!abierto()) return
+    menu.hidden = true; btn.setAttribute('aria-expanded', 'false')
+    document.removeEventListener('click', alTocarFuera, true)
+    document.removeEventListener('keydown', alTeclear)
+    if (devolverFoco) btn.focus()
+  }
+  function abrir() {
+    menu.hidden = false; btn.setAttribute('aria-expanded', 'true')
+    document.addEventListener('click', alTocarFuera, true)
+    document.addEventListener('keydown', alTeclear)
+    menu.querySelector('button')?.focus()
+  }
+  const alTocarFuera = e => { if (!menu.contains(e.target) && e.target !== btn) cerrar() }
+  const alTeclear = e => { if (e.key === 'Escape') cerrar(true) }
+  btn.addEventListener('click', () => abierto() ? cerrar() : abrir())
+  document.getElementById('dn-menu-contrasena').addEventListener('click', () => { cerrar(); abrirCambiarContrasena() })
+  document.getElementById('dn-menu-salir').addEventListener('click', async () => {
+    cerrar()
+    const { logout } = await import('./auth.js'); logout()
+  })
+}
+
 export async function initDueno(negocioId) {
-  inyectarEstilosDueno(); initNavDueno()
+  inyectarEstilosDueno(); initNavDueno(); initMenuDueno()
   ayudasMotor.activar('dn-root', AYUDAS_DUENO)
   const sesion = ++duenoSesion
   const $ = id => document.getElementById(id)
@@ -4378,39 +4537,42 @@ export async function initDueno(negocioId) {
     $('dn-resumen').hidden = p !== 'resumen'
     $('dn-ajustes').hidden = p !== 'ajustes'
     $('dn-equipo').hidden = p !== 'equipo'
+    $('dn-cab-titulo').textContent = TITULOS_PESTANA[p] || ''
     if (p === 'resumen' && estado.resumenViejo) cargarResumen()
     else if (p === 'resumen') pintarGrafica()  // ya visible: al ancho real
     if (p === 'ajustes' && !estado.ajustesCargados) cargarAjustes()
     if (p === 'equipo' && !estado.equipoCargado) cargarEquipo()
   }
 
-  // Pestaña "Equipo" (Fase 4C): lista con equipo_negocio(); altas, nuevas
-  // contraseñas y bajas con la Edge Function crear-mesero.
+  // Pestaña "Equipo", sección Meseros (Fase 4C): lista con equipo_negocio();
+  // altas, nuevas contraseñas y bajas con la Edge Function crear-mesero.
+  // Las otras secciones de la pestaña: "Cómo va tu equipo" y Visitas recientes
+  // (con el resumen) y Números del personal / QR abiertos (con Personalización).
   async function cargarEquipo() {
     if (estado.cargandoEquipo) return
     estado.cargandoEquipo = true
-    if (!estado.equipoCargado) $('dn-equipo').innerHTML = [160, 60].map(bloqueEsq).join('')
+    if (!estado.equipoCargado) $('dn-eq-meseros').innerHTML = bloqueEsq(160)
     try {
       const { data, error } = await supabase.rpc('equipo_negocio')
       if (!vigente()) return
       if (error) throw error
       const meseros = data?.meseros || []
-      $('dn-equipo').innerHTML = equipoHTML(data)
+      $('dn-eq-meseros').innerHTML = equipoHTML(data)
       estado.equipoCargado = true
       const nombreNegocio = estado.nombre || (() => { try { return JSON.parse(localStorage.getItem('negocio'))?.nombre || '' } catch (e) { return '' } })()
       const buscar = id => meseros.find(m => m.usuario_id === id)
       $('eq-agregar')?.addEventListener('click', () => abrirAgregarMesero(nombreNegocio, cargarEquipo))
-      $('dn-equipo').querySelectorAll('[data-nueva]').forEach(b => b.addEventListener('click', () => {
+      $('dn-eq-meseros').querySelectorAll('[data-nueva]').forEach(b => b.addEventListener('click', () => {
         const m = buscar(b.dataset.nueva); if (m) abrirNuevaContrasena(m, nombreNegocio)
       }))
-      $('dn-equipo').querySelectorAll('[data-desactivar]').forEach(b => b.addEventListener('click', () => {
+      $('dn-eq-meseros').querySelectorAll('[data-desactivar]').forEach(b => b.addEventListener('click', () => {
         const m = buscar(b.dataset.desactivar); if (m) abrirDesactivar(m, () => { cargarEquipo(); estado.resumenViejo = true })
       }))
     } catch (e) {
       if (!vigente() || await salirSiInactivo(e)) return
       console.error('Error al cargar el equipo:', e)
       if (!estado.equipoCargado) {
-        $('dn-equipo').innerHTML = errorPanelHTML(sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar tu equipo.', 'dn-reintentar-equipo')
+        $('dn-eq-meseros').innerHTML = errorPanelHTML(sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar tu equipo.', 'dn-reintentar-equipo')
         $('dn-reintentar-equipo')?.addEventListener('click', cargarEquipo)
       }
     } finally {
@@ -4592,7 +4754,8 @@ export async function initDueno(negocioId) {
       if (!vigente()) return
       if (res.error) throw res.error
       if (mes.error) throw mes.error
-      $('dn-resumen').innerHTML = resumenHTML(res.data || {}, res.data?.clientes_registrados > 0 ? mes.data?.meseros : [], graf.pref)
+      $('dn-resumen').innerHTML = resumenHTML(res.data || {}, graf.pref)
+      $('dn-eq-semana').innerHTML = equipoSemanaHTML(res.data?.clientes_registrados > 0 ? mes.data?.meseros : [])
       estado.resumenCargado = Date.now(); estado.resumenViejo = false
       initGrafica()
       cargarVisitas()
@@ -4614,6 +4777,9 @@ export async function initDueno(negocioId) {
       if (!estado.resumenCargado) {
         $('dn-resumen').innerHTML = errorPanelHTML(sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar tus números.', 'dn-reintentar-resumen')
         $('dn-reintentar-resumen')?.addEventListener('click', cargarResumen)
+        $('dn-eq-semana').innerHTML = `<h2 class="ow-titulo-sec">Cómo va tu equipo esta semana</h2><p style="margin-bottom:12px">${sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar esta semana.'}</p><button class="ow-btn secundario" id="dn-reintentar-semana">Reintentar</button>`
+        $('dn-reintentar-semana')?.addEventListener('click', cargarResumen)
+        if (!vis.lista) cargarVisitas()  // Visitas recientes no depende del resumen
       }
     } finally {
       estado.cargandoResumen = false
@@ -4633,17 +4799,23 @@ export async function initDueno(negocioId) {
       if (nd?.activo === false) { const { logout } = await import('./auth.js'); logout('negocio'); return }
       estado.nombre = nd.nombre || ''
       aplicarColorNegocio(nd.color_principal)
+      // Encabezado: nombre y logo al día (lo guardado en el celular puede ser viejo).
+      $('dn-cab-hola').textContent = `Hola, ${estado.nombre}`
+      $('dn-cab-logo').innerHTML = cabLogoHTML(estado.nombre, nd.logo_ruta)
       $('dn-ajustes').innerHTML = ajustesHTML(nd, negocioId)
+      // Números del personal y QR abiertos viven en la pestaña Equipo.
+      $('dn-eq-ajustes').innerHTML = equipoAjustesHTML(nd)
       estado.ajustesCargados = true
       // Si cambian ticket, costo o premio, el resumen y la vista previa se ponen al día.
-      const tarjeta = initTarjetaDueno(negocioId, nd)
-      initProgramaDueno({ meta: nd.meta_puntos, premio: nd.premio }, ({ meta, premio }) => {
+      const tarjeta = initTarjetaDueno(negocioId, nd, ({ logo_ruta }) => {
+        if (vigente()) $('dn-cab-logo').innerHTML = cabLogoHTML(estado.nombre, logo_ruta)
+      })
+      initProgramaDueno(nd, ({ meta, premio }) => {
         estado.resumenViejo = true
         tarjeta.actualizar({ meta_puntos: meta, premio })
       })
       initPersonalDueno(negocioId)
       initAjustesExtra(negocioId, estado.nombre)
-      initContrasenaDueno()
       // 4F: las ayudas de primera vez vuelven a salir en este celular.
       $('ayuda-otra-vez')?.addEventListener('click', () => {
         reiniciarAyudas()
@@ -4652,8 +4824,11 @@ export async function initDueno(negocioId) {
     } catch (e) {
       if (!vigente()) return
       console.error('Error al cargar los ajustes:', e)
-      $('dn-ajustes').innerHTML = errorPanelHTML(sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar tus ajustes.', 'dn-reintentar-ajustes')
+      const texto = sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar tus ajustes.'
+      $('dn-ajustes').innerHTML = errorPanelHTML(texto, 'dn-reintentar-ajustes')
       $('dn-reintentar-ajustes')?.addEventListener('click', cargarAjustes)
+      $('dn-eq-ajustes').innerHTML = errorPanelHTML(texto, 'dn-reintentar-eq-ajustes')
+      $('dn-reintentar-eq-ajustes')?.addEventListener('click', cargarAjustes)
     } finally {
       estado.cargandoAjustes = false
     }
@@ -4665,7 +4840,8 @@ export async function initDueno(negocioId) {
   const alVolver = () => {
     if (!vigente()) { document.removeEventListener('visibilitychange', alVolver); return }
     if (document.visibilityState !== 'visible') return
-    if (!$('dn-resumen').hidden && Date.now() - estado.resumenCargado > 60 * 1000) cargarResumen()
+    // Resumen y Equipo ("Cómo va tu equipo" y Visitas recientes) se refrescan juntos.
+    if ((!$('dn-resumen').hidden || !$('dn-equipo').hidden) && Date.now() - estado.resumenCargado > 60 * 1000) cargarResumen()
   }
   document.addEventListener('visibilitychange', alVolver)
 
@@ -4782,13 +4958,13 @@ function abrirCrearNegocio(alCrear) {
         titulo: `Listo, ${datos.nombre} ya está en Sello`,
         correo: datos.correo,
         contrasena: datos.contrasena,
-        nota: 'Es una contraseña temporal. Pídele al dueño que la cambie al entrar: Mi panel → Personalización → Tu contraseña.',
+        nota: 'Es una contraseña temporal. Pídele al dueño que la cambie al entrar: Mi panel → menú ☰ → Cambiar contraseña.',
         mensaje: [
           `Hola, ya está lista la cuenta de ${datos.nombre} en Sello.`,
           `1. Abre: ${direccion}`,
           `2. Correo: ${datos.correo}`,
           `3. Contraseña temporal: ${datos.contrasena}`,
-          'Al entrar, cámbiala en Mi panel → Personalización → Tu contraseña.',
+          'Al entrar, cámbiala en Mi panel → menú ☰ → Cambiar contraseña.',
         ].join('\n'),
       })
     } catch (e) {
