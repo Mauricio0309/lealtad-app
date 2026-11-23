@@ -1,10 +1,11 @@
 // Subir esta versión en cada cambio importante: al activarse, el SW nuevo
 // borra los cachés viejos y la app se recarga sola (ver main.js).
-const CACHE_NAME = 'sello-v21'
+const CACHE_NAME = 'sello-v25'
 
 const STATIC_ASSETS = [
   '/',
   '/index.html',
+  '/fonts/pacifico.woff2',
 ]
 
 self.addEventListener('install', (event) => {

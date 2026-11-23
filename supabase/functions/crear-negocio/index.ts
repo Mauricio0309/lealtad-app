@@ -2,7 +2,12 @@
 // El administrador de Sello da de alta un negocio piloto con su cuenta de dueño.
 //
 // POST, cuerpo JSON:
-//   { nombre, correo }  → { negocio_id, nombre, correo, contrasena }
+//   { nombre, correo, telefono? }  → { negocio_id, nombre, correo, contrasena,
+//                                       telefono_dueno, telefono_aviso }
+//   telefono (opcional): WhatsApp del dueño. Se guarda con fijar_telefono_dueno
+//   (supabase/fase-9-ajustes.sql) DESPUÉS de crear el negocio. Si no es válido
+//   o falla, el negocio se crea igual: telefono_dueno = null y telefono_aviso =
+//   'TELEFONO_INVALIDO' (o 'TELEFONO_NO_GUARDADO') para que la app avise.
 // Errores: estado 4xx/5xx con { error: 'CODIGO', mensaje: 'texto en español' }.
 //
 // Seguridad:
@@ -181,7 +186,28 @@ Deno.serve(async (req: Request) => {
       throw errorAlta ?? new Error('alta_negocio sin negocio')
     }
 
-    return responder(200, { negocio_id: alta.negocio_id, nombre: alta.nombre ?? nombre, correo, contrasena })
+    // 6. WhatsApp del dueño (opcional). Nunca hace fallar el alta.
+    let telefonoDueno: string | null = null
+    let telefonoAviso: string | null = null
+    const telefono = String(cuerpo.telefono ?? '').replace(/[\u0000-\u001f\u007f-\u009f]/g, '').trim().slice(0, 40)
+    if (telefono) {
+      const { data: tel, error: errorTel } = await admin.rpc('fijar_telefono_dueno', {
+        p_negocio_id: alta.negocio_id,
+        p_telefono: telefono,
+        p_admin_id: usuario.id,
+      })
+      if (errorTel) {
+        telefonoAviso = errorTel.message?.includes('TELEFONO_INVALIDO') ? 'TELEFONO_INVALIDO' : 'TELEFONO_NO_GUARDADO'
+        if (telefonoAviso === 'TELEFONO_NO_GUARDADO') console.error('crear-negocio: no se guardó el teléfono del dueño', errorTel.code ?? '')
+      } else {
+        telefonoDueno = tel?.telefono_dueno ?? null
+      }
+    }
+
+    return responder(200, {
+      negocio_id: alta.negocio_id, nombre: alta.nombre ?? nombre, correo, contrasena,
+      telefono_dueno: telefonoDueno, telefono_aviso: telefonoAviso,
+    })
   } catch (e) {
     // Solo el tipo de error: nunca el cuerpo, correos ni contraseñas.
     const err = e as { code?: string; name?: string }
