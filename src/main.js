@@ -9,12 +9,13 @@ import {
   paginaDueno, initDueno,
   paginaBienvenida, initBienvenida,
   paginaOnboarding, initOnboarding,
-  paginaLanding, initLanding,
+  paginaPrograma, initPrograma,
   paginaPrivacidad, initPrivacidad,
   paginaTerminos, initTerminos,
   paginaReclamar, initReclamar,
   paginaTarjeta, initTarjeta,
   paginaAdmin, initAdmin,
+  salirDePantalla,
 } from './pages.js'
 
 // Actualización automática de la PWA:
@@ -138,11 +139,19 @@ async function render() {
   // Cada render tiene su turno: si cambia la ruta mientras se espera la
   // sesión, el render viejo ya no pinta nada encima del nuevo.
   const turno = ++turnoRender
+  // La pantalla anterior cierra sus temporizadores, canales y listeners.
+  salirDePantalla()
   if (page !== 'login') modoRecuperacion = false
   // Las pantallas del dueño pintan el fondo de la página (html.ow-pagina) para
   // que no se vea blanco mientras se dibujan. En las demás se quita.
   if (!['login', 'onboarding', 'bienvenida', 'dueno', 'terminos', 'admin'].includes(page)) {
     document.documentElement.classList.remove('ow-pagina')
+  }
+  // La página del programa pinta la barra del navegador con el color del
+  // negocio; las demás vuelven al color de la app.
+  if (page !== 'programa') {
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#f1f7f4')
+    document.title = 'Sello'
   }
   // (No se vacía #app aquí: cada rama pinta su vista o la pantalla de carga,
   // así nunca hay un instante en blanco entre una y otra.)
@@ -170,13 +179,16 @@ async function render() {
     return
   }
 
-  if (page === 'landing') {
+  // Página pública del programa de un negocio: /#/n/<slug> (la comparte el
+  // negocio por WhatsApp, Instagram o Google Maps).
+  if (page === 'programa') {
     mostrarCargando(app)
-    const negocioId = hash.split('/')[2] || ''
-    const html = await paginaLanding(negocioId)
+    let slug = (hash.split('/')[2] || '').split('?')[0]
+    try { slug = decodeURIComponent(slug) } catch (e) {}
+    const html = await paginaPrograma(slug)
     if (turno !== turnoRender) return
     app.innerHTML = html
-    initLanding(negocioId)
+    initPrograma()
     return
   }
 

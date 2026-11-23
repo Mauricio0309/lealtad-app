@@ -1,4 +1,3 @@
-import QRCode from 'qrcode'
 import { isAuthRetryableFetchError, isAuthSessionMissingError, isAuthWeakPasswordError } from '@supabase/supabase-js'
 import { supabase } from './supabase.js'
 import { navigate, getPage } from './router.js'
@@ -40,6 +39,23 @@ function textoSobreColor(hex) {
   }
   const lum = 0.2126 * canal(0) + 0.7152 * canal(2) + 0.0722 * canal(4)
   return 1.05 / (lum + 0.05) >= 4.5 ? '#ffffff' : '#1c2b25'
+}
+
+// ═══════════════════════════════════════════════════════════
+// AL SALIR DE UNA PANTALLA
+// Cada pantalla registra aquí cómo cerrar sus temporizadores, canales de
+// tiempo real y listeners globales; main.js llama salirDePantalla() en cada
+// cambio de ruta. (Antes se cerraban solos "en el siguiente tic", hasta 1 s
+// después, o al siguiente evento.)
+// ═══════════════════════════════════════════════════════════
+const limpiezasPantalla = new Set()
+function alSalirDePantalla(fn) { limpiezasPantalla.add(fn) }
+export function salirDePantalla() {
+  for (const fn of [...limpiezasPantalla]) {
+    limpiezasPantalla.delete(fn)
+    try { fn() } catch (e) { console.error('Error al cerrar la pantalla:', e) }
+  }
+  ayudasMotor.detener()
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -169,13 +185,6 @@ function inyectarEstilos() {
 
 
 
-    .landing-root { min-height: 100vh; background: ${DS.gray50}; }
-    .landing-hero { background: linear-gradient(145deg, ${DS.green900}, var(--negocio-color, ${DS.green800})); padding: calc(60px + env(safe-area-inset-top)) calc(24px + env(safe-area-inset-right)) 80px calc(24px + env(safe-area-inset-left)); text-align: center; position: relative; }
-    .landing-hero::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 40px; background: ${DS.gray50}; border-radius: 40px 40px 0 0; }
-    .landing-nombre { font-family: 'Sora', sans-serif; font-size: 36px; font-weight: 800; color: ${DS.white}; margin-bottom: 8px; }
-    .landing-tag { font-size: 14px; color: rgba(255,255,255,0.5); }
-    .landing-premio { background: ${DS.white}; border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; gap: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 12px; }
-    .landing-cta-btn { width: 100%; padding: 18px; background: linear-gradient(135deg, ${DS.green600}, ${DS.green700}); border: none; border-radius: 14px; color: ${DS.white}; font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 700; cursor: pointer; }
 
     .cj-main { padding: 20px 16px 8px; }
     .cj-cobre { width: 100%; min-height: 38vh; border: none; border-radius: 24px; background: var(--negocio-color, ${DS.green800}); color: var(--negocio-texto, ${DS.white}); font-family: 'Sora', sans-serif; font-size: 26px; font-weight: 800; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform 0.1s, opacity 0.15s; }
@@ -380,7 +389,7 @@ function inyectarEstilosDueno() {
   s.id = 'sello-styles-dueno'
   s.textContent = `
     html.ow-pagina, html.ow-pagina body { background: #f1f7f4; }
-    .ow, .ow-hoja-fondo, .ow-lg-fondo {
+    .ow, .ow-hoja-fondo, .ow-lg-fondo, .ow-guardar {
       --ow-fondo: #f1f7f4; --ow-superficie: #ffffff; --ow-borde: #dbe8e1;
       --ow-texto: #1c2b25; --ow-texto-2: #4d5f57; --ow-texto-3: #7b8a83;
       --ow-sello: ${VERDE_SELLO}; --ow-sello-suave: #e2f1ea;
@@ -548,29 +557,20 @@ function inyectarEstilosDueno() {
     .ow-color-libre input[type="color"].activo { box-shadow: 0 0 0 2px var(--ow-texto); }
     .ow-color-libre input[type="color"]:focus-visible { outline: 2px solid var(--ow-texto); outline-offset: 3px; }
     .ow-color-libre .ow-label { margin: 0; }
-    .ow-vista { padding: 16px; border: 1px solid var(--ow-borde); border-radius: 12px; background: #f5f6f8; margin-bottom: 20px; }
-    .ow-vista-sellotop { display: flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; color: #94a3b8; }
-    .ow-vista-marca { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-    .ow-vista-nombre { display: block; font-size: 16px; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; }
-    .ow-vista-mensaje { display: block; font-size: 13px; color: var(--ow-texto-2); overflow-wrap: anywhere; }
+    /* Vista previa: la tarjeta real del cliente en un "teléfono" (escalarVista). */
+    .ow-vista { position: relative; overflow: hidden; max-width: 340px; margin: 0 auto 20px; border-radius: 24px; background: #F5F6F8; box-shadow: 0 0 0 1px var(--ow-borde), 0 6px 20px rgba(15,23,42,0.06); }
+    .ow-vista-escala { width: ${ANCHO_TELEFONO}px; transform-origin: 0 0; }
+    .ow-vista-escala .cl-root, .ow-vista-escala .cl-wrap { min-height: 0; }
+    .ow-vista-escala .cl-root { font-size: 16px; line-height: normal; }
+    .ow-vista-escala .cl-wrap { padding: 16px 20px 24px; }
     .ow-vista-avatar { position: relative; flex-shrink: 0; width: 52px; height: 52px; border-radius: 50%; background: var(--vista-color); color: var(--vista-texto, #ffffff); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; overflow: hidden; }
     .ow-vista-avatar.con-logo { border-radius: 22%; background: #ffffff; box-shadow: inset 0 0 0 1px rgba(15,23,42,0.08); }
     .ow-vista-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #ffffff; }
-    .ow-vista-pie { text-align: center; font-size: 10px; color: #94a3b8; margin-top: 10px; }
     .ow-logo-fila { display: flex; align-items: center; gap: 14px; }
     .ow-logo-fila .ow-vista-avatar { width: 64px; height: 64px; font-size: 26px; }
     .ow-logo-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
     .ow-logo-acciones .ow-enlace { min-height: 36px; padding: 6px 0; }
     .ow-cuenta { float: right; font-weight: 500; color: var(--ow-texto-3); font-variant-numeric: tabular-nums; }
-    .ow-vista-saludo { font-size: 18px; font-weight: 700; margin-top: 12px; }
-    .ow-vista-tarjeta { margin-top: 10px; padding: 16px; border-radius: 12px; background: #ffffff; text-align: center; }
-    .ow-vista-num { font-size: 34px; font-weight: 800; color: var(--vista-tinta, var(--vista-color)); font-variant-numeric: tabular-nums; }
-    .ow-vista-meta { font-size: 18px; font-weight: 700; color: #cbd5e1; }
-    .ow-vista-sellos { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; justify-items: center; margin-top: 12px; }
-    .ow-vista-sello { width: 100%; max-width: 30px; aspect-ratio: 1; border: 1.5px dashed #cbd5e1; border-radius: 50%; }
-    .ow-vista-sello.lleno { border: none; background: var(--vista-color); }
-    .ow-vista-premio { margin-top: 10px; padding: 12px 16px; border-radius: 12px; background: #ffffff; font-size: 14px; font-weight: 600; }
-    .ow-vista-premio span { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: var(--ow-texto-3); }
 
     .ow-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 100; display: flex; background: var(--ow-superficie); border-top: 1px solid var(--ow-borde); padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
     .ow-nav button { position: relative; flex: 1; min-height: 54px; background: none; border: none; font: inherit; font-size: 14px; font-weight: 600; color: var(--ow-texto-3); cursor: pointer; }
@@ -710,6 +710,12 @@ function inyectarEstilosDueno() {
     .ow-festejo-compartir:disabled { opacity: 0.8; cursor: default; }
     .ow-festejo-despues { margin-top: 6px; min-height: 44px; padding: 8px 20px; border: none; border-radius: 10px; background: none; color: #ffffff; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
     .ow-festejo-pista { font-size: 13px; opacity: 0.8; }
+    /* Respaldo de "Compartir" sin Web Share: imagen grande para guardarla a mano. */
+    .ow-guardar { position: fixed; inset: 0; z-index: 10003; display: flex; align-items: center; justify-content: center; padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom)); background: rgba(8,20,15,0.7); }
+    .ow-guardar-hoja { width: 100%; max-width: 420px; max-height: 100%; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px; border-radius: 20px; background: #ffffff; color: #1c2b25; text-align: center; font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+    .ow-guardar-img { display: block; width: auto; max-width: 100%; max-height: 62vh; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); -webkit-touch-callout: default; user-select: auto; }
+    .ow-guardar-texto { margin: 6px 0 4px; font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .ow-guardar .ow-btn { width: 100%; }
     .ow-festejo-nota { min-height: 18px; margin-top: 6px; font-size: 13px; }
     .ow-festejo-nota:empty { display: none; }
     .ow-festejo-compartir:focus-visible, .ow-festejo-despues:focus-visible { outline: 3px solid #ffffff; outline-offset: 3px; }
@@ -1213,6 +1219,10 @@ export function initOnboarding(paso = 0) {
   let cambiando = false
   const sinMovimiento = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
+  // Se da por vista en cuanto se abre: antes solo al terminar o "Lo veo
+  // después", y quien salía a la mitad (o cerraba la app) la veía otra vez en
+  // cada inicio de sesión.
+  marcarOnboardingVisto()
   const terminar = () => { marcarOnboardingVisto(); navigate('bienvenida') }
 
   function irA(i) {
@@ -1348,8 +1358,9 @@ function mensajeCajero(error, max) {
 // ═══════════════════════════════════════════════════════════
 // AYUDAS DE PRIMERA VEZ (4F) — mesero y dueño; el cliente no tiene.
 // Una burbuja corta señala el elemento real (resaltado suave) la primera vez
-// que está a la vista. Una a la vez. "Entendido" (o tocar el elemento) la da
-// por vista; "Saltar todo" da por vistas todas las de esa pantalla.
+// que está a la vista. Una a la vez. Queda como vista en cuanto aparece (sale
+// una sola vez por usuario y celular, aunque cierre sesión). "Entendido" (o
+// tocar el elemento) la cierra; "Saltar todo" da por vistas todas las de esa pantalla.
 // Se recuerdan en localStorage POR USUARIO ("sello_ayudas_vistas:<user_id>",
 // ver clavePorUsuario); si falla, al menos no se repiten en la sesión.
 // No tapan los botones de "proteger" (se coloca arriba, abajo o más allá).
@@ -1390,6 +1401,7 @@ function reiniciarAyudas() {
   const clave = clavePorUsuario(CLAVE_AYUDAS)
   try { if (clave) localStorage.removeItem(clave) } catch (e) {}
   ayudasMotor.ocultar()
+  ayudasMotor.reanudar()
 }
 
 const AYUDAS_MESERO = [
@@ -1430,7 +1442,7 @@ function inyectarEstilosAyudas() {
 
 // Un solo motor para toda la app: cada pantalla le dice su raíz y su lista.
 const ayudasMotor = (() => {
-  let raizId = null, lista = [], tic = null, actual = null, pausaHasta = 0
+  let raizId = null, lista = [], tic = null, actual = null, pausaHasta = 0, ultima = null
   let burbuja = null, resalte = null, focoAntes = null
 
   const propios = n => n === burbuja || n === resalte || burbuja?.contains(n)
@@ -1509,6 +1521,10 @@ const ayudasMotor = (() => {
   function mostrar(ayuda, el) {
     inyectarEstilosAyudas()
     actual = ayuda
+    // Cuenta como vista en cuanto aparece (una sola vez por usuario y celular):
+    // antes solo se guardaba al tocar "Entendido", y si la persona cambiaba de
+    // pantalla o cerraba sesión con la burbuja abierta, volvía a salir al entrar.
+    marcarAyudasVistas([ayuda.id])
     resalte = document.createElement('div'); resalte.className = 'ay-resalte'; resalte.setAttribute('aria-hidden', 'true')
     burbuja = document.createElement('div')
     burbuja.className = 'ay-burbuja'
@@ -1536,13 +1552,15 @@ const ayudasMotor = (() => {
   function revisar() {
     if (!raizId || !document.getElementById(raizId)) { detener(); return }
     if (actual) {
-      // Si el elemento se fue (cambió la pantalla), se esconde sin darla por vista.
+      // Si el elemento se fue (cambió la pantalla), se esconde (ya quedó como vista).
       if (!aLaVista(document.querySelector(actual.elemento))) ocultar()
       else colocar()
       return
     }
     if (Date.now() < pausaHasta || document.visibilityState !== 'visible') return
     const vistas = leerAyudasVistas()
+    // Ya las vio todas: el revisor se apaga (antes seguía midiendo cada 0.4 s).
+    if (lista.every(a => vistas.has(a.id))) { detener(); return }
     for (const a of lista) {
       if (vistas.has(a.id)) continue
       const el = document.querySelector(a.elemento)
@@ -1557,11 +1575,16 @@ const ayudasMotor = (() => {
     activar(id, ayudas) {
       detener()
       raizId = id; lista = ayudas
+      ultima = { id, ayudas }
       pausaHasta = Date.now() + 800   // que la pantalla termine de dibujarse
       tic = setInterval(revisar, 400)
     },
     pendiente: id => !leerAyudasVistas().has(id),
     ocultar: () => ocultar(),
+    detener: () => detener(),
+    // "Ver ayuda otra vez": vuelve a revisar la pantalla actual aunque el
+    // revisor ya se hubiera apagado por haberlas visto todas.
+    reanudar() { if (ultima && document.getElementById(ultima.id)) this.activar(ultima.id, ultima.ayudas) },
   }
 })()
 
@@ -1627,8 +1650,15 @@ export function paginaCajero(rol = 'mesero') {
   `
 }
 
+// La librería del QR solo la necesita el mesero: se pide al abrir su pantalla
+// (no con la app ni al tocar el botón), así ya está lista y en caché para el
+// modo sin internet.
+let libQR = null
+const cargarLibQR = () => (libQR ||= import('qrcode').then(m => m.default || m).catch(e => { libQR = null; throw e }))
+
 export async function initCajero() {
   inyectarEstilos(); initNavCajero()
+  cargarLibQR().catch(() => {})
   const sesion = ++cajeroSesion
   const $ = id => document.getElementById(id)
   const vigente = () => sesion === cajeroSesion && !!$('cj-root')
@@ -1682,6 +1712,7 @@ export async function initCajero() {
     $('cj-qr-tiempo').textContent = formatoTiempo(restante(c))
     $('cj-qr').hidden = false
     try {
+      const QRCode = await cargarLibQR()
       await QRCode.toCanvas($('cj-qr-canvas'), url, { width: lado, margin: 2, errorCorrectionLevel: 'L' })
     } catch (e) {
       console.error('Error al dibujar el QR:', e)
@@ -1939,6 +1970,7 @@ export async function initCajero() {
   }
   document.addEventListener('visibilitychange', alVolver)
   window.addEventListener('online', alVolver)
+  alSalirDePantalla(() => limpiar())
 
   function limpiar() {
     clearInterval(reloj)
@@ -2353,6 +2385,8 @@ function avatarNegocioHTML(nombre, url) {
 
 // grande = tarjeta y pantallas de éxito: logo grande y mensaje de agradecimiento.
 // celebra = "¡Ganaste 1 punto!" y "¡Disfruta tu premio!": sus botones no se achican.
+// negocio.logoUrlVista: solo la vista previa del dueño (logo recién elegido, aún
+// sin subir, como URL local); el cliente siempre usa negocio.logo.
 function pantallaCliente({ negocio = null, cuerpo, acciones = '', gris = false, arriba = false, grande = false, celebra = false }) {
   const mensaje = grande ? String(negocio?.mensaje_gracias || '').trim() : ''
   return `
@@ -2360,7 +2394,7 @@ function pantallaCliente({ negocio = null, cuerpo, acciones = '', gris = false, 
       <div class="cl-wrap">
         <div class="cl-sello-top">${logoSVG(14, '#94a3b8')}<span>Sello</span></div>
         ${negocio?.nombre ? `<div class="cl-marca${grande ? ' grande' : ''}">
-          ${avatarNegocioHTML(negocio.nombre, urlLogo(negocio.logo))}
+          ${avatarNegocioHTML(negocio.nombre, negocio.logoUrlVista || urlLogo(negocio.logo))}
           <span class="cl-marca-texto"><span class="cl-marca-nombre">${esc(negocio.nombre)}</span>${mensaje ? `<span class="cl-marca-mensaje">${esc(mensaje)}</span>` : ''}</span>
         </div>` : ''}
         <div class="cl-cuerpo${arriba ? ' arriba' : ''}">${cuerpo}</div>
@@ -2702,12 +2736,12 @@ export async function initTarjeta(negocioId, { hayTarjeta = false, desdeMostrado
     }
   }
 
-  // Al salir de la pantalla, el listener se quita solo en el siguiente cambio.
   const alVolver = () => {
     if (!vigente()) { document.removeEventListener('visibilitychange', alVolver); return }
     if (document.visibilityState === 'visible') cargar()
   }
   document.addEventListener('visibilitychange', alVolver)
+  alSalirDePantalla(() => document.removeEventListener('visibilitychange', alVolver))
 
   cargar()
 }
@@ -2755,6 +2789,7 @@ async function iniciarCanje(negocioId, negocio, opcionesTarjeta = {}) {
     document.removeEventListener('visibilitychange', alVolver)
     mantenerPantalla(false)
   }
+  alSalirDePantalla(limpiar)
 
   function alVolver() {
     if (!vigente()) return limpiar()
@@ -3024,52 +3059,168 @@ export function initTerminos() {
   })
 }
 
-export async function paginaLanding(negocioId) {
-  inyectarEstilos()
-  try {
-    const { data: resumen, error } = await supabase.rpc('public_get_landing', { p_business_id: negocioId })
-    if (error) throw error
-    if (!resumen?.business) return `<div style="padding:40px;text-align:center">No encontrado</div>`
-    const negocio = resumen.business
-    aplicarColorNegocio(negocio.color_principal)
-    const niveles = resumen.levels || []
-    const filasNiveles = (niveles||[]).filter(n => n.premio_bienvenida).map(n => `
-      <div class="landing-premio">
-        <div style="font-size:28px">${n.emoji}</div>
-        <div>
-          <div style="font-size:15px;font-weight:600;color:${DS.gray900}">${n.nombre}</div>
-          <div style="font-size:12px;color:${DS.gray500};margin-top:2px">Desde ${n.visitas_minimas} visitas · Premio: ${n.premio_bienvenida}</div>
-        </div>
-      </div>
-    `).join('')
-    return `
-      <div class="landing-root">
-        <div class="landing-hero">
-          ${urlLogo(negocio.logo) ? `<img src="${esc(urlLogo(negocio.logo))}" alt="" style="width:80px;height:80px;border-radius:20px;object-fit:contain;background:#ffffff;margin-bottom:16px" onerror="this.style.display='none'" />` : `<div style="margin-bottom:16px">${logoSVG(40, 'rgba(255,255,255,0.5)')}</div>`}
-          <div style="font-size:40px;margin-bottom:8px">${negocio.emoji_negocio || '☕'}</div>
-          <div class="landing-nombre">${negocio.nombre}</div>
-          <div class="landing-tag">${negocio.descripcion || 'Programa de lealtad digital'}</div>
-        </div>
-        <div style="padding:24px 16px 0;margin-top:-20px;position:relative;z-index:1">
-          <h2 style="font-family:'Sora',sans-serif;font-size:18px;font-weight:800;color:${DS.gray900};margin-bottom:16px">⭐ Niveles y premios</h2>
-          ${filasNiveles || `<div class="landing-premio"><div>🏆</div><div><div style="font-size:15px;font-weight:600">Sube de nivel y gana premios</div></div></div>`}
-        </div>
-        <div style="margin:24px 16px">
-          <button class="landing-cta-btn" id="landing-registrar">Registrarme en el programa →</button>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 32px">
-          <div style="background:white;border-radius:14px;padding:20px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.04)"><div style="font-family:'Sora',sans-serif;font-size:32px;font-weight:800;color:${DS.green800}">${resumen.customer_count}</div><div style="font-size:12px;color:${DS.gray500};margin-top:4px">Clientes registrados</div></div>
-          <div style="background:white;border-radius:14px;padding:20px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.04)"><div style="font-family:'Sora',sans-serif;font-size:32px;font-weight:800;color:${DS.green800}">${resumen.visit_count}</div><div style="font-size:12px;color:${DS.gray500};margin-top:4px">Visitas registradas</div></div>
-        </div>
-        <div style="text-align:center;padding:0 16px 32px;font-size:12px;color:${DS.gray300}">Powered by <strong style="color:${DS.green800}">Sello</strong></div>
-      </div>
-    `
-  } catch (e) { return `<div style="padding:40px;text-align:center">${errMsg()}</div>` }
+// ═══════════════════════════════════════════════════════════
+// PÁGINA PÚBLICA DEL PROGRAMA (/#/n/<slug>)
+// La comparte el negocio (WhatsApp, Instagram, Google Maps) para invitar a
+// sus clientes. Una sola pantalla en el celular, sin QR. Los datos salen de
+// public_get_programa (fase 6E): { nombre, logo, color, meta, premio }, lo
+// mismo que se configura en Personalización. Nunca datos de clientes.
+// programaPublicoHTML es el componente de la página. Nada en la app enlaza
+// a esta ruta: el negocio comparte el link a mano.
+// ═══════════════════════════════════════════════════════════
+const SLUG_VALIDO = /^[a-z0-9]+(-[a-z0-9]+)*$/
+const PASOS_PROGRAMA = ['Pide tu código', 'Escanea', 'Suma']
+const ICONO_REGALO = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18"/><path d="M12 8c-1.5-3-5-4-5.5-2S9 8 12 8c3 0 6-.5 5.5-2S13.5 5 12 8z"/></svg>'
+
+// Hasta 2 letras: la primera de cada una de las dos primeras palabras.
+function inicialesNegocio(nombre) {
+  const palabras = String(nombre || '').trim().split(/\s+/).filter(p => /[\p{L}\p{N}]/u.test(p))
+  return palabras.slice(0, 2)
+    .map(p => Array.from(p).find(c => /[\p{L}\p{N}]/u.test(c)) || '')
+    .join('').toLocaleUpperCase('es-MX')
 }
 
-export function initLanding(negocioId) {
+// Colores de la página: texto blanco, o #17201E si el color es claro (y los
+// chips con sombra en vez de luz). tinta = el color usado SOBRE blanco.
+function coloresPrograma(colorGuardado) {
+  const color = esColorHex(colorGuardado) ? colorGuardado.toLowerCase() : COLOR_TARJETA_INICIAL
+  const claro = textoSobreColor(color) !== '#ffffff'
+  return {
+    color,
+    vars: `--pp-color:${color};--pp-texto:${claro ? '#17201E' : '#ffffff'};--pp-chip:${claro ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.16)'};--pp-tinta:${tintaSobreBlanco(color)}`,
+  }
+}
+
+// d = { nombre, logo (ruta) | logoUrl (URL ya armada), color, meta, premio }
+function programaPublicoHTML(d) {
+  const { vars } = coloresPrograma(d.color)
+  const nombre = String(d.nombre || '').trim() || 'Tu negocio'
+  const meta = Math.min(999, Math.max(1, Math.round(Number(d.meta)) || 10))
+  const premio = String(d.premio || '').replace(/\s+/g, ' ').trim()
+  const logoUrl = d.logoUrl !== undefined ? d.logoUrl : urlLogo(d.logo)
+  // La tarjeta es un ejemplo: 2 llenas (o menos si la meta es muy corta).
+  const ejemplo = Math.max(0, Math.min(2, meta - 1))
+  const tamPremio = premio.length > 48 ? ' muy-largo' : premio.length > 22 ? ' largo' : ''
+  const casillas = meta <= 8
+    ? `<div class="pp-casillas">${Array.from({ length: meta }, (_, i) => i === meta - 1
+        ? `<span class="pp-casilla regalo">${ICONO_REGALO}</span>`
+        : `<span class="pp-casilla${i < ejemplo ? ' llena' : ''}">${i < ejemplo ? palomitaSVG(18, 'currentColor') : ''}</span>`).join('')}</div>`
+    : '<div class="pp-barra"><span></span></div>'
+  return `
+    <main class="pp" style="${vars}">
+      <header class="pp-cab">
+        <div class="pp-logo" aria-hidden="true">
+          <span class="pp-iniciales">${esc(inicialesNegocio(nombre))}</span>
+          ${logoUrl ? `<img src="${esc(logoUrl)}" alt="" decoding="async" onerror="this.remove()">` : ''}
+        </div>
+        <h1 class="pp-nombre">${esc(nombre)}</h1>
+        <p class="pp-sub">Programa de lealtad</p>
+      </header>
+      <div class="pp-oferta">
+        <p class="pp-meta"><span class="pp-num">${formatoNumero(meta)}</span><span class="pp-visitas">${meta === 1 ? 'visita' : 'visitas'}</span></p>
+        ${premio ? `<p class="pp-premio${tamPremio}">= ${esc(premio)}</p>` : ''}
+      </div>
+      <section class="pp-tarjeta" aria-label="Ejemplo de tarjeta: ${ejemplo} de ${meta} visitas">
+        <div class="pp-tarjeta-cab" aria-hidden="true"><span class="pp-tarjeta-lbl">Así se ve tu tarjeta</span><span class="pp-tarjeta-cuenta">${ejemplo} de ${formatoNumero(meta)}</span></div>
+        <div aria-hidden="true">${casillas}</div>
+      </section>
+      <ol class="pp-pasos" aria-label="Cómo funciona">
+        ${PASOS_PROGRAMA.map((p, i) => `<li>${i + 1} · ${p}</li>`).join('')}
+      </ol>
+      <footer class="pp-pie">
+        <div class="pp-pie-fila"><span>Gratis · Sin descargar nada</span><span class="pp-hecho">Hecho con Sello</span></div>
+        <button type="button" class="pp-aviso">Aviso de privacidad</button>
+      </footer>
+    </main>`
+}
+
+function inyectarEstilosPrograma() {
+  if (document.getElementById('sello-styles-programa')) return
+  const sistema = "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto, sans-serif"
+  const titulos = `'Bricolage Grotesque', 'Inter', ${sistema}`
+  const s = document.createElement('style')
+  s.id = 'sello-styles-programa'
+  s.textContent = `
+    @font-face {
+      font-family: 'Bricolage Grotesque'; font-style: normal; font-weight: 700 800; font-display: swap;
+      src: url('${import.meta.env.BASE_URL}fonts/bricolage-grotesque.woff2') format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    .pp-pagina { display: flex; min-height: 100vh; min-height: 100dvh; }
+    .pp { box-sizing: border-box; flex: 1; width: 100%; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column;
+      padding: calc(40px + env(safe-area-inset-top)) calc(24px + env(safe-area-inset-right)) calc(26px + env(safe-area-inset-bottom)) calc(24px + env(safe-area-inset-left));
+      background: var(--pp-color); color: var(--pp-texto); font-family: 'Inter', ${sistema}; font-size: 16px; line-height: 1.4; text-align: left; -webkit-font-smoothing: antialiased; }
+    .pp *, .pp *::before, .pp *::after { box-sizing: border-box; }
+    .pp-cab { display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .pp-logo { position: relative; flex-shrink: 0; width: 112px; height: 112px; border-radius: 50%; background: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.18); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .pp-logo img { position: absolute; inset: 0; width: 100%; height: 100%; padding: 16px; object-fit: contain; background: #ffffff; }
+    .pp-iniciales { font-family: ${titulos}; font-size: 38px; font-weight: 800; letter-spacing: -1px; color: var(--pp-tinta); }
+    .pp-nombre { margin: 12px 0 0; font-size: 18px; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+    .pp-sub { margin: 2px 0 0; font-size: 13px; opacity: 0.85; }
+    .pp-oferta { margin-top: 26px; text-align: center; }
+    .pp-meta { margin: 0; display: flex; align-items: baseline; justify-content: center; gap: 10px; font-family: ${titulos}; line-height: 0.85; }
+    .pp-num { font-size: 130px; font-weight: 800; letter-spacing: -5px; font-variant-numeric: tabular-nums; }
+    .pp-visitas { font-size: 30px; font-weight: 700; }
+    .pp-premio { margin: 12px 0 0; font-family: ${titulos}; font-size: 38px; font-weight: 800; line-height: 1.08; letter-spacing: -0.5px; text-wrap: balance; overflow-wrap: anywhere; }
+    .pp-premio.largo { font-size: 30px; }
+    .pp-premio.muy-largo { font-size: 24px; }
+    .pp-tarjeta { margin-top: 24px; padding: 18px; border-radius: 22px; background: #ffffff; color: #17201E; box-shadow: 0 10px 30px rgba(0,0,0,0.12); }
+    .pp-tarjeta-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 14px; }
+    .pp-tarjeta-lbl { color: #5B6661; }
+    .pp-tarjeta-cuenta { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .pp-casillas { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
+    .pp-casilla { flex: 1 1 0; max-width: 64px; height: 44px; border-radius: 12px; border: 2px dashed #C9CFCC; display: flex; align-items: center; justify-content: center; }
+    .pp-casilla.llena { border: none; background: var(--pp-color); color: var(--pp-texto); }
+    .pp-casilla.regalo { border: 2px solid var(--pp-tinta); color: var(--pp-tinta); }
+    .pp-barra { margin-top: 14px; height: 12px; border-radius: 999px; background: #E6EAE8; overflow: hidden; }
+    .pp-barra span { display: block; width: 25%; height: 100%; border-radius: inherit; background: var(--pp-color); }
+    .pp-pasos { list-style: none; margin: 16px 0 0; padding: 0; display: flex; gap: 6px; }
+    .pp-pasos li { flex: 1 1 auto; min-width: 0; padding: 10px 8px; border-radius: 14px; background: var(--pp-chip); font-size: 14px; font-weight: 600; line-height: 1.25; text-align: center; }
+    @media (min-width: 360px) { .pp-pasos li { white-space: nowrap; } }
+    .pp-pie { margin-top: auto; padding-top: 20px; font-size: 13px; }
+    .pp-pie-fila { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .pp-hecho { opacity: 0.75; white-space: nowrap; }
+    .pp-aviso { display: block; min-height: 44px; margin: 2px auto -10px; padding: 0 12px; border: none; background: none; color: inherit; font: inherit; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; opacity: 0.85; cursor: pointer; }
+    .pp-aviso:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 6px; }
+    @media (min-width: 600px) {
+      .pp-pagina { align-items: center; justify-content: center; padding: 32px 16px; background: #F2F4F3 !important; }
+      .pp-pagina .pp { flex: 0 1 420px; min-height: 0; border-radius: 28px; padding: 40px 24px 26px; box-shadow: 0 20px 60px rgba(15,23,42,0.12); }
+    }
+  `
+  document.head.appendChild(s)
+}
+
+const paginaProgramaNoEncontrada = () => pantallaEstadoCliente({
+  icono: '🔍', titulo: 'No encontramos este negocio', sub: 'Revisa el link que te compartieron.',
+})
+
+export async function paginaPrograma(slug) {
   inyectarEstilos()
-  document.getElementById('landing-registrar')?.addEventListener('click', () => navigate('negocio', negocioId))
+  inyectarEstilosPrograma()
+  aplicarColorNegocio(AZUL_RESPALDO)
+  const limpio = String(slug || '').trim().toLowerCase()
+  if (!SLUG_VALIDO.test(limpio) || limpio.length > 40) return paginaProgramaNoEncontrada()
+  try {
+    const { data, error } = await supabase.rpc('public_get_programa', { p_slug: limpio })
+    if (error) throw error
+    if (!data?.nombre) return paginaProgramaNoEncontrada()
+    const { color } = coloresPrograma(data.color)
+    aplicarColorNegocio(color)
+    document.title = `${data.nombre} · Programa de lealtad`
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color)
+    return `<div class="pp-pagina" style="background:${color}">${programaPublicoHTML(data)}</div>`
+  } catch (e) {
+    console.error('Error al cargar el programa:', e)
+    return pantallaEstadoCliente({
+      icono: '📶',
+      titulo: sinInternet(e) ? 'Necesitas internet para ver esta página' : 'No pudimos abrir esta página',
+      sub: 'Revisa tu señal e intenta de nuevo.',
+    })
+  }
+}
+
+export function initPrograma() {
+  document.querySelector('.pp-pagina .pp-aviso')?.addEventListener('click', abrirAvisoPrivacidadCliente)
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3420,17 +3571,33 @@ function abrirActividad() {
 // La pestaña completa, en este orden: tarjeta principal, Logros, el periodo,
 // (lugar de la gráfica "Clientes en tu programa", pendiente de la fase 9),
 // tarjetas de acción y Lo que está pasando. Sin clientes: los pasos para empezar.
+// Cada parte que llega por separado va en su "ranura" (dn-r-*), para pintarla
+// en cuanto llega su dato sin redibujar lo demás (ver ranuraResumenHTML).
 function resumenHTML(d, periodo) {
   const inicio = d?.inicio || {}
-  if (!(Number(inicio.clientes_registrados) > 0)) return vacioResumenHTML() + logrosFilaHTML(d)
+  if (!(Number(inicio.clientes_registrados) > 0)) return vacioResumenHTML() + `<div id="dn-r-logros">${ranuraResumenHTML('logros', d)}</div>`
   return `
-    ${principalInicioHTML(inicio, d.grafica?.alta)}
-    ${logrosFilaHTML(d)}
+    <div id="dn-r-principal">${ranuraResumenHTML('principal', d)}</div>
+    <div id="dn-r-logros">${ranuraResumenHTML('logros', d)}</div>
     <section class="ow-periodo" id="dn-periodo" aria-labelledby="dn-periodo-titulo">${periodoHTML(d, periodo)}</section>
     <div id="dn-grafica-clientes"></div>
-    ${cercaPremioHTML(d.cerca)}
-    ${inactivosHTML(d.inactivos)}
-    ${actividadHTML(d.actividad)}`
+    <div id="dn-r-cerca">${ranuraResumenHTML('cerca', d)}</div>
+    <div id="dn-r-inactivos">${ranuraResumenHTML('inactivos', d)}</div>
+    <div id="dn-r-actividad">${ranuraResumenHTML('actividad', d)}</div>`
+}
+
+// undefined = todavía no llega (esqueleto, o nada si la tarjeta es de las que
+// solo aparecen a veces); null = falló (no se muestra).
+function ranuraResumenHTML(clave, d) {
+  const espera = v => v === undefined
+  switch (clave) {
+    case 'principal': return principalInicioHTML(d.inicio || {}, d.grafica?.alta)
+    case 'logros': return espera(d.logros) ? bloqueEsq(64) : logrosFilaHTML(d)
+    case 'cerca': return espera(d.cerca) ? '' : cercaPremioHTML(d.cerca)
+    case 'inactivos': return espera(d.inactivos) ? '' : inactivosHTML(d.inactivos)
+    case 'actividad': return espera(d.actividad) ? bloqueEsq(150) : actividadHTML(d.actividad)
+    default: return ''
+  }
 }
 
 // ── "Clientes en tu programa" (grafica_clientes, fase 9) ──
@@ -3668,37 +3835,44 @@ const fechaLocal = d => { const [a, m, dd] = String(d).split('-').map(Number); r
 const sinPunto = t => t.replace(/\./g, '')
 
 // ── Personalización ──
-// Vista previa de la tarjeta del cliente (mismo acomodo que su pantalla).
+// Vista previa: la tarjeta REAL del cliente (tarjetaClienteHTML, la misma
+// función que pinta su pantalla) con un cliente de ejemplo, dibujada al ancho
+// de un teléfono (ANCHO_TELEFONO) y escalada para caber (escalarVista).
 // logoUrl: el logo guardado o el recién elegido (aún sin guardar); mensaje: el
 // que está escrito en el campo. Así la vista previa cambia en vivo.
+// Es inerte: sus botones no se pueden tocar ni enfocar.
+const ANCHO_TELEFONO = 390
 function vistaTarjetaHTML(nd, { logoUrl = null, mensaje = '' } = {}) {
   const meta = Math.max(1, Number(nd.meta_puntos) || 10)
-  const puntos = Math.min(meta - 1, Math.max(1, Math.round(meta * 0.4)))
-  const sellos = meta <= 10
-    ? `<div class="ow-vista-sellos">${Array.from({ length: meta }, (_, i) => `<span class="ow-vista-sello${i < puntos ? ' lleno' : ''}"></span>`).join('')}</div>`
-    : ''
-  const ini = esc(inicialNegocio(nd.nombre || 'Tu negocio'))
-  const avatar = logoUrl
-    ? `<span class="ow-vista-avatar con-logo">${ini}<img src="${esc(logoUrl)}" alt="" onerror="this.parentNode.classList.remove('con-logo');this.remove()"></span>`
-    : `<span class="ow-vista-avatar">${ini}</span>`
-  const msj = String(mensaje || '').trim()
-  return `
-    <div class="ow-vista-sellotop">${logoSVG(11, '#94a3b8')}<span>Sello</span></div>
-    <div class="ow-vista-marca">${avatar}<span><span class="ow-vista-nombre">${esc(nd.nombre || 'Tu negocio')}</span>${msj ? `<span class="ow-vista-mensaje">${esc(msj)}</span>` : ''}</span></div>
-    <div class="ow-vista-saludo">Buenas tardes, Ana</div>
-    <div class="ow-vista-tarjeta">
-      <div><span class="ow-vista-num">${puntos}</span><span class="ow-vista-meta"> / ${meta}</span></div>
-      ${sellos}
-    </div>
-    <div class="ow-vista-premio"><span>TU PREMIO</span>${esc(nd.premio || 'Tu premio')}</div>
-    ${MOSTRAR_PIE_SELLO ? '<div class="ow-vista-pie">Hecho con Sello</div>' : ''}`
+  const puntos = Math.max(1, Math.min(meta - 1, Math.round(meta * 0.4)))
+  const negocio = {
+    nombre: String(nd.nombre || '').trim() || 'Tu negocio',
+    logo: null,
+    logoUrlVista: logoUrl,
+    mensaje_gracias: mensaje,
+  }
+  const ejemplo = { nombre: 'Ana', meta, puntos, premio: nd.premio || '', premio_listo: false }
+  return `<div class="ow-vista-escala" inert>${tarjetaClienteHTML(negocio, ejemplo)}</div>`
+}
+
+// Las variables de color que usa la tarjeta del cliente, solo dentro de la vista previa.
+const varsTarjeta = c => `--negocio-color:${c};--negocio-texto:${textoSobreColor(c)};--negocio-tinta:${tintaSobreBlanco(c)}`
+
+// Escala la tarjeta al ancho disponible (nunca más grande que un teléfono) y le
+// da a la caja la altura ya escalada. Con la pestaña oculta (ancho 0) no hace
+// nada: el ResizeObserver la vuelve a llamar al mostrarse.
+function escalarVista(vista) {
+  const interior = vista.querySelector('.ow-vista-escala')
+  if (!interior || !vista.clientWidth) return
+  const escala = Math.min(1, vista.clientWidth / ANCHO_TELEFONO)
+  interior.style.transform = `scale(${escala})`
+  vista.style.height = `${Math.ceil(interior.offsetHeight * escala)}px`
 }
 
 // Personalización, en este orden: Tu programa, Para calcular tus ventas,
 // Tarjeta de tus clientes y Exportar. Cada sección guarda con su propio
 // botón (programa, ventas y QR abiertos usan la misma RPC guardar_programa).
-function ajustesHTML(nd, negocioId) {
-  const landingUrl = `${window.location.origin}/#/landing/${negocioId}`
+function ajustesHTML(nd) {
   const pesos = v => v == null ? '' : String(Number(v))
   const actual = esColorHex(nd.color_principal) ? nd.color_principal.toLowerCase() : COLOR_TARJETA_INICIAL
   // Si el color guardado no está en la paleta, se ofrece como "Tu color actual".
@@ -3772,7 +3946,7 @@ function ajustesHTML(nd, negocioId) {
           <div class="ow-chips">${PLANTILLAS_MENSAJE.map(p => `<button type="button" class="ow-chip" data-mensaje="${esc(p)}">${esc(p)}</button>`).join('')}</div>
         </div>
         <div class="ow-label">Vista previa</div>
-        <div class="ow-vista" id="vista-tarjeta" style="${varsVista(actual)}">${vistaTarjetaHTML(nd, { logoUrl: urlLogo(nd.logo_ruta), mensaje: nd.mensaje_gracias })}</div>
+        <div class="ow-vista" id="vista-tarjeta" style="${varsTarjeta(actual)}">${vistaTarjetaHTML(nd, { logoUrl: urlLogo(nd.logo_ruta), mensaje: nd.mensaje_gracias })}</div>
         <button id="btn-guardar-tarjeta" class="ow-btn primario">Guardar</button>
         <div id="msg-tarjeta"></div>
       </div>
@@ -3780,21 +3954,10 @@ function ajustesHTML(nd, negocioId) {
 
     <section class="ow-seccion" aria-labelledby="sec-exportar">
       <h2 class="ow-seccion-titulo" id="sec-exportar">Exportar</h2>
-      <p class="ow-seccion-sub">Tu lista de clientes y tu página para compartir.</p>
+      <p class="ow-seccion-sub">Tu lista de clientes, para abrirla en Excel.</p>
       <div class="ow-tarjeta">
-        <p class="ow-label">Lista de clientes</p>
-        <p class="ow-ayuda" style="margin:0 0 12px">Para abrirla en Excel.</p>
         <button id="btn-exportar-csv" class="ow-btn secundario">Descargar clientes (.csv)</button>
         <div id="msg-exportar"></div>
-        <div class="ow-separador"></div>
-        <p class="ow-label">Tu página pública</p>
-        <p class="ow-ayuda" style="margin:0 0 12px">Compártela en Instagram o WhatsApp.</p>
-        <div class="ow-url">${esc(landingUrl)}</div>
-        <div class="ow-botones">
-          <button id="btn-copiar-landing" class="ow-btn secundario">Copiar link</button>
-          <button id="btn-ver-landing" class="ow-btn secundario">Ver página</button>
-        </div>
-        <div id="msg-landing"></div>
       </div>
     </section>
     <p style="text-align:center"><button type="button" class="ow-enlace" id="ayuda-otra-vez">Ver ayuda otra vez</button></p>
@@ -4102,14 +4265,43 @@ function initTarjetaDueno(negocioId, nd, alGuardar) {
   }
 
   const logoVisible = () => estado.logoNuevoUrl || (estado.quitar ? null : urlLogo(estado.logoGuardado))
+  // La vista previa se reescala si cambia el ancho del panel o el alto de la
+  // tarjeta (mensaje largo, fuentes que terminan de cargar).
+  const observador = typeof ResizeObserver === 'function'
+    ? new ResizeObserver(() => { if (vista.isConnected) escalarVista(vista); else observador.disconnect() })
+    : null
+  // El color NO redibuja la tarjeta: solo cambia sus variables CSS (la tarjeta
+  // del cliente usa --negocio-*). pintar() redibuja el contenido (logo,
+  // mensaje, meta, premio); al escribir el mensaje espera un momento
+  // (pintarPronto) para no redibujar en cada letra.
+  function ponerColor() {
+    const c = estado.color
+    const vars = [['color', c], ['texto', textoSobreColor(c)], ['tinta', tintaSobreBlanco(c)]]
+    vars.forEach(([k, v]) => vista.style.setProperty(`--negocio-${k}`, v))
+    const avatar = muestra.firstElementChild
+    if (avatar) vars.forEach(([k, v]) => avatar.style.setProperty(`--vista-${k}`, v))
+  }
+  let tPintar = 0
+  function pintarPronto() {
+    cuenta.textContent = `${mensaje.value.length}/${MENSAJE_GRACIAS_MAX}`
+    clearTimeout(tPintar)
+    tPintar = setTimeout(() => { if (vista.isConnected) pintar() }, 150)
+  }
   function pintar() {
+    clearTimeout(tPintar)
     const url = logoVisible()
-    vista.style.cssText = varsVista(estado.color)
     vista.innerHTML = vistaTarjetaHTML(datos, { logoUrl: url, mensaje: mensaje.value })
+    escalarVista(vista)
+    if (observador) {
+      observador.disconnect()
+      observador.observe(vista)
+      observador.observe(vista.querySelector('.ow-vista-escala'))
+    }
     muestra.innerHTML = `<span class="ow-vista-avatar${url ? ' con-logo' : ''}" style="${varsVista(estado.color)}">${esc(inicialNegocio(datos.nombre || 'Tu negocio'))}${url ? `<img src="${esc(url)}" alt="" onerror="this.parentNode.classList.remove('con-logo');this.remove()">` : ''}</span>`
     elegirLogo.textContent = url ? 'Cambiar logo' : 'Subir logo'
     quitarLogo.hidden = !url
     cuenta.textContent = `${mensaje.value.length}/${MENSAJE_GRACIAS_MAX}`
+    ponerColor()
   }
   const cambiado = () => { msg.innerHTML = '' }
 
@@ -4119,7 +4311,7 @@ function initTarjetaDueno(negocioId, nd, alGuardar) {
     libre?.classList.remove('activo')
     opciones.forEach(o => { o.setAttribute('aria-checked', String(o === boton)); o.tabIndex = o === boton ? 0 : -1 })
     estado.color = boton.dataset.color
-    cambiado(); pintar()
+    cambiado(); ponerColor()
     if (enfocar) boton.focus()
   }
   opciones.forEach(o => { o.tabIndex = o.getAttribute('aria-checked') === 'true' ? 0 : -1 })
@@ -4142,11 +4334,11 @@ function initTarjetaDueno(negocioId, nd, alGuardar) {
     opciones.forEach((o, i) => { o.setAttribute('aria-checked', 'false'); o.tabIndex = i === 0 ? 0 : -1 })
     libre.classList.add('activo')
     estado.color = v
-    cambiado(); pintar()
+    cambiado(); ponerColor()
   })
 
   // Mensaje: en vivo en la vista previa, con plantillas.
-  mensaje.addEventListener('input', () => { cambiado(); pintar() })
+  mensaje.addEventListener('input', () => { cambiado(); pintarPronto() })
   document.querySelectorAll('.ow-chip[data-mensaje]').forEach(chip => chip.addEventListener('click', () => {
     mensaje.value = chip.dataset.mensaje.slice(0, MENSAJE_GRACIAS_MAX); cambiado(); pintar(); mensaje.focus()
   }))
@@ -4375,16 +4567,6 @@ function initAjustesExtra(negocioId, nombreNegocio) {
     finally { btn.textContent = 'Descargar clientes (.csv)'; btn.disabled = false }
   }
 
-  $('btn-copiar-landing')?.addEventListener('click', () => {
-    const url = `${window.location.origin}/#/landing/${negocioId}`
-    const msg = $('msg-landing')
-    navigator.clipboard.writeText(url).then(() => {
-      if (!msg) return
-      msg.innerHTML = avisoOk('Link copiado')
-      setTimeout(() => { if (msg.isConnected) msg.innerHTML = '' }, 2000)
-    }).catch(() => { if (msg) msg.innerHTML = avisoError('No se pudo copiar. Selecciona el link y cópialo a mano.') })
-  })
-  $('btn-ver-landing')?.addEventListener('click', () => navigate('landing', negocioId))
 }
 
 // ── EQUIPO (Fase 4C) ──
@@ -4739,230 +4921,30 @@ function logrosFilaHTML(d) {
   </button>`
 }
 
-// ── Imagen para compartir (1080×1920) ──
-function cargarImagenCORS(url) {
-  return new Promise(resolve => {
-    if (!url) { resolve(null); return }
-    const img = new Image()
-    const listo = v => { resolve(v); img.onload = img.onerror = null }
-    img.crossOrigin = 'anonymous'
-    img.onload = () => listo(img.naturalWidth > 0 ? img : null)
-    img.onerror = () => listo(null)
-    setTimeout(() => listo(null), 5000)
-    img.src = url
-  })
-}
-
-function lineasTexto(ctx, texto, ancho) {
-  const lineas = []
-  let linea = ''
-  for (const p of String(texto).split(/\s+/).filter(Boolean)) {
-    const prueba = linea ? `${linea} ${p}` : p
-    if (linea && ctx.measureText(prueba).width > ancho) { lineas.push(linea); linea = p } else linea = prueba
-  }
-  if (linea) lineas.push(linea)
-  return lineas
-}
-
-// La frase de abajo usa UNA sola tipografía: Pacifico (public/fonts, la guarda
-// el service worker). Se registra con FontFace (no depende de qué hoja de
-// estilos esté puesta) y se espera document.fonts.load antes de dibujar.
-// Devuelve true si quedó lista; si no (sin red y sin caché), la imagen se
-// dibuja con la del sistema y NO se guarda, para reintentar la próxima vez.
-const FUENTE_FRASE = 'Pacifico'
-// (document.fonts.check no sirve para saberlo: da true con una familia que no
-// existe. Por eso se revisa el estado de NUESTRA FontFace.)
-let caraPacifico = null
-let cargaPacifico = null
-function esperarFuenteFrase() {
-  if (!cargaPacifico) {
-    cargaPacifico = (async () => {
-      try {
-        if (!document.fonts?.load || typeof FontFace !== 'function') return false
-        if (!caraPacifico) {
-          caraPacifico = new FontFace(FUENTE_FRASE, `url('${import.meta.env.BASE_URL}fonts/pacifico.woff2') format('woff2')`)
-          document.fonts.add(caraPacifico)
-        }
-        await Promise.race([
-          caraPacifico.load().then(() => document.fonts.load(`64px '${FUENTE_FRASE}'`, FRASE_IMAGEN_LOGRO)),
-          new Promise(r => setTimeout(r, 4000)),
-        ])
-        return caraPacifico.status === 'loaded'
-      } catch (e) { return false }
-    })()
-    cargaPacifico.then(ok => {
-      if (ok) return
-      // Para reintentar luego, una FontFace nueva (una que falló no se recupera).
-      if (caraPacifico?.status === 'error') { document.fonts.delete(caraPacifico); caraPacifico = null }
-      cargaPacifico = null
+// Módulo de imagen/confeti/compartir, cargado una sola vez y solo al celebrar.
+// Si no carga (sin red), la celebración se muestra igual sin imagen.
+let mediaLogros = null
+function cargarMediaLogros() {
+  if (!mediaLogros) {
+    mediaLogros = import('./logros-media.js').catch(e => {
+      console.error('No se pudo cargar la imagen del logro:', e)
+      mediaLogros = null
+      return null
     })
   }
-  return cargaPacifico
-}
-
-// LA función que dibuja la imagen (1080×1920). La usan la celebración nueva,
-// su miniatura ("Vista previa") y la celebración que se abre desde Logros.
-// Se genera una vez por logro y negocio; la miniatura y "Compartir" usan
-// ese mismo blob.
-const imagenesLogro = new Map()
-async function imagenLogro(l, marca) {
-  const color = esColorHex(marca.color) ? marca.color : DS.green800
-  const tinta = textoSobreColor(color)   // oscuro si el color del negocio es claro
-  const logoUrl = urlLogo(marca.logoRuta)
-  const texto = textoImagenLogro(l, marca.nombre)
-  const clave = [l.tipo, l.hito, color, logoUrl || '', texto].join('|')
-  if (imagenesLogro.has(clave)) return imagenesLogro.get(clave)
-
-  const W = 1080, H = 1920, M = 100, ANCHO = W - 2 * M, CX = W / 2
-  const lienzo = document.createElement('canvas')
-  lienzo.width = W; lienzo.height = H
-  const ctx = lienzo.getContext('2d')
-  if (!ctx) return null
-  const sistema = "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto, sans-serif"
-  const [logo, fuenteLista] = await Promise.all([cargarImagenCORS(logoUrl), esperarFuenteFrase()])
-
-  function dibujar(conLogo) {
-    ctx.clearRect(0, 0, W, H)
-    ctx.fillStyle = color
-    ctx.fillRect(0, 0, W, H)
-    ctx.textAlign = 'center'
-    ctx.fillStyle = tinta
-
-    // Medidas de cada bloque para centrar todo en vertical.
-    const numero = formatoNumero(l.hito)
-    let tamNum = 360
-    ctx.font = `800 ${tamNum}px ${sistema}`
-    while (ctx.measureText(numero).width > ANCHO && tamNum > 160) { tamNum -= 10; ctx.font = `800 ${tamNum}px ${sistema}` }
-    const mNum = ctx.measureText(numero)
-    const subeNum = mNum.actualBoundingBoxAscent || tamNum * 0.72
-    const altoNum = subeNum + (mNum.actualBoundingBoxDescent || 0)
-
-    let tamTxt = 76
-    ctx.font = `700 ${tamTxt}px ${sistema}`
-    let lineasTxt = lineasTexto(ctx, texto, ANCHO)
-    if (lineasTxt.length > 3) { tamTxt = 62; ctx.font = `700 ${tamTxt}px ${sistema}`; lineasTxt = lineasTexto(ctx, texto, ANCHO) }
-    const lhTxt = Math.round(tamTxt * 1.2)
-
-    const tamFrase = 64
-    ctx.font = `${tamFrase}px '${FUENTE_FRASE}', ${sistema}`
-    const lineasFrase = lineasTexto(ctx, FRASE_IMAGEN_LOGRO, ANCHO)
-    const lhFrase = Math.round(tamFrase * 1.3)
-
-    const LOGO = 340
-    const hayLogo = conLogo && !!logo
-    const total = (hayLogo ? LOGO + 80 : 0) + altoNum + 56 + lineasTxt.length * lhTxt + 70 + lineasFrase.length * lhFrase
-    const arriba = M, abajo = H - M - 90   // deja lugar a "Hecho con Sello"
-    let y = arriba + Math.max(0, (abajo - arriba - total) / 2)
-
-    // Logo en círculo blanco, completo (contain) dentro del cuadrado inscrito.
-    if (hayLogo) {
-      ctx.fillStyle = '#ffffff'
-      ctx.beginPath(); ctx.arc(CX, y + LOGO / 2, LOGO / 2, 0, Math.PI * 2); ctx.fill()
-      const caja = Math.floor(LOGO / Math.SQRT2) - 8
-      const escala = Math.min(caja / logo.naturalWidth, caja / logo.naturalHeight)
-      const w = logo.naturalWidth * escala, h = logo.naturalHeight * escala
-      ctx.drawImage(logo, CX - w / 2, y + (LOGO - h) / 2, w, h)
-      ctx.fillStyle = tinta
-      y += LOGO + 80
-    }
-
-    ctx.textBaseline = 'alphabetic'
-    ctx.font = `800 ${tamNum}px ${sistema}`
-    ctx.fillText(numero, CX, y + subeNum)
-    y += altoNum + 56
-
-    ctx.textBaseline = 'top'
-    ctx.font = `700 ${tamTxt}px ${sistema}`
-    for (const linea of lineasTxt) { ctx.fillText(linea, CX, y); y += lhTxt }
-    y += 70
-
-    ctx.font = `${tamFrase}px '${FUENTE_FRASE}', ${sistema}`
-    for (const linea of lineasFrase) { ctx.fillText(linea, CX, y); y += lhFrase }
-
-    // Marca Sello: pequeña y discreta.
-    ctx.globalAlpha = 0.9
-    ctx.textBaseline = 'alphabetic'
-    ctx.font = `500 32px ${sistema}`
-    ctx.fillText('Hecho con Sello', CX, H - M)
-    ctx.globalAlpha = 1
-  }
-
-  dibujar(true)
-  let blob = await lienzoABlob(lienzo, 'image/png')
-  // Si el logo no deja exportar el lienzo (CORS), se dibuja sin logo y sigue.
-  if (!blob && logo) { dibujar(false); blob = await lienzoABlob(lienzo, 'image/png') }
-  if (blob && fuenteLista) imagenesLogro.set(clave, blob)
-  return blob
-}
-
-function descargarBlob(blob, nombreArchivo) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url; a.download = nombreArchivo; a.style.display = 'none'
-  document.body.appendChild(a); a.click(); a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 10000)
-}
-
-// Comparte el PNG con la hoja del sistema (dentro del toque: el blob ya está
-// listo); si el navegador no puede, lo descarga. → 'compartido' | 'cancelado' | 'descargado'
-async function compartirPNG(blob, nombreArchivo, titulo) {
-  try {
-    const archivo = new File([blob], nombreArchivo, { type: 'image/png' })
-    if (navigator.canShare?.({ files: [archivo] })) {
-      try { await navigator.share({ files: [archivo], title: titulo }); return 'compartido' }
-      catch (e) { if (e?.name === 'AbortError') return 'cancelado' }
-    }
-  } catch (e) { /* sin File o sin Web Share: se descarga */ }
-  descargarBlob(blob, nombreArchivo)
-  return 'descargado'
-}
-
-// Confeti ligero (~2 s) en un canvas propio, sin librerías.
-function lanzarConfeti(lienzo) {
-  const ctx = lienzo.getContext('2d')
-  if (!ctx) return () => {}
-  const dpr = Math.min(2, window.devicePixelRatio || 1)
-  const w = lienzo.clientWidth, h = lienzo.clientHeight
-  lienzo.width = Math.round(w * dpr); lienzo.height = Math.round(h * dpr)
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  const colores = ['#ffffff', '#FFD166', '#F4845F']
-  const piezas = Array.from({ length: 110 }, (_, i) => ({
-    x: w / 2 + (Math.random() - 0.5) * Math.min(w, 420) * 0.4,
-    y: h * 0.3,
-    vx: (Math.random() - 0.5) * 10,
-    vy: -(Math.random() * 9 + 5),
-    g: 0.2 + Math.random() * 0.1,
-    rot: Math.random() * Math.PI * 2,
-    vr: (Math.random() - 0.5) * 0.3,
-    an: 6 + Math.random() * 5,
-    al: 9 + Math.random() * 7,
-    c: colores[i % colores.length],
-  }))
-  const inicio = performance.now(), DURA = 2000
-  let raf = 0
-  function cuadro(t) {
-    const p = (t - inicio) / DURA
-    ctx.clearRect(0, 0, w, h)
-    if (p >= 1) return
-    ctx.globalAlpha = p > 0.7 ? (1 - p) / 0.3 : 1
-    for (const q of piezas) {
-      q.vy += q.g; q.vx *= 0.99; q.x += q.vx; q.y += q.vy; q.rot += q.vr
-      ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.rot)
-      ctx.fillStyle = q.c; ctx.fillRect(-q.an / 2, -q.al / 2, q.an, q.al)
-      ctx.restore()
-    }
-    raf = requestAnimationFrame(cuadro)
-  }
-  raf = requestAnimationFrame(cuadro)
-  return () => { cancelAnimationFrame(raf); ctx.clearRect(0, 0, w, h) }
+  return mediaLogros
 }
 
 // Celebración de un logro. Nuevo: "NUEVO LOGRO", confeti y se marca como
 // celebrado en cuanto aparece (si cierra la app ahí, no vuelve a salir).
 // reabrir (desde Logros): "LOGRO DESBLOQUEADO" con la fecha, "Cerrar" y sin
 // llamar a celebrar_logro. Resuelve al cerrarse.
+// Solo "clientes registrados" se comparte (vista previa y "Compartir");
+// "clientes que regresaron" solo trae "Seguir" (o "Cerrar" al reabrir).
+const logroCompartible = l => l?.tipo === 'clientes'
 function mostrarCelebracion(l, marca, { reabrir = false, fecha = null } = {}) {
   inyectarEstilosDueno()
+  const compartible = logroCompartible(l)
   return new Promise(resolve => {
     const titulo = tituloCelebracion(l, marca.nombre)
     const numero = formatoNumero(l.hito)
@@ -4979,14 +4961,15 @@ function mostrarCelebracion(l, marca, { reabrir = false, fecha = null } = {}) {
           <p class="ow-festejo-etiqueta">${esc(etiqueta)}</p>
           <div class="ow-festejo-num${numero.length >= 4 ? ' largo' : ''}" aria-hidden="true">${esc(numero)}</div>
           <h2 class="ow-festejo-titulo" id="ow-festejo-titulo">${esc(titulo)}</h2>
-          <p class="ow-festejo-sub">Compártelo con tus clientes. Que se enteren de que tu programa está creciendo.</p>
+          ${compartible ? `<p class="ow-festejo-sub">Compártelo con tus clientes. Que se enteren de que tu programa está creciendo.</p>
           <figure class="ow-festejo-vista">
             <div class="ow-festejo-mini cargando"><img alt="Imagen para compartir: ${esc(numero)} ${esc(textoImagenLogro(l, marca.nombre))}" hidden></div>
             <figcaption>Vista previa</figcaption>
           </figure>
           <button type="button" class="ow-festejo-compartir" data-festejo="compartir" disabled>${ICONO_COMPARTIR}<span>Compartir</span></button>
           <p class="ow-festejo-nota" role="status" aria-live="polite"></p>
-          <button type="button" class="ow-festejo-despues" data-festejo="cerrar">${reabrir ? 'Cerrar' : 'Después'}</button>
+          <button type="button" class="ow-festejo-despues" data-festejo="cerrar">${reabrir ? 'Cerrar' : 'Después'}</button>`
+          : `<button type="button" class="ow-festejo-compartir" data-festejo="cerrar">${reabrir ? 'Cerrar' : 'Seguir'}</button>`}
           ${reabrir ? '' : '<p class="ow-festejo-pista">Lo encuentras luego en Logros</p>'}
         </div>
       </div>
@@ -4997,30 +4980,38 @@ function mostrarCelebracion(l, marca, { reabrir = false, fecha = null } = {}) {
 
     if (!reabrir) supabase.rpc('celebrar_logro', { p_tipo: l.tipo, p_hito: Number(l.hito) }).then(() => {}, () => {})
 
-    const btnCompartir = el.querySelector('[data-festejo="compartir"]')
     const btnCerrar = el.querySelector('[data-festejo="cerrar"]')
-    const nota = el.querySelector('.ow-festejo-nota')
-    const mini = el.querySelector('.ow-festejo-mini')
-    const img = mini.querySelector('img')
     const confeti = el.querySelector('.ow-confeti')
-    const pararConfeti = confeti ? lanzarConfeti(confeti) : () => {}
+    let urlMini = null, abierta = true
+    // Imagen, confeti y Compartir viven en src/logros-media.js: se cargan
+    // aquí, al abrir, y no con la app.
+    const media = cargarMediaLogros()
+    let pararConfeti = () => {}
+    if (confeti) media.then(m => { if (abierta && m) pararConfeti = m.lanzarConfeti(confeti) })
 
-    // La imagen se genera UNA vez al abrir; la miniatura es esa misma imagen.
-    let blob = null, urlMini = null, abierta = true
-    imagenLogro(l, marca).then(b => b, () => null).then(b => {
-      if (!abierta) return
-      blob = b
-      mini.classList.remove('cargando')
-      if (b) { urlMini = URL.createObjectURL(b); img.src = urlMini; img.hidden = false }
-      btnCompartir.disabled = false
-    })
-
-    btnCompartir.addEventListener('click', async () => {
-      if (btnCompartir.disabled) return
-      nota.textContent = ''
-      if (!blob) { nota.textContent = 'No pudimos preparar la imagen.'; return }
-      if (await compartirPNG(blob, nombreArchivoLogro(l), titulo) === 'descargado' && abierta) nota.textContent = 'Imagen guardada en tus descargas.'
-    })
+    if (compartible) {
+      const btnCompartir = el.querySelector('[data-festejo="compartir"]')
+      const nota = el.querySelector('.ow-festejo-nota')
+      const mini = el.querySelector('.ow-festejo-mini')
+      const img = mini.querySelector('img')
+      // La imagen se genera UNA vez al abrir; la miniatura es esa misma imagen.
+      // "Compartir" se habilita hasta tener el módulo y el blob, para que el
+      // toque llame a navigator.share sin esperar nada antes.
+      let blob = null, m = null
+      media.then(mod => { m = mod; return mod ? mod.imagenLogro(l, marca) : null }).then(b => b, () => null).then(b => {
+        if (!abierta) return
+        blob = b
+        mini.classList.remove('cargando')
+        if (b) { urlMini = URL.createObjectURL(b); img.src = urlMini; img.hidden = false }
+        btnCompartir.disabled = false
+      })
+      btnCompartir.addEventListener('click', () => {
+        if (btnCompartir.disabled) return
+        nota.textContent = ''
+        if (!blob || !m) { nota.textContent = 'No pudimos preparar la imagen.'; return }
+        m.compartirPNG(blob, nombreArchivoLogro(l), titulo)
+      })
+    }
 
     function cerrar() {
       if (!abierta) return
@@ -5035,6 +5026,7 @@ function mostrarCelebracion(l, marca, { reabrir = false, fecha = null } = {}) {
       resolve()
     }
     function alTeclear(e) {
+      if (document.querySelector('.ow-guardar')) return   // la hoja de guardar atiende sus teclas
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cerrar() }
       else if (e.key === 'Tab') {   // el foco se queda dentro
         const botones = [...el.querySelectorAll('button:not([disabled])')]
@@ -5053,7 +5045,8 @@ function mostrarCelebracion(l, marca, { reabrir = false, fecha = null } = {}) {
 
 // Pantalla "Logros": los 14 hitos en cuadrícula. Las desbloqueadas abren su
 // celebración (sin volver a marcarla).
-function abrirLogros(marca) {
+// previos(): { lista, inicio } ya traídos por el Resumen (o null para pedirlos).
+function abrirLogros(marca, previos = null) {
   inyectarEstilosDueno()
   const focoAntes = document.activeElement
   const fondo = document.createElement('div')
@@ -5091,8 +5084,8 @@ function abrirLogros(marca) {
   btnCerrar.focus({ preventScroll: true })
 
   const tarjetaHTML = (t, i) => t.ok
-    ? `<button type="button" class="ow-lg-t ok" data-logro="${i}" aria-label="${esc(tituloCelebracion(t, marca().nombre))}. Ver y compartir">
-        <span class="ow-lg-icono">${ICONO_COMPARTIR}</span>
+    ? `<button type="button" class="ow-lg-t ok" data-logro="${i}" aria-label="${esc(tituloCelebracion(t, marca().nombre))}. ${logroCompartible(t) ? 'Ver y compartir' : 'Ver'}">
+        ${logroCompartible(t) ? `<span class="ow-lg-icono">${ICONO_COMPARTIR}</span>` : ''}
         <span class="ow-lg-cifra"><span class="ow-lg-num">${formatoNumero(t.hito)}</span>${ICONO_MEDALLA}</span>
         <span class="ow-lg-nombre">${tituloCortoLogro(t)}</span>
         <span class="ow-lg-pie"><span class="ow-lg-fecha">${t.fecha ? esc(formatoFechaLogro(t.fecha)) : 'Desbloqueado'}</span></span>
@@ -5110,7 +5103,10 @@ function abrirLogros(marca) {
     cuenta.textContent = ''
     cuerpo.innerHTML = `<div class="ow-lg-grid">${'<div class="ow-lg-esq"></div>'.repeat(6)}</div>`
     try {
-      const [lista, inicio] = await Promise.all([supabase.rpc('logros_lista'), supabase.rpc('resumen_inicio')])
+      const p = previos?.()
+      const [lista, inicio] = p
+        ? [{ data: p.lista }, { data: p.inicio }]
+        : await Promise.all([supabase.rpc('logros_lista'), supabase.rpc('resumen_inicio')])
       if (!fondo.isConnected) return
       if (lista.error) throw lista.error
       if (inicio.error) throw inicio.error
@@ -5231,7 +5227,7 @@ export async function initDueno(negocioId) {
   const sesion = ++duenoSesion
   const $ = id => document.getElementById(id)
   const vigente = () => sesion === duenoSesion && !!$('dn-root')
-  const estado = { resumenCargado: 0, resumenViejo: false, ajustesCargados: false, cargandoResumen: false, cargandoAjustes: false, equipoCargado: false, cargandoEquipo: false, nombre: '', logoRuta: undefined, logrosRevisados: false }
+  const estado = { resumenCargado: 0, resumenViejo: false, ajustesCargados: false, cargandoResumen: false, cargandoAjustes: false, equipoCargado: false, cargandoEquipo: false, equipoAbierto: false, logrosViejos: false, nombre: '', logoRuta: undefined, logrosRevisados: false }
 
   // Nombre, color y logo del negocio para los logros: lo más reciente de
   // Personalización y, mientras carga, lo guardado al entrar.
@@ -5244,7 +5240,7 @@ export async function initDueno(negocioId) {
       logoRuta: estado.logoRuta !== undefined ? estado.logoRuta : local.logo_ruta,
     }
   }
-  initMenuDueno({ alLogros: () => abrirLogros(marca) })
+  initMenuDueno({ alLogros: () => abrirLogros(marca, logrosPrevios) })
 
   // Los logros esperan a Personalización (trae color y logo), máx. 5 s.
   let avisarMarca
@@ -5267,6 +5263,7 @@ export async function initDueno(negocioId) {
       for (const l of cola) {
         if (!vigente()) return
         await mostrarCelebracion(l, marca())
+        estado.logrosViejos = true
       }
     } catch (e) { /* en silencio */ }
   }
@@ -5288,19 +5285,20 @@ export async function initDueno(negocioId) {
     if (p === 'resumen' && estado.resumenCargado) revisarLogros()
     if (p === 'resumen') pintarGrafica()   // se dibuja al ancho real
     if (p === 'ajustes' && !estado.ajustesCargados) cargarAjustes()
-    if (p === 'equipo' && !estado.equipoCargado) cargarEquipo()
+    if (p === 'equipo') abrirEquipo()
   }
 
   // Pestaña "Equipo", sección Meseros (Fase 4C): lista con equipo_negocio();
   // altas, nuevas contraseñas y bajas con la Edge Function crear-mesero.
   // Las otras secciones de la pestaña: "Cómo va tu equipo" y Visitas recientes
   // (con el resumen) y Números del personal / QR abiertos (con Personalización).
-  async function cargarEquipo() {
+  // nuevo = true (o el evento de "Reintentar"): pide otra vez, sin compartir.
+  async function cargarEquipo(nuevo = false) {
     if (estado.cargandoEquipo) return
     estado.cargandoEquipo = true
     if (!estado.equipoCargado) $('dn-eq-meseros').innerHTML = bloqueEsq(160)
     try {
-      const { data, error } = await supabase.rpc('equipo_negocio')
+      const { data, error } = await pedirEquipo(!!nuevo)
       if (!vigente()) return
       if (error) throw error
       const meseros = data?.meseros || []
@@ -5308,12 +5306,12 @@ export async function initDueno(negocioId) {
       estado.equipoCargado = true
       const nombreNegocio = estado.nombre || (() => { try { return JSON.parse(localStorage.getItem('negocio'))?.nombre || '' } catch (e) { return '' } })()
       const buscar = id => meseros.find(m => m.usuario_id === id)
-      $('eq-agregar')?.addEventListener('click', () => abrirAgregarMesero(nombreNegocio, cargarEquipo))
+      $('eq-agregar')?.addEventListener('click', () => abrirAgregarMesero(nombreNegocio, () => cargarEquipo(true)))
       $('dn-eq-meseros').querySelectorAll('[data-nueva]').forEach(b => b.addEventListener('click', () => {
         const m = buscar(b.dataset.nueva); if (m) abrirNuevaContrasena(m, nombreNegocio)
       }))
       $('dn-eq-meseros').querySelectorAll('[data-desactivar]').forEach(b => b.addEventListener('click', () => {
-        const m = buscar(b.dataset.desactivar); if (m) abrirDesactivar(m, () => { cargarEquipo(); estado.resumenViejo = true })
+        const m = buscar(b.dataset.desactivar); if (m) abrirDesactivar(m, () => { cargarEquipo(true); estado.resumenViejo = true })
       }))
     } catch (e) {
       if (!vigente() || await salirSiInactivo(e)) return
@@ -5339,6 +5337,7 @@ export async function initDueno(negocioId) {
     const caja = $('dn-grafica-clientes')
     if (!caja) return
     const todo = res.datos?.grafica
+    if (todo === undefined) { caja.innerHTML = bloqueEsq(250); return }   // todavía no llega
     if (!todo) { caja.innerHTML = ''; return }   // si falló, no se muestra
     const cargando = gc.modo === '30' && !gc.d30
     const g = gc.modo === '30' ? (gc.d30 || todo) : todo
@@ -5385,10 +5384,23 @@ export async function initDueno(negocioId) {
     $('dn-resumen').innerHTML = resumenHTML(d, res.periodo)
     pintarPeriodo()
     pintarGrafica()
-    $('dn-ir-cajero')?.addEventListener('click', () => navigate('cajero'))
-    $('dn-ver-logros')?.addEventListener('click', () => abrirLogros(marca))
-    $('dn-ver-actividad')?.addEventListener('click', abrirActividad)
-    $('dn-invita-ticket')?.addEventListener('click', () => {
+  }
+
+  // Una parte del Resumen que acaba de llegar, sin redibujar lo demás.
+  function pintarRanura(clave) {
+    if (!res.datos) return
+    if (clave === 'grafica') { pintarRanura('principal'); pintarGrafica(); return }
+    const caja = $(`dn-r-${clave}`)
+    if (caja) caja.innerHTML = ranuraResumenHTML(clave, res.datos)
+  }
+
+  // Los botones del Resumen se atienden con UN listener en el contenedor (que
+  // no se redibuja): así no hay que volver a conectarlos en cada pintada.
+  const accionesResumen = {
+    'dn-ir-cajero': () => navigate('cajero'),
+    'dn-ver-logros': () => abrirLogros(marca, logrosPrevios),
+    'dn-ver-actividad': () => abrirActividad(),
+    'dn-invita-ticket': () => {
       mostrarPestana('ajustes')
       // Cuando Personalización termine de cargar, el campo del ticket queda a la vista.
       const enfocar = (intentos = 20) => {
@@ -5397,9 +5409,9 @@ export async function initDueno(negocioId) {
         else if (intentos > 0 && vigente()) setTimeout(() => enfocar(intentos - 1), 150)
       }
       enfocar()
-    })
-    $('dn-ver-cerca')?.addEventListener('click', () => {
-      const c = d.cerca || {}
+    },
+    'dn-ver-cerca': () => {
+      const c = res.datos?.cerca || {}
       const total = Number(c.total) || 0
       const lista = c.clientes || []
       abrirListaClientes({
@@ -5408,16 +5420,29 @@ export async function initDueno(negocioId) {
         clientes: lista,
         nota: total > lista.length ? `Se muestran ${formatoNumero(lista.length)} de ${formatoNumero(total)}.` : '',
       })
-    })
-    $('dn-ver-inactivos')?.addEventListener('click', () => {
-      const lista = d.inactivos?.clientes || []
+    },
+    'dn-ver-inactivos': () => {
+      const lista = res.datos?.inactivos?.clientes || []
       abrirListaClientes({
         titulo: 'No vienen desde hace 21 días',
         sub: 'Los que vinieron más recientemente, primero.',
         clientes: lista,
         detalle: c => `Última visita hace ${formatoNumero(c.dias)} días · ${formatoNumero(c.visitas)} ${Number(c.visitas) === 1 ? 'visita' : 'visitas'}`,
       })
-    })
+    },
+  }
+  const selectorAccionesResumen = Object.keys(accionesResumen).map(id => '#' + id).join(', ')
+  $('dn-resumen').addEventListener('click', e => {
+    const b = e.target.closest(selectorAccionesResumen)
+    if (b) accionesResumen[b.id]()
+  })
+
+  // Logros (pantalla del menú): reusa lo que ya trajo el Resumen si es
+  // reciente y no se celebró nada desde entonces.
+  const logrosPrevios = () => {
+    const d = res.datos
+    if (!d?.logros || !d.inicio || estado.logrosViejos || Date.now() - estado.resumenCargado > 60 * 1000) return null
+    return { lista: d.logros, inicio: d.inicio }
   }
 
   // Visitas recientes (Fase 6). Lo ya traído se guarda para repintar al
@@ -5469,7 +5494,7 @@ export async function initDueno(negocioId) {
           .gte('fecha', desde)
           .order('fecha', { ascending: false })
           .limit(MAX_VISITAS_RECIENTES),
-        supabase.rpc('equipo_negocio'),
+        pedirEquipo(),
         supabase.auth.getSession(),
       ])
       if (!vigente() || pedido !== vis.pedido) return
@@ -5499,70 +5524,110 @@ export async function initDueno(negocioId) {
     pintarVisitas()
   }
 
-  // Resumen y "Cómo va tu equipo" (pestaña Equipo) se cargan juntos.
-  // Obligatorias: resumen_inicio y resumen_periodo (mes y semana). Las demás
-  // tarjetas, si fallan, simplemente no aparecen (el error queda en consola).
+  // supabase.rpc devuelve un "thenable" que vuelve a pedir cada vez que se le
+  // llama .then: se convierte en promesa para pedir UNA sola vez.
+  const rpc = (nombre, args) => Promise.resolve(supabase.rpc(nombre, args))
+
+  // equipo_negocio lo usan la lista de meseros y Visitas recientes: una sola
+  // petición compartida (30 s). nuevo = true después de un cambio en el equipo.
+  let equipoPedido = null, equipoHora = 0
+  function pedirEquipo(nuevo = false) {
+    if (nuevo || !equipoPedido || Date.now() - equipoHora > 30 * 1000) {
+      equipoPedido = rpc('equipo_negocio'); equipoHora = Date.now()
+    }
+    return equipoPedido
+  }
+
+  // Resumen (pestaña Resumen). Las 8 consultas salen juntas; se pinta en cuanto
+  // llegan las obligatorias (resumen_inicio y resumen_periodo mes y semana) y
+  // cada tarjeta opcional aparece cuando llega la suya. Si una opcional falla,
+  // simplemente no aparece (el error queda en consola). En una recarga, lo de
+  // antes se queda en pantalla hasta que llega lo nuevo.
+  const OPCIONALES_RESUMEN = {
+    cerca: ['clientes_cerca_premio', undefined, 'los clientes cerca del premio'],
+    inactivos: ['clientes_inactivos', undefined, 'los clientes que no vienen'],
+    actividad: ['actividad_reciente', { p_limite: 5 }, 'la actividad reciente'],
+    logros: ['logros_lista', undefined, 'los logros'],
+    grafica: ['grafica_clientes', { p_dias: null }, 'la gráfica de clientes'],
+  }
   async function cargarResumen() {
     if (estado.cargandoResumen) return
     estado.cargandoResumen = true
     // Si ya había datos, se quedan en pantalla mientras se actualizan.
     if (!estado.resumenCargado) $('dn-resumen').innerHTML = esqueletoResumen()
+    // Lo de la pestaña Equipo solo si ya se abrió en esta visita.
+    if (estado.equipoAbierto) { cargarSemanaEquipo(); cargarVisitas() }
+    const opcionales = Object.entries(OPCIONALES_RESUMEN).map(([clave, [fn, args, que]]) =>
+      [clave, que, rpc(fn, args).catch(error => ({ error }))])
     try {
-      const [ini, mes, sem, cerca, inact, act, meseros, logros, graf] = await Promise.all([
-        supabase.rpc('resumen_inicio'),
-        supabase.rpc('resumen_periodo', { p_periodo: 'mes' }),
-        supabase.rpc('resumen_periodo', { p_periodo: 'semana' }),
-        supabase.rpc('clientes_cerca_premio'),
-        supabase.rpc('clientes_inactivos'),
-        supabase.rpc('actividad_reciente', { p_limite: 5 }),
-        supabase.rpc('resumen_meseros'),
-        supabase.rpc('logros_lista'),
-        supabase.rpc('grafica_clientes', { p_dias: null }),
+      const [ini, mes, sem] = await Promise.all([
+        rpc('resumen_inicio'),
+        rpc('resumen_periodo', { p_periodo: 'mes' }),
+        rpc('resumen_periodo', { p_periodo: 'semana' }),
       ])
       if (!vigente()) return
       for (const r of [ini, mes, sem]) if (r.error) throw r.error
-      const opcional = (r, que) => {
-        if (!r.error) return r.data
-        console.error(`Error al cargar ${que}:`, r.error)
-        return null
+      const antes = res.datos || {}
+      const datos = {
+        inicio: ini.data || {}, mes: mes.data || {}, semana: sem.data || {},
+        cerca: antes.cerca, inactivos: antes.inactivos, actividad: antes.actividad, logros: antes.logros, grafica: antes.grafica,
       }
-      res.datos = {
-        inicio: ini.data || {},
-        mes: mes.data || {},
-        semana: sem.data || {},
-        cerca: opcional(cerca, 'los clientes cerca del premio'),
-        inactivos: opcional(inact, 'los clientes que no vienen'),
-        actividad: opcional(act, 'la actividad reciente'),
-        logros: opcional(logros, 'los logros'),
-        grafica: opcional(graf, 'la gráfica de clientes'),
-      }
+      res.datos = datos
       // "30 días" se vuelve a pedir solo si está a la vista.
       gc.d30 = null
       if (gc.modo === '30') cargar30()
       pintarResumen()
-      if (meseros.error) {
-        console.error('Error al cargar el equipo de la semana:', meseros.error)
-        $('dn-eq-semana').innerHTML = `<h2 class="ow-titulo-sec">Cómo va tu equipo esta semana</h2><p style="margin-bottom:12px">${sinInternet(meseros.error) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar esta semana.'}</p><button class="ow-btn secundario" id="dn-reintentar-semana">Reintentar</button>`
-        $('dn-reintentar-semana')?.addEventListener('click', cargarResumen)
-      } else {
-        $('dn-eq-semana').innerHTML = equipoSemanaHTML(Number(ini.data?.clientes_registrados) > 0 ? meseros.data?.meseros : [])
-      }
-      estado.resumenCargado = Date.now(); estado.resumenViejo = false
-      cargarVisitas()
+      estado.resumenCargado = Date.now(); estado.resumenViejo = false; estado.logrosViejos = false
       revisarLogros()
+      await Promise.all(opcionales.map(([clave, que, p]) => p.then(r => {
+        if (!vigente() || res.datos !== datos) return
+        if (r.error) console.error(`Error al cargar ${que}:`, r.error)
+        datos[clave] = r.error ? null : r.data
+        pintarRanura(clave)
+      })))
     } catch (e) {
       if (!vigente() || await salirSiInactivo(e)) return
       console.error('Error al cargar el resumen:', e)
       if (!estado.resumenCargado) {
         $('dn-resumen').innerHTML = errorPanelHTML(sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar tus números.', 'dn-reintentar-resumen')
         $('dn-reintentar-resumen')?.addEventListener('click', cargarResumen)
-        $('dn-eq-semana').innerHTML = `<h2 class="ow-titulo-sec">Cómo va tu equipo esta semana</h2><p style="margin-bottom:12px">${sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar esta semana.'}</p><button class="ow-btn secundario" id="dn-reintentar-semana">Reintentar</button>`
-        $('dn-reintentar-semana')?.addEventListener('click', cargarResumen)
-        if (!vis.lista) cargarVisitas()  // Visitas recientes no depende del resumen
       }
     } finally {
       estado.cargandoResumen = false
     }
+  }
+
+  // "Cómo va tu equipo esta semana" (pestaña Equipo): resumen_meseros. Se pide
+  // al abrir Equipo y se refresca junto con el Resumen después.
+  let semanaPedido = 0
+  async function cargarSemanaEquipo() {
+    const pedido = ++semanaPedido
+    const caja = () => $('dn-eq-semana')
+    const fallo = e => {
+      caja().innerHTML = `<h2 class="ow-titulo-sec">Cómo va tu equipo esta semana</h2><p style="margin-bottom:12px">${sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar esta semana.'}</p><button class="ow-btn secundario" id="dn-reintentar-semana">Reintentar</button>`
+      $('dn-reintentar-semana')?.addEventListener('click', () => cargarSemanaEquipo())
+    }
+    try {
+      const meseros = await rpc('resumen_meseros')
+      if (!vigente() || pedido !== semanaPedido || !caja()) return
+      if (meseros.error) throw meseros.error
+      // Sin clientes todavía, la tabla sale vacía (igual que antes).
+      const conClientes = res.datos ? Number(res.datos.inicio?.clientes_registrados) > 0 : true
+      caja().innerHTML = equipoSemanaHTML(conClientes ? meseros.data?.meseros : [])
+    } catch (e) {
+      if (!vigente() || pedido !== semanaPedido || !caja() || await salirSiInactivo(e)) return
+      console.error('Error al cargar el equipo de la semana:', e)
+      fallo(e)
+    }
+  }
+
+  // La pestaña Equipo pide lo suyo la primera vez que se abre.
+  function abrirEquipo() {
+    if (!estado.equipoCargado) cargarEquipo()
+    if (estado.equipoAbierto) return
+    estado.equipoAbierto = true
+    cargarSemanaEquipo()
+    cargarVisitas()
   }
 
   async function cargarAjustes() {
@@ -5582,7 +5647,7 @@ export async function initDueno(negocioId) {
       // Encabezado: nombre y logo al día (lo guardado en el celular puede ser viejo).
       $('dn-cab-hola').textContent = `Hola, ${estado.nombre}`
       $('dn-cab-logo').innerHTML = cabLogoHTML(estado.nombre, nd.logo_ruta)
-      $('dn-ajustes').innerHTML = ajustesHTML(nd, negocioId)
+      $('dn-ajustes').innerHTML = ajustesHTML(nd)
       // Números del personal y QR abiertos viven en la pestaña Equipo.
       $('dn-eq-ajustes').innerHTML = equipoAjustesHTML(nd)
       estado.ajustesCargados = true
@@ -5635,11 +5700,16 @@ export async function initDueno(negocioId) {
     tGrafica = setTimeout(() => { if (vigente() && !$('dn-resumen').hidden) pintarGrafica() }, 150)
   }
   window.addEventListener('resize', alCambiarAncho)
+  alSalirDePantalla(() => {
+    document.removeEventListener('visibilitychange', alVolver)
+    window.removeEventListener('resize', alCambiarAncho)
+    clearTimeout(tGrafica)
+  })
 
   // Personalización se carga desde el principio: trae el color del negocio (el acento).
   cargarResumen()
   cargarAjustes()
-  if (leerPestanaDueno() === 'equipo') cargarEquipo()
+  if (leerPestanaDueno() === 'equipo') abrirEquipo()
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -5990,3 +6060,6 @@ export function initAdmin() {
 
   cargar()
 }
+
+// Para src/logros-media.js (se carga aparte, solo al celebrar un logro).
+export { DS, esColorHex, textoSobreColor, urlLogo, textoImagenLogro, formatoNumero, lienzoABlob, FRASE_IMAGEN_LOGRO, inyectarEstilosDueno }
