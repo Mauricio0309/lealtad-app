@@ -3,7 +3,7 @@ export function getPage() {
   if (hash.startsWith('#/c/')) return 'reclamar'
   if (hash.startsWith('#/tarjeta/')) return 'tarjeta'
   if (hash.startsWith('#/negocio/')) return 'negocio'
-  if (hash.startsWith('#/landing/')) return 'landing'
+  if (hash.startsWith('#/n/')) return 'programa'
   if (hash.startsWith('#/onboarding')) return 'onboarding'
   if (hash === '#/terminos') return 'terminos'
   if (hash === '#/admin') return 'admin'

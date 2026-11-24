@@ -1,7 +1,7 @@
-import QRCode from 'qrcode'
 import { isAuthRetryableFetchError, isAuthSessionMissingError, isAuthWeakPasswordError } from '@supabase/supabase-js'
 import { supabase } from './supabase.js'
 import { navigate, getPage } from './router.js'
+import { getUsuarioIdLocal } from './auth.js'
 
 // ═══════════════════════════════════════════════════════════
 // DESIGN SYSTEM
@@ -15,7 +15,47 @@ const DS = {
 }
 
 function aplicarColorNegocio(color) {
-  document.documentElement.style.setProperty('--negocio-color', color || DS.green800)
+  const c = color || DS.green800
+  document.documentElement.style.setProperty('--negocio-color', c)
+  // Texto que se lee SOBRE ese color (botones, sellos, avatar): blanco u oscuro.
+  document.documentElement.style.setProperty('--negocio-texto', textoSobreColor(c))
+  // El color usado COMO texto sobre blanco (números): el suyo, u oscuro si es muy claro.
+  document.documentElement.style.setProperty('--negocio-tinta', tintaSobreBlanco(c))
+}
+
+// Para texto sobre fondo blanco: el color del negocio si contrasta 4.5:1; si
+// es muy claro (color libre), casi negro.
+function tintaSobreBlanco(hex) {
+  return textoSobreColor(hex) === '#ffffff' ? hex : '#1c2b25'
+}
+
+// Blanco si contrasta al menos 4.5:1 con el color; si no, casi negro.
+function textoSobreColor(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''))
+  if (!m) return '#ffffff'
+  const canal = i => {
+    const c = parseInt(m[1].slice(i, i + 2), 16) / 255
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+  }
+  const lum = 0.2126 * canal(0) + 0.7152 * canal(2) + 0.0722 * canal(4)
+  return 1.05 / (lum + 0.05) >= 4.5 ? '#ffffff' : '#1c2b25'
+}
+
+// ═══════════════════════════════════════════════════════════
+// AL SALIR DE UNA PANTALLA
+// Cada pantalla registra aquí cómo cerrar sus temporizadores, canales de
+// tiempo real y listeners globales; main.js llama salirDePantalla() en cada
+// cambio de ruta. (Antes se cerraban solos "en el siguiente tic", hasta 1 s
+// después, o al siguiente evento.)
+// ═══════════════════════════════════════════════════════════
+const limpiezasPantalla = new Set()
+function alSalirDePantalla(fn) { limpiezasPantalla.add(fn) }
+export function salirDePantalla() {
+  for (const fn of [...limpiezasPantalla]) {
+    limpiezasPantalla.delete(fn)
+    try { fn() } catch (e) { console.error('Error al cerrar la pantalla:', e) }
+  }
+  ayudasMotor.detener()
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -31,8 +71,8 @@ function inyectarEstilos() {
     body { font-family: 'Inter', sans-serif; background: #f1f7f4; color: ${DS.gray900}; -webkit-font-smoothing: antialiased; }
 
     .sello-topbar { background: var(--negocio-color, ${DS.green800}); padding: calc(16px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) 16px calc(20px + env(safe-area-inset-left)); display: flex; align-items: center; justify-content: space-between; }
-    .sello-topbar-brand { display: flex; align-items: center; gap: 10px; font-family: 'Sora', sans-serif; font-weight: 800; font-size: 20px; color: ${DS.white}; letter-spacing: -0.02em; }
-    .sello-topbar-brand .brand-name { color: ${DS.white}; }
+    .sello-topbar-brand { display: flex; align-items: center; gap: 10px; font-family: 'Sora', sans-serif; font-weight: 800; font-size: 20px; color: var(--negocio-texto, ${DS.white}); letter-spacing: -0.02em; }
+    .sello-topbar-brand .brand-name { color: var(--negocio-texto, ${DS.white}); }
     .sello-topbar-brand .brand-name span { color: ${DS.gold400}; }
 
     .s-card { background: ${DS.white}; border-radius: 16px; padding: 20px; margin: 0 16px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04); }
@@ -51,7 +91,7 @@ function inyectarEstilos() {
     .s-btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; transition: opacity 0.15s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; }
     .s-btn:active { transform: scale(0.98); }
     .s-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .s-btn.primary { background: var(--negocio-color, ${DS.green800}); color: ${DS.white}; }
+    .s-btn.primary { background: var(--negocio-color, ${DS.green800}); color: var(--negocio-texto, ${DS.white}); }
     .s-btn.gold { background: ${DS.gold500}; color: ${DS.white}; }
     .s-btn.ghost { background: ${DS.gray100}; color: ${DS.gray700}; }
     .s-btn.share { background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045); color: white; }
@@ -138,23 +178,16 @@ function inyectarEstilos() {
     .sc-search-area { padding: 16px 16px 8px; display: flex; flex-direction: column; gap: 8px; }
     .sc-search-row { display: flex; gap: 8px; }
     .sc-search-input { flex: 1; }
-    .sc-search-btn { padding: 13px 16px; background: var(--negocio-color, ${DS.green800}); color: ${DS.white}; border: none; border-radius: 10px; cursor: pointer; font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 600; white-space: nowrap; }
+    .sc-search-btn { padding: 13px 16px; background: var(--negocio-color, ${DS.green800}); color: var(--negocio-texto, ${DS.white}); border: none; border-radius: 10px; cursor: pointer; font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 600; white-space: nowrap; }
 
     .s-chart-wrap { position: relative; height: 180px; margin-top: 8px; }
     .s-chart-wrap.donut { height: 200px; }
 
 
 
-    .landing-root { min-height: 100vh; background: ${DS.gray50}; }
-    .landing-hero { background: linear-gradient(145deg, ${DS.green900}, var(--negocio-color, ${DS.green800})); padding: calc(60px + env(safe-area-inset-top)) calc(24px + env(safe-area-inset-right)) 80px calc(24px + env(safe-area-inset-left)); text-align: center; position: relative; }
-    .landing-hero::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 40px; background: ${DS.gray50}; border-radius: 40px 40px 0 0; }
-    .landing-nombre { font-family: 'Sora', sans-serif; font-size: 36px; font-weight: 800; color: ${DS.white}; margin-bottom: 8px; }
-    .landing-tag { font-size: 14px; color: rgba(255,255,255,0.5); }
-    .landing-premio { background: ${DS.white}; border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; gap: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 12px; }
-    .landing-cta-btn { width: 100%; padding: 18px; background: linear-gradient(135deg, ${DS.green600}, ${DS.green700}); border: none; border-radius: 14px; color: ${DS.white}; font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 700; cursor: pointer; }
 
     .cj-main { padding: 20px 16px 8px; }
-    .cj-cobre { width: 100%; min-height: 38vh; border: none; border-radius: 24px; background: var(--negocio-color, ${DS.green800}); color: ${DS.white}; font-family: 'Sora', sans-serif; font-size: 26px; font-weight: 800; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform 0.1s, opacity 0.15s; }
+    .cj-cobre { width: 100%; min-height: 38vh; border: none; border-radius: 24px; background: var(--negocio-color, ${DS.green800}); color: var(--negocio-texto, ${DS.white}); font-family: 'Sora', sans-serif; font-size: 26px; font-weight: 800; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform 0.1s, opacity 0.15s; }
     .cj-cobre:active { transform: scale(0.98); }
     .cj-cobre:disabled { opacity: 0.6; cursor: wait; }
     .cj-cobre-icon { font-size: 56px; line-height: 1; }
@@ -167,7 +200,7 @@ function inyectarEstilos() {
     .cj-fila { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; background: none; border: none; border-bottom: 1px solid ${DS.gray100}; text-align: left; cursor: pointer; font-family: 'Inter', sans-serif; }
     .cj-fila:last-child { border-bottom: none; padding-bottom: 0; }
     .cj-fila .s-row-title, .cj-fila .s-row-sub { display: block; }
-    .cj-fila-ver { font-size: 13px; font-weight: 600; color: var(--negocio-color, ${DS.green800}); white-space: nowrap; }
+    .cj-fila-ver { font-size: 13px; font-weight: 600; color: var(--negocio-tinta, var(--negocio-color, ${DS.green800})); white-space: nowrap; }
     .cj-vacio { color: #aaa; font-size: 13px; text-align: center; padding: 8px 0; }
     .cj-qr { position: fixed; inset: 0; z-index: 200; background: ${DS.white}; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: calc(24px + env(safe-area-inset-top)) calc(24px + env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) calc(24px + env(safe-area-inset-left)); text-align: center; }
     .cj-qr[hidden] { display: none; }
@@ -194,7 +227,7 @@ function inyectarEstilos() {
     .cj-manual-caja { max-width: 420px; margin: 0 auto; }
     .cj-manual .cl-btn { margin-top: 0; }
     .cj-exito.premio .cj-exito-listo { color: #78350f; }
-    .cj-canjear { width: 100%; height: 72px; margin-top: 12px; border: 2px solid var(--negocio-color, ${DS.green800}); border-radius: 20px; background: ${DS.white}; color: var(--negocio-color, ${DS.green800}); font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform 0.1s; }
+    .cj-canjear { width: 100%; height: 72px; margin-top: 12px; border: 2px solid var(--negocio-color, ${DS.green800}); border-radius: 20px; background: ${DS.white}; color: var(--negocio-tinta, var(--negocio-color, ${DS.green800})); font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform 0.1s; }
     .cj-canjear:active { transform: scale(0.98); }
     .cj-canje { position: fixed; inset: 0; z-index: 250; background: ${DS.white}; overflow-y: auto; display: flex; padding: calc(24px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left)); }
     .cj-canje[hidden] { display: none; }
@@ -234,7 +267,7 @@ function inyectarEstilos() {
     .cl-marca-mensaje { display: block; font-size: 15px; line-height: 1.35; color: ${DS.gray500}; margin-top: 2px; overflow-wrap: anywhere; }
     .cl-marca.grande { gap: 16px; margin-top: 18px; }
     .cl-marca.grande .cl-marca-nombre { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
-    .cl-avatar { position: relative; flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; background: var(--negocio-color, #2B4ACB); color: ${DS.white}; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; overflow: hidden; }
+    .cl-avatar { position: relative; flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; background: var(--negocio-color, #2B4ACB); color: var(--negocio-texto, ${DS.white}); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; overflow: hidden; }
     .cl-marca.grande .cl-avatar { width: 76px; height: 76px; font-size: 34px; }
     .cl-avatar.con-logo { border-radius: 22%; background: ${DS.white}; box-shadow: inset 0 0 0 1px rgba(15,23,42,0.08); }
     .cl-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: ${DS.white}; }
@@ -256,7 +289,7 @@ function inyectarEstilos() {
     .cl-input::placeholder { color: ${DS.gray300}; }
     .cl-error-campo { color: #dc2626; font-size: 15px; margin-top: 6px; }
     .cl-aviso { margin-bottom: 14px; border-radius: 16px; padding: 14px 16px; font-size: 16px; line-height: 1.4; background: #fef2f2; color: #b91c1c; }
-    .cl-btn { width: 100%; height: 62px; border: none; border-radius: 20px; background: var(--negocio-color, #2B4ACB); color: ${DS.white}; font-family: inherit; font-size: 20px; font-weight: 800; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform 0.1s, opacity 0.15s; }
+    .cl-btn { width: 100%; height: 62px; border: none; border-radius: 20px; background: var(--negocio-color, #2B4ACB); color: var(--negocio-texto, ${DS.white}); font-family: inherit; font-size: 20px; font-weight: 800; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform 0.1s, opacity 0.15s; }
     .cl-btn:active { transform: scale(0.98); }
     .cl-btn:disabled { opacity: 0.6; cursor: wait; }
     .cl-btn.secundario { background: ${DS.gray100}; color: ${DS.gray900}; }
@@ -265,16 +298,16 @@ function inyectarEstilos() {
     .cl-privacidad { font-size: 14px; line-height: 1.5; color: ${DS.gray500}; text-align: center; margin-top: 16px; }
     .cl-privacidad button { background: none; border: none; font: inherit; color: ${DS.gray700}; text-decoration: underline; padding: 12px 4px; margin: -12px -4px; cursor: pointer; }
     .cl-estado-icono { width: 72px; height: 72px; border-radius: 50%; background: ${DS.gray100}; display: flex; align-items: center; justify-content: center; font-size: 34px; margin-bottom: 24px; }
-    .cl-exito-icono { width: 72px; height: 72px; border-radius: 50%; background: var(--negocio-color, #2B4ACB); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; animation: sPopIn 0.35s cubic-bezier(0.34,1.56,0.64,1); }
+    .cl-exito-icono { width: 72px; height: 72px; border-radius: 50%; background: var(--negocio-color, #2B4ACB); color: var(--negocio-texto, #ffffff); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; animation: sPopIn 0.35s cubic-bezier(0.34,1.56,0.64,1); }
     .cl-listo { margin-top: 20px; border-radius: 20px; padding: 18px; background: ${DS.gold100}; border: 2px solid #fde68a; color: #78350f; font-size: 18px; font-weight: 800; line-height: 1.35; text-align: center; }
     .cl-tarjeta { background: ${DS.white}; border-radius: 24px; padding: 24px 20px; margin-top: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 8px 24px rgba(0,0,0,0.04); }
     .cl-progreso { display: flex; align-items: baseline; justify-content: center; gap: 8px; font-weight: 800; font-variant-numeric: tabular-nums; }
-    .cl-progreso-num { font-size: 64px; line-height: 1; color: var(--negocio-color, #2B4ACB); }
+    .cl-progreso-num { font-size: 64px; line-height: 1; color: var(--negocio-tinta, var(--negocio-color, #2B4ACB)); }
     .cl-progreso-meta { font-size: 32px; color: ${DS.gray300}; }
     .cl-progreso-lbl { text-align: center; font-size: 15px; color: ${DS.gray500}; margin-top: 6px; }
     .cl-sellos { display: grid; gap: 10px; justify-items: center; margin-top: 22px; }
     .cl-sello { width: 100%; max-width: 52px; aspect-ratio: 1; border-radius: 50%; border: 2px dashed ${DS.gray300}; display: flex; align-items: center; justify-content: center; font-size: 22px; }
-    .cl-sello.lleno { border: none; background: var(--negocio-color, #2B4ACB); }
+    .cl-sello.lleno { border: none; background: var(--negocio-color, #2B4ACB); color: var(--negocio-texto, #ffffff); }
     .cl-sello.nuevo { animation: clSelloNuevo 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.4s both; }
     .cl-sello.nuevo svg { animation: sPopIn 0.3s ease-out 0.9s both; }
     @keyframes clSelloNuevo {
@@ -356,19 +389,23 @@ function inyectarEstilosDueno() {
   s.id = 'sello-styles-dueno'
   s.textContent = `
     html.ow-pagina, html.ow-pagina body { background: #f1f7f4; }
-    .ow, .ow-hoja-fondo {
+    .ow, .ow-hoja-fondo, .ow-lg-fondo, .ow-guardar {
       --ow-fondo: #f1f7f4; --ow-superficie: #ffffff; --ow-borde: #dbe8e1;
       --ow-texto: #1c2b25; --ow-texto-2: #4d5f57; --ow-texto-3: #7b8a83;
       --ow-sello: ${VERDE_SELLO}; --ow-sello-suave: #e2f1ea;
       --ow-acento: var(--negocio-color, ${VERDE_SELLO});
+      --ow-acento-texto: var(--negocio-texto, #ffffff);
+      /* Colores con significado: verde = crecimiento, ámbar = oportunidad,
+         gris azulado = información. Nunca rojo para malas noticias. */
       --ow-ok: #0d7a5f; --ow-ok-suave: #e3f3ec;
       --ow-atencion: #a45a06; --ow-atencion-suave: #fdf3e1; --ow-atencion-borde: #f3d9a8;
-      --ow-mal: #b42318;
+      --ow-info: #475b70; --ow-info-suave: #eef2f6; --ow-info-borde: #d6dee8;
+      --ow-mal: #8f4d05;
       color: var(--ow-texto); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
       font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased;
     }
     .ow { min-height: 100vh; background: var(--ow-fondo); }
-    .ow.ow-sello { --ow-acento: var(--ow-sello); }
+    .ow.ow-sello { --ow-acento: var(--ow-sello); --ow-acento-texto: #ffffff; }
     .ow *:focus-visible { outline: 2px solid var(--ow-acento); outline-offset: 2px; }
 
     .ow-logo { display: inline-flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; color: var(--ow-sello); }
@@ -379,7 +416,7 @@ function inyectarEstilosDueno() {
 
     .ow-tabs { display: flex; gap: 6px; padding: 4px; margin: 4px 0 20px; background: var(--ow-superficie); border: 1px solid var(--ow-borde); border-radius: 12px; }
     .ow-tab { flex: 1; min-height: 42px; padding: 8px 10px; background: none; border: none; border-radius: 9px; font: inherit; font-size: 15px; font-weight: 600; color: var(--ow-texto-2); cursor: pointer; transition: background 0.15s, color 0.15s; }
-    .ow-tab[aria-selected="true"] { background: var(--ow-acento); color: #ffffff; }
+    .ow-tab[aria-selected="true"] { background: var(--ow-acento); color: var(--ow-acento-texto); }
     .ow [role="tabpanel"][hidden] { display: none; }
 
     .ow-tarjeta { background: var(--ow-superficie); border: 1px solid var(--ow-borde); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
@@ -394,11 +431,41 @@ function inyectarEstilosDueno() {
     .ow-nota { color: var(--ow-texto-3); font-weight: 400; }
     .ow-ayuda { font-size: 13px; color: var(--ow-texto-2); margin-top: 6px; }
 
-    .ow-principal { background: var(--ow-ok-suave); border-color: #c5e6d6; padding: 22px 20px; }
-    .ow-principal-lbl { font-size: 15px; color: var(--ow-texto-2); }
-    .ow-principal-num { font-size: 42px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--ow-ok); margin: 4px 0; }
-    .ow-principal-sub { font-size: 17px; font-weight: 600; color: var(--ow-texto); }
-    .ow-principal .ow-enlace { color: var(--ow-ok); }
+    /* Tarjeta principal del Resumen: verde Sello sólido, texto blanco. */
+    .ow-principal { background: #0F7B5A; border-color: #0F7B5A; color: #ffffff; padding: 22px 20px; }
+    .ow-principal-lbl { font-size: 15px; font-weight: 500; color: #ffffff; }
+    .ow-principal-num { font-size: 52px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; font-variant-numeric: tabular-nums; color: #ffffff; margin: 2px 0 8px; }
+    .ow-principal-sub { font-size: 16px; font-weight: 600; color: #ffffff; }
+    .ow-principal-sub .ow-nota { color: rgba(255,255,255,0.85); font-weight: 500; }
+    .ow-principal-desde { margin-top: 4px; font-size: 13px; color: #ffffff; opacity: 0.85; }
+    .ow-principal .ow-enlace { color: #ffffff; }
+    .ow-principal .ow-enlace:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; }
+    /* Fila de Logros bajo la tarjeta principal (dorado solo en medallas y barra). */
+    .ow-lgfila { display: flex; align-items: center; gap: 14px; width: 100%; margin-bottom: 16px; padding: 14px 16px; background: var(--ow-superficie); border: 1px solid #EFE6CC; border-radius: 12px; font: inherit; color: var(--ow-texto); text-align: left; cursor: pointer; }
+    .ow-lgfila:focus-visible { outline: 3px solid #0F7B5A; outline-offset: 2px; }
+    .ow-medallas { display: flex; flex-shrink: 0; padding-left: 8px; }
+    .ow-medalla { width: 30px; height: 30px; margin-left: -8px; border-radius: 50%; background: #F6EED6; border: 2px solid #B8902F; box-shadow: 0 0 0 2px var(--ow-superficie); color: #7A5C12; font-size: 11px; font-weight: 800; line-height: 1; display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+    .ow-lgfila-centro { flex: 1; min-width: 0; }
+    .ow-lgfila-linea { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .ow-lgfila-titulo { font-size: 15px; font-weight: 600; }
+    .ow-lgfila-falta { flex-shrink: 0; font-size: 13px; font-weight: 600; color: #6B5A2E; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .ow-lgfila-barra { display: block; margin-top: 8px; height: 6px; border-radius: 3px; background: #DDE5E0; overflow: hidden; }
+    .ow-lgfila-barra span { display: block; height: 100%; border-radius: 3px; background: #B8902F; }
+    .ow-lgfila-flecha { flex-shrink: 0; font-size: 24px; line-height: 1; color: #9aa59f; }
+    .ow-primer { display: block; margin-top: 8px; font-size: 12px; color: #6B7670; }
+    /* Gráfica "Clientes en tu programa" */
+    .ow-gc-cab { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .ow-gc-sub { margin-top: 2px; font-size: 13px; color: var(--ow-texto-2); }
+    .ow-gc-total { flex-shrink: 0; font-size: 32px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; color: #2563EB; font-variant-numeric: tabular-nums; }
+    .ow-gc-chips { display: flex; gap: 2px; margin: 6px 0 6px -2px; }
+    .ow-gc-chip { min-height: 44px; padding: 0 2px; border: none; background: none; font: inherit; cursor: pointer; }
+    .ow-gc-chip span { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border-radius: 999px; font-size: 14px; font-weight: 600; color: var(--ow-texto-2); }
+    .ow-gc-chip[aria-pressed="true"] span { background: #E8EFFD; color: #1E4FC2; }
+    .ow-gc-chip:focus-visible { outline: none; }
+    .ow-gc-chip:focus-visible span { outline: 2px solid #1E4FC2; outline-offset: 2px; }
+    .ow-gc-svg { display: block; width: 100%; height: auto; }
+    .ow-gc-fechas { display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; color: var(--ow-texto-3); }
+    .ow-gc-esq { height: 140px; margin: 0; }
 
     .ow-cifras { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--ow-superficie); border: 1px solid var(--ow-borde); border-radius: 12px; margin-bottom: 16px; }
     .ow-cifras.dos { grid-template-columns: repeat(2, 1fr); }
@@ -410,7 +477,7 @@ function inyectarEstilosDueno() {
     .ow-cifra-lbl { font-size: 13px; line-height: 1.3; color: var(--ow-texto-2); margin-top: 6px; }
     .ow-cambio { display: inline-block; font-size: 12px; font-weight: 600; margin-top: 8px; color: var(--ow-texto-3); font-variant-numeric: tabular-nums; }
     .ow-cambio.sube { color: var(--ow-ok); }
-    .ow-cambio.baja { color: var(--ow-atencion); }
+    .ow-cambio.baja { color: var(--ow-texto-3); }  /* nunca rojo ni alarma */
 
     .ow-fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; margin-bottom: 16px; padding: 18px 20px; background: var(--ow-superficie); border: 1px solid var(--ow-borde); border-radius: 12px; font: inherit; color: inherit; text-align: left; cursor: pointer; }
     .ow-fila:disabled { cursor: default; }
@@ -431,7 +498,7 @@ function inyectarEstilosDueno() {
     .ow-persona { font-weight: 600; }
     .ow-revisar { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 6px; background: var(--ow-atencion-suave); border: 1px solid var(--ow-atencion-borde); font-size: 12px; font-weight: 600; color: var(--ow-atencion); text-align: left; }
 
-    .ow-vacio { padding: 14px 16px; border-radius: 10px; background: var(--ow-sello-suave); font-size: 14px; color: var(--ow-texto-2); }
+    .ow-vacio { padding: 14px 16px; border-radius: 10px; background: var(--ow-info-suave); font-size: 14px; color: var(--ow-info); }
     .ow-vacio-tarjeta { background: var(--ow-sello-suave); border-color: #c7e3d6; }
     .ow-pasos { list-style: none; display: flex; flex-direction: column; gap: 16px; margin: 18px 0 20px; }
     .ow-pasos li { display: flex; gap: 12px; }
@@ -440,7 +507,7 @@ function inyectarEstilosDueno() {
     .ow-paso-desc { display: block; font-size: 14px; color: var(--ow-texto-2); }
 
     .ow-btn { display: inline-flex; align-items: center; justify-content: center; width: 100%; min-height: 46px; padding: 10px 16px; border: 1px solid transparent; border-radius: 10px; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; transition: filter 0.15s, background 0.15s; }
-    .ow-btn.primario { background: var(--ow-acento); color: #ffffff; }
+    .ow-btn.primario { background: var(--ow-acento); color: var(--ow-acento-texto); }
     .ow-btn.primario:hover { filter: brightness(1.08); }
     .ow-btn.secundario { background: var(--ow-superficie); color: var(--ow-texto); border-color: var(--ow-borde); }
     .ow-btn.secundario:hover { background: var(--ow-fondo); }
@@ -482,29 +549,28 @@ function inyectarEstilosDueno() {
     .ow-colores { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
     .ow-color { width: 38px; height: 38px; padding: 0; border: 3px solid #ffffff; border-radius: 50%; box-shadow: 0 0 0 1px var(--ow-borde); cursor: pointer; }
     .ow-color[aria-checked="true"] { box-shadow: 0 0 0 2px var(--ow-texto); }
-    .ow-vista { padding: 16px; border: 1px solid var(--ow-borde); border-radius: 12px; background: #f5f6f8; margin-bottom: 20px; }
-    .ow-vista-sellotop { display: flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; color: #94a3b8; }
-    .ow-vista-marca { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-    .ow-vista-nombre { display: block; font-size: 16px; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; }
-    .ow-vista-mensaje { display: block; font-size: 13px; color: var(--ow-texto-2); overflow-wrap: anywhere; }
-    .ow-vista-avatar { position: relative; flex-shrink: 0; width: 52px; height: 52px; border-radius: 50%; background: var(--vista-color); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; overflow: hidden; }
+    .ow-color-libre { display: flex; align-items: center; gap: 10px; margin: -6px 0 6px; }
+    .ow-color-libre input[type="color"] { -webkit-appearance: none; appearance: none; flex-shrink: 0; width: 38px; height: 38px; padding: 0; border: 3px solid #ffffff; border-radius: 50%; background: none; box-shadow: 0 0 0 1px var(--ow-borde); cursor: pointer; }
+    .ow-color-libre input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+    .ow-color-libre input[type="color"]::-webkit-color-swatch { border: none; border-radius: 50%; }
+    .ow-color-libre input[type="color"]::-moz-color-swatch { border: none; border-radius: 50%; }
+    .ow-color-libre input[type="color"].activo { box-shadow: 0 0 0 2px var(--ow-texto); }
+    .ow-color-libre input[type="color"]:focus-visible { outline: 2px solid var(--ow-texto); outline-offset: 3px; }
+    .ow-color-libre .ow-label { margin: 0; }
+    /* Vista previa: la tarjeta real del cliente en un "teléfono" (escalarVista). */
+    .ow-vista { position: relative; overflow: hidden; max-width: 340px; margin: 0 auto 20px; border-radius: 24px; background: #F5F6F8; box-shadow: 0 0 0 1px var(--ow-borde), 0 6px 20px rgba(15,23,42,0.06); }
+    .ow-vista-escala { width: ${ANCHO_TELEFONO}px; transform-origin: 0 0; }
+    .ow-vista-escala .cl-root, .ow-vista-escala .cl-wrap { min-height: 0; }
+    .ow-vista-escala .cl-root { font-size: 16px; line-height: normal; }
+    .ow-vista-escala .cl-wrap { padding: 16px 20px 24px; }
+    .ow-vista-avatar { position: relative; flex-shrink: 0; width: 52px; height: 52px; border-radius: 50%; background: var(--vista-color); color: var(--vista-texto, #ffffff); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; overflow: hidden; }
     .ow-vista-avatar.con-logo { border-radius: 22%; background: #ffffff; box-shadow: inset 0 0 0 1px rgba(15,23,42,0.08); }
     .ow-vista-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #ffffff; }
-    .ow-vista-pie { text-align: center; font-size: 10px; color: #94a3b8; margin-top: 10px; }
     .ow-logo-fila { display: flex; align-items: center; gap: 14px; }
     .ow-logo-fila .ow-vista-avatar { width: 64px; height: 64px; font-size: 26px; }
     .ow-logo-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
     .ow-logo-acciones .ow-enlace { min-height: 36px; padding: 6px 0; }
     .ow-cuenta { float: right; font-weight: 500; color: var(--ow-texto-3); font-variant-numeric: tabular-nums; }
-    .ow-vista-saludo { font-size: 18px; font-weight: 700; margin-top: 12px; }
-    .ow-vista-tarjeta { margin-top: 10px; padding: 16px; border-radius: 12px; background: #ffffff; text-align: center; }
-    .ow-vista-num { font-size: 34px; font-weight: 800; color: var(--vista-color); font-variant-numeric: tabular-nums; }
-    .ow-vista-meta { font-size: 18px; font-weight: 700; color: #cbd5e1; }
-    .ow-vista-sellos { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; justify-items: center; margin-top: 12px; }
-    .ow-vista-sello { width: 100%; max-width: 30px; aspect-ratio: 1; border: 1.5px dashed #cbd5e1; border-radius: 50%; }
-    .ow-vista-sello.lleno { border: none; background: var(--vista-color); }
-    .ow-vista-premio { margin-top: 10px; padding: 12px 16px; border-radius: 12px; background: #ffffff; font-size: 14px; font-weight: 600; }
-    .ow-vista-premio span { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: var(--ow-texto-3); }
 
     .ow-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 100; display: flex; background: var(--ow-superficie); border-top: 1px solid var(--ow-borde); padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
     .ow-nav button { position: relative; flex: 1; min-height: 54px; background: none; border: none; font: inherit; font-size: 14px; font-weight: 600; color: var(--ow-texto-3); cursor: pointer; }
@@ -554,6 +620,35 @@ function inyectarEstilosDueno() {
     .ow-contrasena { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 22px; font-weight: 700; letter-spacing: 0.04em; user-select: all; word-break: break-all; }
     .ow-cifra-num.sin-corte { white-space: nowrap; }
 
+    /* 6: visitas recientes y anular visita */
+    .ow-visita { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--ow-borde); }
+    .ow-visita:last-of-type { border-bottom: none; }
+    .ow-visita-info { min-width: 0; }
+    .ow-visita-linea { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+    .ow-visita-dato { font-size: 13px; color: var(--ow-texto-2); margin-top: 3px; font-variant-numeric: tabular-nums; }
+    .ow-visita.anulada .ow-persona { color: var(--ow-texto-3); text-decoration: line-through; }
+    .ow-visita .ow-btn { flex-shrink: 0; }
+    .ow-origen { padding: 1px 7px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; background: #eef1ef; color: var(--ow-texto-2); }
+    .ow-origen.manual { background: var(--ow-atencion-suave); color: var(--ow-atencion); }
+    .ow-textarea { height: auto; min-height: 84px; padding: 10px 12px; resize: vertical; line-height: 1.4; }
+    /* Panel v2: encabezado con el negocio, menú ☰ y equipo por persona */
+    .ow-cab-id { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .ow-cab-logo { width: 40px; height: 40px; font-size: 18px; }
+    .ow-cab-textos { min-width: 0; }
+    .ow-cab-hola { font-size: 13px; color: var(--ow-texto-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ow-cab-titulo { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
+    .ow-menu-caja { position: relative; flex-shrink: 0; }
+    .ow-menu-btn { width: 44px; height: 44px; border: 1px solid var(--ow-borde); border-radius: 10px; background: var(--ow-superficie); font: inherit; font-size: 20px; line-height: 1; color: var(--ow-texto); cursor: pointer; }
+    .ow-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 200; min-width: 210px; padding: 6px; background: var(--ow-superficie); border: 1px solid var(--ow-borde); border-radius: 12px; box-shadow: 0 10px 30px rgba(16,32,26,0.14); }
+    .ow-menu button { display: block; width: 100%; min-height: 44px; padding: 8px 12px; border: none; border-radius: 8px; background: none; font: inherit; font-size: 15px; font-weight: 500; color: var(--ow-texto); text-align: left; cursor: pointer; }
+    .ow-menu button:hover, .ow-menu button:focus-visible { background: var(--ow-fondo); }
+    .ow-eq-persona { padding: 12px 0; border-bottom: 1px solid var(--ow-borde); }
+    .ow-eq-persona:first-of-type { padding-top: 0; }
+    .ow-eq-persona:last-of-type { border-bottom: none; padding-bottom: 0; }
+    .ow-eq-linea { font-size: 15px; color: var(--ow-texto-2); font-variant-numeric: tabular-nums; }
+    .ow-eq-aviso { margin-top: 8px; padding: 8px 12px; border-radius: 8px; background: var(--ow-atencion-suave); border: 1px solid var(--ow-atencion-borde); font-size: 14px; color: var(--ow-atencion); }
+    .ow-resumen-visita { margin-bottom: 16px; padding: 12px 14px; border: 1px solid var(--ow-borde); border-radius: 10px; background: var(--ow-fondo); font-size: 14px; }
+
     /* 5A: panel del administrador de Sello */
     .ow-admin-cab { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
     .ow-admin-cab .ow-btn { width: auto; flex-shrink: 0; }
@@ -561,32 +656,126 @@ function inyectarEstilosDueno() {
     .ow-negocio-info .ow-persona { overflow-wrap: anywhere; }
     .ow-negocio-datos { font-size: 13px; color: var(--ow-texto-2); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 
-    /* 4D: gráfica del panel */
+    /* Selector de periodo (ow-seg) */
     .ow-seg { display: flex; gap: 4px; padding: 3px; background: var(--ow-fondo); border: 1px solid var(--ow-borde); border-radius: 10px; }
     .ow-seg button { flex: 1; min-height: 38px; padding: 6px 8px; background: none; border: none; border-radius: 8px; font: inherit; font-size: 14px; font-weight: 600; color: var(--ow-texto-2); cursor: pointer; white-space: nowrap; }
     .ow-seg button[aria-pressed="true"] { background: var(--ow-superficie); color: var(--ow-texto); box-shadow: 0 0 0 1px var(--ow-borde); }
     .ow-seg button.apagado { color: var(--ow-texto-3); font-weight: 500; }
     .ow-seg.chico { display: inline-flex; }
     .ow-seg.chico button { flex: 0 0 auto; min-height: 32px; padding: 4px 12px; font-size: 13px; }
-    .ow-graf-cab { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px; margin: 18px 0 10px; }
-    .ow-graf-num { font-size: 28px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; font-variant-numeric: tabular-nums; }
-    .ow-graf-num small { font-size: 14px; font-weight: 500; color: var(--ow-texto-2); letter-spacing: 0; }
-    .ow-graf-comp { font-size: 13px; color: var(--ow-texto-2); margin-top: 2px; font-variant-numeric: tabular-nums; }
-    .ow-graf-leyenda { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ow-texto-2); margin-bottom: 6px; }
-    .ow-graf-leyenda span { display: inline-flex; align-items: center; gap: 6px; }
-    .ow-graf-leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: #065FD4; }
-    .ow-graf-leyenda i.linea { width: 14px; height: 3px; border-radius: 2px; background: #C3D0E0; }
-    .ow-graf svg { display: block; width: 100%; overflow: visible; touch-action: pan-y; }
-    .ow-graf svg text { font-family: inherit; font-size: 11px; fill: var(--ow-texto-3); font-variant-numeric: tabular-nums; }
-    .ow-graf-lectura { min-height: 20px; margin-top: 6px; font-size: 13px; color: var(--ow-texto-2); font-variant-numeric: tabular-nums; }
-    .ow-graf-lectura strong { color: var(--ow-texto); font-weight: 600; }
-    .ow-graf-nota { margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: var(--ow-fondo); font-size: 14px; color: var(--ow-texto-2); }
-    .ow-graf-nota .ow-enlace { min-height: 0; padding: 0; font-size: 14px; color: var(--ow-texto); font-weight: 600; }
+    /* Resumen (Fase B) */
+    .ow-principal-arranque { font-size: 21px; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em; color: #ffffff; margin-bottom: 4px; }
+    .ow-periodo-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 0 10px; }
+    .ow-fila.atencion .ow-fila-titulo { color: var(--ow-atencion); }
+    .ow-fila.info { background: var(--ow-info-suave); border-color: var(--ow-info-borde); }
+    .ow-fila.info .ow-fila-titulo, .ow-fila.info .ow-fila-ver { color: var(--ow-info); }
+    .ow-act { list-style: none; margin: 0; padding: 0; }
+    .ow-act-fila { display: flex; align-items: baseline; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--ow-borde); }
+    .ow-act-fila:first-child { padding-top: 0; }
+    .ow-act-fila:last-child { border-bottom: none; padding-bottom: 0; }
+    .ow-act-punto { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--ow-ok); transform: translateY(-1px); }
+    .ow-act-punto.nuevo { background: var(--ow-info); }
+    .ow-act-punto.canje { background: var(--ow-atencion); }
+    .ow-act-texto { flex: 1; min-width: 0; font-size: 15px; color: var(--ow-texto-2); overflow-wrap: anywhere; }
+    .ow-act-texto strong { color: var(--ow-texto); font-weight: 600; }
+    .ow-act-hora { flex-shrink: 0; font-size: 13px; color: var(--ow-texto-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .ow-barras { display: flex; align-items: stretch; gap: 12px; height: 150px; }
+    .ow-barra-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+    .ow-barra-num { font-size: 13px; font-weight: 700; color: var(--ow-texto); font-variant-numeric: tabular-nums; }
+    .ow-barra-pista { flex: 1; width: 100%; max-width: 56px; display: flex; align-items: flex-end; margin-top: 4px; border-bottom: 1px solid var(--ow-borde); }
+    .ow-barra { width: 100%; border-radius: 6px 6px 0 0; background: #8fcdb3; }
+    .ow-barra.actual { background: var(--ow-ok); }
+    .ow-barra-lbl { margin-top: 6px; font-size: 12px; color: var(--ow-texto-3); white-space: nowrap; }
     .ow-oculto { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+    /* Fase C: logros. Celebración en verde Sello (texto blanco): pantalla
+       completa en celular; en computadora, tarjeta de 420px sobre el panel
+       oscurecido. Encima de todo, también de las burbujas de ayuda. */
+    .ow-festejo { position: fixed; inset: 0; z-index: 10002; display: flex; background: #0F7B5A; color: #ffffff; animation: owFestejoFondo 0.3s ease-out both; }
+    .ow-festejo-tarjeta { position: relative; flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: #0F7B5A; animation: owFestejoEntra 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+    .ow-festejo-cont { margin: auto; width: 100%; max-width: 420px; padding: calc(28px + env(safe-area-inset-top)) calc(24px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(24px + env(safe-area-inset-left)); display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .ow-confeti { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+    .ow-festejo-etiqueta { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; }
+    .ow-festejo-num { margin-top: 6px; font-size: 116px; font-weight: 800; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+    .ow-festejo-num.largo { font-size: 100px; }
+    .ow-festejo-titulo { margin-top: 12px; font-size: 26px; font-weight: 800; line-height: 1.2; letter-spacing: -0.01em; text-wrap: balance; overflow-wrap: anywhere; }
+    .ow-festejo-sub { margin-top: 10px; max-width: 340px; font-size: 16px; line-height: 1.4; opacity: 0.92; text-wrap: pretty; }
+    .ow-festejo-vista { margin: 22px 0 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .ow-festejo-mini { width: 150px; height: 266px; border-radius: 14px; overflow: hidden; background: rgba(255,255,255,0.14); box-shadow: 0 10px 28px rgba(0,0,0,0.22); }
+    .ow-festejo-mini.cargando { animation: owFestejoPulso 1.4s ease-in-out infinite; }
+    .ow-festejo-mini img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .ow-festejo-vista figcaption { font-size: 13px; opacity: 0.85; }
+    .ow-festejo-compartir { margin-top: 22px; width: 100%; height: 54px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: none; border-radius: 14px; background: #ffffff; color: #0F7B5A; font: inherit; font-size: 17px; font-weight: 800; cursor: pointer; }
+    .ow-festejo-compartir svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .ow-festejo-compartir:disabled { opacity: 0.8; cursor: default; }
+    .ow-festejo-despues { margin-top: 6px; min-height: 44px; padding: 8px 20px; border: none; border-radius: 10px; background: none; color: #ffffff; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
+    .ow-festejo-pista { font-size: 13px; opacity: 0.8; }
+    /* Respaldo de "Compartir" sin Web Share: imagen grande para guardarla a mano. */
+    .ow-guardar { position: fixed; inset: 0; z-index: 10003; display: flex; align-items: center; justify-content: center; padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom)); background: rgba(8,20,15,0.7); }
+    .ow-guardar-hoja { width: 100%; max-width: 420px; max-height: 100%; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px; border-radius: 20px; background: #ffffff; color: #1c2b25; text-align: center; font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+    .ow-guardar-img { display: block; width: auto; max-width: 100%; max-height: 62vh; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); -webkit-touch-callout: default; user-select: auto; }
+    .ow-guardar-texto { margin: 6px 0 4px; font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .ow-guardar .ow-btn { width: 100%; }
+    .ow-festejo-nota { min-height: 18px; margin-top: 6px; font-size: 13px; }
+    .ow-festejo-nota:empty { display: none; }
+    .ow-festejo-compartir:focus-visible, .ow-festejo-despues:focus-visible { outline: 3px solid #ffffff; outline-offset: 3px; }
+    @media (min-width: 600px) {
+      .ow-festejo { align-items: center; justify-content: center; padding: 24px; background: rgba(8,20,15,0.55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+      .ow-festejo-tarjeta { flex: 0 1 420px; max-height: calc(100vh - 48px); border-radius: 24px; box-shadow: 0 24px 60px rgba(0,0,0,0.3); }
+      .ow-festejo-cont { padding: 32px 28px 20px; }
+    }
+    @media (max-height: 760px) {
+      .ow-festejo-num { font-size: 92px; }
+      .ow-festejo-num.largo { font-size: 80px; }
+      .ow-festejo-mini { width: 120px; height: 213px; }
+    }
+    @keyframes owFestejoFondo { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes owFestejoEntra { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: none; } }
+    @keyframes owFestejoPulso { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+    /* Pantalla "Logros": cuadrícula de los 14 hitos. */
+    .ow-lg-fondo { position: fixed; inset: 0; z-index: 9999; display: flex; background: #ffffff; }
+    .ow-lg { flex: 1; display: flex; flex-direction: column; min-height: 0; background: #ffffff; color: #1c2b25; }
+    .ow-lg-cab { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 14px calc(20px + env(safe-area-inset-left)); border-bottom: 1px solid #e6eeea; }
+    .ow-lg-titulo { font-size: 24px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; }
+    .ow-lg-cuenta { margin-top: 2px; font-size: 14px; color: #4d5f57; font-variant-numeric: tabular-nums; }
+    .ow-lg-cerrar { flex-shrink: 0; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: none; border-radius: 50%; background: #F2F4F3; color: #1c2b25; cursor: pointer; }
+    .ow-lg-cerrar:focus-visible { outline: 3px solid #0F7B5A; outline-offset: 2px; }
+    .ow-lg-cuerpo { flex: 1; overflow-y: auto; padding: 16px calc(16px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); }
+    .ow-lg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .ow-lg-t { position: relative; display: flex; flex-direction: column; align-items: flex-start; min-height: 136px; padding: 14px; border: none; border-radius: 16px; font: inherit; color: inherit; text-align: left; }
+    .ow-lg-t.ok { background: #FFFFFF; border: 1px solid #E9D9A6; cursor: pointer; transition: transform 0.15s; }
+    .ow-lg-t.ok:active { transform: scale(0.98); }
+    .ow-lg-t.ok:focus-visible { outline: 3px solid #0F7B5A; outline-offset: 2px; }
+    .ow-lg-t.bloq { background: #F2F4F3; }
+    .ow-lg-cifra { display: flex; align-items: center; gap: 6px; }
+    .ow-lg-medalla { width: 18px; height: 18px; flex-shrink: 0; }
+    .ow-lg-sec { margin: 0 0 10px; font-size: 15px; font-weight: 700; color: #1c2b25; }
+    .ow-lg-seccion + .ow-lg-seccion { margin-top: 24px; }
+    .ow-lg-num { font-size: 40px; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; color: #0F7B5A; font-variant-numeric: tabular-nums; }
+    .ow-lg-t.bloq .ow-lg-num { color: #98a59e; }
+    .ow-lg-nombre { margin-top: 4px; padding-right: 4px; font-size: 14px; font-weight: 600; line-height: 1.3; }
+    .ow-lg-t.bloq .ow-lg-nombre { color: #4d5f57; }
+    .ow-lg-pie { display: block; margin-top: auto; padding-top: 12px; width: 100%; }
+    .ow-lg-fecha { font-size: 12px; color: #4d5f57; }
+    .ow-lg-icono { position: absolute; top: 14px; right: 14px; width: 20px; height: 20px; color: #0F7B5A; }
+    .ow-lg-barra { display: block; height: 6px; border-radius: 3px; background: #DDE5E0; overflow: hidden; }
+    .ow-lg-barra span { display: block; height: 100%; border-radius: 3px; background: #B8902F; }
+    .ow-lg-falta { display: block; margin-top: 6px; font-size: 12px; color: #4d5f57; font-variant-numeric: tabular-nums; }
+    .ow-lg-esq { min-height: 136px; border-radius: 16px; background: #eef2f0; animation: owPulso 1.6s ease-in-out infinite; }
+    @media (min-width: 600px) {
+      .ow-lg-fondo { align-items: center; justify-content: center; padding: 24px; background: rgba(8,20,15,0.45); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+      .ow-lg { flex: 0 1 720px; max-height: calc(100vh - 48px); border-radius: 24px; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,0.25); }
+      .ow-lg-cab { padding: 20px 20px 16px 24px; }
+      .ow-lg-cuerpo { padding: 20px 24px 24px; }
+      .ow-lg-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
 
     @media (prefers-reduced-motion: reduce) {
       .ow-esq { animation: none; }
       .ow-paso-cambio, .ow-tab, .ow-btn, .ow-input { transition: none; }
+      .ow-festejo, .ow-festejo-tarjeta, .ow-festejo-mini.cargando, .ow-lg-esq { animation: none; }
+      .ow-lg-t.ok { transition: none; }
     }
   `
   document.head.appendChild(s)
@@ -734,13 +923,13 @@ function confirmarSalidaMesero() {
 }
 
 // Barra inferior del dueño: solo texto, sin íconos. Va dentro de .ow.
+// "Salir" vive en el menú ☰ del encabezado.
 function navBarDueno(active = 'panel') {
   return `
     <nav class="ow-nav" aria-label="Secciones">
       <button id="snav-panel"${active === 'panel' ? ' aria-current="page"' : ''}>Mi panel</button>
       <button id="snav-cajero-d">Cajero</button>
       <button id="snav-admin" hidden>Admin</button>
-      <button id="snav-salir">Salir</button>
     </nav>
   `
 }
@@ -769,14 +958,40 @@ function initNavDueno() {
   }
 }
 
-function onboardingVisto() { return localStorage.getItem('sello_onboarding') === 'done' }
-function marcarOnboardingVisto() { localStorage.setItem('sello_onboarding', 'done') }
+// Marcas de "ya lo vio" POR USUARIO en este celular: "<clave>:<user_id>".
+// Antes eran de todo el celular y un mesero nuevo en un celular usado nunca
+// veía sus ayudas. La primera vez, la clave vieja (sin usuario) pasa al
+// primer usuario que entra y se borra: él no vuelve a ver lo que ya cerró y
+// los siguientes empiezan de cero. Sin usuario conocido devuelve null y no
+// se guarda nada en el celular (solo cuenta la sesión).
+function clavePorUsuario(base) {
+  const uid = getUsuarioIdLocal()
+  if (!uid) return null
+  const clave = `${base}:${uid}`
+  try {
+    const vieja = localStorage.getItem(base)
+    if (vieja !== null) {
+      if (localStorage.getItem(clave) === null) localStorage.setItem(clave, vieja)
+      localStorage.removeItem(base)
+    }
+  } catch (e) {}
+  return clave
+}
+
+function onboardingVisto() {
+  const clave = clavePorUsuario('sello_onboarding')
+  try { return !!clave && localStorage.getItem(clave) === 'done' } catch (e) { return false }
+}
+function marcarOnboardingVisto() {
+  const clave = clavePorUsuario('sello_onboarding')
+  try { if (clave) localStorage.setItem(clave, 'done') } catch (e) {}
+}
 
 // Bienvenida del dueño en 3 pasos. También se muestran en el panel mientras
 // el negocio no tiene clientes.
 const PASOS_ONBOARDING = [
   { titulo: 'Elige tu premio y tu meta', desc: 'Por ejemplo: un café gratis a las 10 visitas. Lo cambias cuando quieras en Mi panel → Personalización.' },
-  { titulo: 'Da de alta a tus meseros', desc: 'Cada mesero entra a Sello desde su celular con su propia cuenta. Agrega sus números en Personalización → Personal para que no ganen puntos.' },
+  { titulo: 'Da de alta a tus meseros', desc: 'Cada mesero entra a Sello desde su celular con su propia cuenta. Agrega sus números en Equipo → Números del personal para que no ganen puntos.' },
   { titulo: 'Haz una visita de prueba', desc: 'Toca "Cobré una cuenta", escanea el QR con tu celular y suma tu primer punto. Así verás lo mismo que tus clientes.' },
 ]
 
@@ -1004,6 +1219,10 @@ export function initOnboarding(paso = 0) {
   let cambiando = false
   const sinMovimiento = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
+  // Se da por vista en cuanto se abre: antes solo al terminar o "Lo veo
+  // después", y quien salía a la mitad (o cerraba la app) la veía otra vez en
+  // cada inicio de sesión.
+  marcarOnboardingVisto()
   const terminar = () => { marcarOnboardingVisto(); navigate('bienvenida') }
 
   function irA(i) {
@@ -1139,29 +1358,50 @@ function mensajeCajero(error, max) {
 // ═══════════════════════════════════════════════════════════
 // AYUDAS DE PRIMERA VEZ (4F) — mesero y dueño; el cliente no tiene.
 // Una burbuja corta señala el elemento real (resaltado suave) la primera vez
-// que está a la vista. Una a la vez. "Entendido" (o tocar el elemento) la da
-// por vista; "Saltar todo" da por vistas todas las de esa pantalla.
-// Se recuerdan en localStorage; si falla, al menos no se repiten en la sesión.
+// que está a la vista. Una a la vez. Queda como vista en cuanto aparece (sale
+// una sola vez por usuario y celular, aunque cierre sesión). "Entendido" (o
+// tocar el elemento) la cierra; "Saltar todo" da por vistas todas las de esa pantalla.
+// Se recuerdan en localStorage POR USUARIO ("sello_ayudas_vistas:<user_id>",
+// ver clavePorUsuario); si falla, al menos no se repiten en la sesión.
 // No tapan los botones de "proteger" (se coloca arriba, abajo o más allá).
 // ═══════════════════════════════════════════════════════════
 const CLAVE_AYUDAS = 'sello_ayudas_vistas'
+// Vistas en esta sesión, de UN usuario. Si entra otra persona sin recargar
+// la app (Salir → Entrar), se empieza de cero.
 const ayudasEnSesion = new Set()
+let ayudasEnSesionUsuario = null
+
+function ayudasDeSesion() {
+  const uid = getUsuarioIdLocal()
+  if (uid !== ayudasEnSesionUsuario) {
+    ayudasEnSesion.clear()
+    ayudasEnSesionUsuario = uid
+  }
+  return ayudasEnSesion
+}
 
 function leerAyudasVistas() {
+  const sesion = ayudasDeSesion()
+  const clave = clavePorUsuario(CLAVE_AYUDAS)
   try {
-    const lista = JSON.parse(localStorage.getItem(CLAVE_AYUDAS) || '[]')
-    return new Set([...(Array.isArray(lista) ? lista : []), ...ayudasEnSesion])
-  } catch (e) { return new Set(ayudasEnSesion) }
+    const lista = clave ? JSON.parse(localStorage.getItem(clave) || '[]') : []
+    return new Set([...(Array.isArray(lista) ? lista : []), ...sesion])
+  } catch (e) { return new Set(sesion) }
 }
 function marcarAyudasVistas(ids) {
-  ids.forEach(id => ayudasEnSesion.add(id))
-  try { localStorage.setItem(CLAVE_AYUDAS, JSON.stringify([...leerAyudasVistas()])) } catch (e) {}
+  const sesion = ayudasDeSesion()
+  ids.forEach(id => sesion.add(id))
+  const clave = clavePorUsuario(CLAVE_AYUDAS)
+  try { if (clave) localStorage.setItem(clave, JSON.stringify([...leerAyudasVistas()])) } catch (e) {}
 }
-// "Ver ayuda otra vez" (Personalización): en este celular vuelven a salir todas.
+// "Ver ayuda otra vez" (Personalización): a este usuario, en este celular,
+// le vuelven a salir todas.
 function reiniciarAyudas() {
-  ayudasEnSesion.clear()
-  try { localStorage.removeItem(CLAVE_AYUDAS) } catch (e) {}
+  ayudasDeSesion().clear()
+  const clave = clavePorUsuario(CLAVE_AYUDAS)
+  try { if (clave) localStorage.removeItem(clave) } catch (e) {}
   ayudasMotor.ocultar()
+  ayudasMotor.reanudar()
 }
 
 const AYUDAS_MESERO = [
@@ -1178,7 +1418,7 @@ const AYUDAS_DUENO = [
   { id: 'dueno-ventas', elemento: '#dn-ventas', texto: 'Estimado: visitas de clientes que regresaron por lo que gasta un cliente.',
     proteger: ['.ow-tabs', '.ow-nav'] },
   { id: 'dueno-ticket', elemento: '#prog-ticket', texto: 'Opcional. Con esto calculamos tus ventas estimadas.',
-    proteger: ['#btn-guardar-programa', '.ow-nav'] },
+    proteger: ['#btn-guardar-ventas', '.ow-nav'] },
   { id: 'dueno-excluidos', elemento: '#excl-tel', texto: 'Agrega tu número y el de tu equipo: no ganan puntos.',
     proteger: ['#btn-agregar-excl', '.ow-nav'] },
 ]
@@ -1193,7 +1433,7 @@ function inyectarEstilosAyudas() {
     .ay-burbuja:focus { outline: none; }
     .ay-texto { font-size: 16px; line-height: 1.4; font-weight: 500; }
     .ay-botones { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
-    .ay-entendido { min-height: 44px; padding: 8px 18px; border: none; border-radius: 10px; background: var(--negocio-color, #0a5c47); color: #ffffff; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .ay-entendido { min-height: 44px; padding: 8px 18px; border: none; border-radius: 10px; background: var(--negocio-color, #0a5c47); color: var(--negocio-texto, #ffffff); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
     .ay-saltar { min-height: 44px; padding: 8px 4px; border: none; background: none; font: inherit; font-size: 14px; color: #64748b; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
     .ay-entendido:focus-visible, .ay-saltar:focus-visible { outline: 2px solid #0f172a; outline-offset: 2px; }
   `
@@ -1202,7 +1442,7 @@ function inyectarEstilosAyudas() {
 
 // Un solo motor para toda la app: cada pantalla le dice su raíz y su lista.
 const ayudasMotor = (() => {
-  let raizId = null, lista = [], tic = null, actual = null, pausaHasta = 0
+  let raizId = null, lista = [], tic = null, actual = null, pausaHasta = 0, ultima = null
   let burbuja = null, resalte = null, focoAntes = null
 
   const propios = n => n === burbuja || n === resalte || burbuja?.contains(n)
@@ -1281,6 +1521,10 @@ const ayudasMotor = (() => {
   function mostrar(ayuda, el) {
     inyectarEstilosAyudas()
     actual = ayuda
+    // Cuenta como vista en cuanto aparece (una sola vez por usuario y celular):
+    // antes solo se guardaba al tocar "Entendido", y si la persona cambiaba de
+    // pantalla o cerraba sesión con la burbuja abierta, volvía a salir al entrar.
+    marcarAyudasVistas([ayuda.id])
     resalte = document.createElement('div'); resalte.className = 'ay-resalte'; resalte.setAttribute('aria-hidden', 'true')
     burbuja = document.createElement('div')
     burbuja.className = 'ay-burbuja'
@@ -1308,13 +1552,15 @@ const ayudasMotor = (() => {
   function revisar() {
     if (!raizId || !document.getElementById(raizId)) { detener(); return }
     if (actual) {
-      // Si el elemento se fue (cambió la pantalla), se esconde sin darla por vista.
+      // Si el elemento se fue (cambió la pantalla), se esconde (ya quedó como vista).
       if (!aLaVista(document.querySelector(actual.elemento))) ocultar()
       else colocar()
       return
     }
     if (Date.now() < pausaHasta || document.visibilityState !== 'visible') return
     const vistas = leerAyudasVistas()
+    // Ya las vio todas: el revisor se apaga (antes seguía midiendo cada 0.4 s).
+    if (lista.every(a => vistas.has(a.id))) { detener(); return }
     for (const a of lista) {
       if (vistas.has(a.id)) continue
       const el = document.querySelector(a.elemento)
@@ -1329,11 +1575,16 @@ const ayudasMotor = (() => {
     activar(id, ayudas) {
       detener()
       raizId = id; lista = ayudas
+      ultima = { id, ayudas }
       pausaHasta = Date.now() + 800   // que la pantalla termine de dibujarse
       tic = setInterval(revisar, 400)
     },
     pendiente: id => !leerAyudasVistas().has(id),
     ocultar: () => ocultar(),
+    detener: () => detener(),
+    // "Ver ayuda otra vez": vuelve a revisar la pantalla actual aunque el
+    // revisor ya se hubiera apagado por haberlas visto todas.
+    reanudar() { if (ultima && document.getElementById(ultima.id)) this.activar(ultima.id, ultima.ayudas) },
   }
 })()
 
@@ -1399,8 +1650,15 @@ export function paginaCajero(rol = 'mesero') {
   `
 }
 
+// La librería del QR solo la necesita el mesero: se pide al abrir su pantalla
+// (no con la app ni al tocar el botón), así ya está lista y en caché para el
+// modo sin internet.
+let libQR = null
+const cargarLibQR = () => (libQR ||= import('qrcode').then(m => m.default || m).catch(e => { libQR = null; throw e }))
+
 export async function initCajero() {
   inyectarEstilos(); initNavCajero()
+  cargarLibQR().catch(() => {})
   const sesion = ++cajeroSesion
   const $ = id => document.getElementById(id)
   const vigente = () => sesion === cajeroSesion && !!$('cj-root')
@@ -1454,6 +1712,7 @@ export async function initCajero() {
     $('cj-qr-tiempo').textContent = formatoTiempo(restante(c))
     $('cj-qr').hidden = false
     try {
+      const QRCode = await cargarLibQR()
       await QRCode.toCanvas($('cj-qr-canvas'), url, { width: lado, margin: 2, errorCorrectionLevel: 'L' })
     } catch (e) {
       console.error('Error al dibujar el QR:', e)
@@ -1711,6 +1970,7 @@ export async function initCajero() {
   }
   document.addEventListener('visibilitychange', alVolver)
   window.addEventListener('online', alVolver)
+  alSalirDePantalla(() => limpiar())
 
   function limpiar() {
     clearInterval(reloj)
@@ -2125,6 +2385,8 @@ function avatarNegocioHTML(nombre, url) {
 
 // grande = tarjeta y pantallas de éxito: logo grande y mensaje de agradecimiento.
 // celebra = "¡Ganaste 1 punto!" y "¡Disfruta tu premio!": sus botones no se achican.
+// negocio.logoUrlVista: solo la vista previa del dueño (logo recién elegido, aún
+// sin subir, como URL local); el cliente siempre usa negocio.logo.
 function pantallaCliente({ negocio = null, cuerpo, acciones = '', gris = false, arriba = false, grande = false, celebra = false }) {
   const mensaje = grande ? String(negocio?.mensaje_gracias || '').trim() : ''
   return `
@@ -2132,7 +2394,7 @@ function pantallaCliente({ negocio = null, cuerpo, acciones = '', gris = false, 
       <div class="cl-wrap">
         <div class="cl-sello-top">${logoSVG(14, '#94a3b8')}<span>Sello</span></div>
         ${negocio?.nombre ? `<div class="cl-marca${grande ? ' grande' : ''}">
-          ${avatarNegocioHTML(negocio.nombre, urlLogo(negocio.logo))}
+          ${avatarNegocioHTML(negocio.nombre, negocio.logoUrlVista || urlLogo(negocio.logo))}
           <span class="cl-marca-texto"><span class="cl-marca-nombre">${esc(negocio.nombre)}</span>${mensaje ? `<span class="cl-marca-mensaje">${esc(mensaje)}</span>` : ''}</span>
         </div>` : ''}
         <div class="cl-cuerpo${arriba ? ' arriba' : ''}">${cuerpo}</div>
@@ -2176,12 +2438,12 @@ function tarjetaClienteHTML(negocio, t, modo = null) {
   const sellos = meta <= 30
     ? Array.from({ length: meta }, (_, i) => {
         const lleno = i < puntos
-        const contenido = i === meta - 1 ? '🎁' : lleno ? palomitaSVG(18) : ''
+        const contenido = i === meta - 1 ? '🎁' : lleno ? palomitaSVG(18, 'currentColor') : ''
         return `<span class="cl-sello${lleno ? ' lleno' : ''}${i === nuevo ? ' nuevo' : ''}">${contenido}</span>`
       }).join('')
     : ''
   const cabecera = modo === 'punto'
-    ? `<div class="cl-exito-icono">${palomitaSVG(40)}</div>
+    ? `<div class="cl-exito-icono">${palomitaSVG(40, 'currentColor')}</div>
        <h1 class="cl-titulo">¡Ganaste 1 punto!</h1>
        <p class="cl-sub">${esc(t.nombre)}, ya llevas ${puntos} de ${meta}.</p>`
     : modo === 'premio'
@@ -2474,12 +2736,12 @@ export async function initTarjeta(negocioId, { hayTarjeta = false, desdeMostrado
     }
   }
 
-  // Al salir de la pantalla, el listener se quita solo en el siguiente cambio.
   const alVolver = () => {
     if (!vigente()) { document.removeEventListener('visibilitychange', alVolver); return }
     if (document.visibilityState === 'visible') cargar()
   }
   document.addEventListener('visibilitychange', alVolver)
+  alSalirDePantalla(() => document.removeEventListener('visibilitychange', alVolver))
 
   cargar()
 }
@@ -2527,6 +2789,7 @@ async function iniciarCanje(negocioId, negocio, opcionesTarjeta = {}) {
     document.removeEventListener('visibilitychange', alVolver)
     mantenerPantalla(false)
   }
+  alSalirDePantalla(limpiar)
 
   function alVolver() {
     if (!vigente()) return limpiar()
@@ -2796,67 +3059,190 @@ export function initTerminos() {
   })
 }
 
-export async function paginaLanding(negocioId) {
-  inyectarEstilos()
-  try {
-    const { data: resumen, error } = await supabase.rpc('public_get_landing', { p_business_id: negocioId })
-    if (error) throw error
-    if (!resumen?.business) return `<div style="padding:40px;text-align:center">No encontrado</div>`
-    const negocio = resumen.business
-    aplicarColorNegocio(negocio.color_principal)
-    const niveles = resumen.levels || []
-    const filasNiveles = (niveles||[]).filter(n => n.premio_bienvenida).map(n => `
-      <div class="landing-premio">
-        <div style="font-size:28px">${n.emoji}</div>
-        <div>
-          <div style="font-size:15px;font-weight:600;color:${DS.gray900}">${n.nombre}</div>
-          <div style="font-size:12px;color:${DS.gray500};margin-top:2px">Desde ${n.visitas_minimas} visitas · Premio: ${n.premio_bienvenida}</div>
-        </div>
-      </div>
-    `).join('')
-    return `
-      <div class="landing-root">
-        <div class="landing-hero">
-          ${urlLogo(negocio.logo) ? `<img src="${esc(urlLogo(negocio.logo))}" alt="" style="width:80px;height:80px;border-radius:20px;object-fit:contain;background:#ffffff;margin-bottom:16px" onerror="this.style.display='none'" />` : `<div style="margin-bottom:16px">${logoSVG(40, 'rgba(255,255,255,0.5)')}</div>`}
-          <div style="font-size:40px;margin-bottom:8px">${negocio.emoji_negocio || '☕'}</div>
-          <div class="landing-nombre">${negocio.nombre}</div>
-          <div class="landing-tag">${negocio.descripcion || 'Programa de lealtad digital'}</div>
-        </div>
-        <div style="padding:24px 16px 0;margin-top:-20px;position:relative;z-index:1">
-          <h2 style="font-family:'Sora',sans-serif;font-size:18px;font-weight:800;color:${DS.gray900};margin-bottom:16px">⭐ Niveles y premios</h2>
-          ${filasNiveles || `<div class="landing-premio"><div>🏆</div><div><div style="font-size:15px;font-weight:600">Sube de nivel y gana premios</div></div></div>`}
-        </div>
-        <div style="margin:24px 16px">
-          <button class="landing-cta-btn" id="landing-registrar">Registrarme en el programa →</button>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 32px">
-          <div style="background:white;border-radius:14px;padding:20px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.04)"><div style="font-family:'Sora',sans-serif;font-size:32px;font-weight:800;color:${DS.green800}">${resumen.customer_count}</div><div style="font-size:12px;color:${DS.gray500};margin-top:4px">Clientes registrados</div></div>
-          <div style="background:white;border-radius:14px;padding:20px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.04)"><div style="font-family:'Sora',sans-serif;font-size:32px;font-weight:800;color:${DS.green800}">${resumen.visit_count}</div><div style="font-size:12px;color:${DS.gray500};margin-top:4px">Visitas registradas</div></div>
-        </div>
-        <div style="text-align:center;padding:0 16px 32px;font-size:12px;color:${DS.gray300}">Powered by <strong style="color:${DS.green800}">Sello</strong></div>
-      </div>
-    `
-  } catch (e) { return `<div style="padding:40px;text-align:center">${errMsg()}</div>` }
+// ═══════════════════════════════════════════════════════════
+// PÁGINA PÚBLICA DEL PROGRAMA (/#/n/<slug>)
+// La comparte el negocio (WhatsApp, Instagram, Google Maps) para invitar a
+// sus clientes. Una sola pantalla en el celular, sin QR. Los datos salen de
+// public_get_programa (fase 6E): { nombre, logo, color, meta, premio }, lo
+// mismo que se configura en Personalización. Nunca datos de clientes.
+// programaPublicoHTML es el componente de la página. Nada en la app enlaza
+// a esta ruta: el negocio comparte el link a mano.
+// ═══════════════════════════════════════════════════════════
+const SLUG_VALIDO = /^[a-z0-9]+(-[a-z0-9]+)*$/
+const PASOS_PROGRAMA = ['Pide tu código', 'Escanea', 'Suma']
+const ICONO_REGALO = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18"/><path d="M12 8c-1.5-3-5-4-5.5-2S9 8 12 8c3 0 6-.5 5.5-2S13.5 5 12 8z"/></svg>'
+
+// Hasta 2 letras: la primera de cada una de las dos primeras palabras.
+function inicialesNegocio(nombre) {
+  const palabras = String(nombre || '').trim().split(/\s+/).filter(p => /[\p{L}\p{N}]/u.test(p))
+  return palabras.slice(0, 2)
+    .map(p => Array.from(p).find(c => /[\p{L}\p{N}]/u.test(c)) || '')
+    .join('').toLocaleUpperCase('es-MX')
 }
 
-export function initLanding(negocioId) {
+// Colores de la página: texto blanco, o #17201E si el color es claro (y los
+// chips con sombra en vez de luz). tinta = el color usado SOBRE blanco.
+function coloresPrograma(colorGuardado) {
+  const color = esColorHex(colorGuardado) ? colorGuardado.toLowerCase() : COLOR_TARJETA_INICIAL
+  const claro = textoSobreColor(color) !== '#ffffff'
+  return {
+    color,
+    vars: `--pp-color:${color};--pp-texto:${claro ? '#17201E' : '#ffffff'};--pp-chip:${claro ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.16)'};--pp-tinta:${tintaSobreBlanco(color)}`,
+  }
+}
+
+// d = { nombre, logo (ruta) | logoUrl (URL ya armada), color, meta, premio }
+function programaPublicoHTML(d) {
+  const { vars } = coloresPrograma(d.color)
+  const nombre = String(d.nombre || '').trim() || 'Tu negocio'
+  const meta = Math.min(999, Math.max(1, Math.round(Number(d.meta)) || 10))
+  const premio = String(d.premio || '').replace(/\s+/g, ' ').trim()
+  const logoUrl = d.logoUrl !== undefined ? d.logoUrl : urlLogo(d.logo)
+  // La tarjeta es un ejemplo: 2 llenas (o menos si la meta es muy corta).
+  const ejemplo = Math.max(0, Math.min(2, meta - 1))
+  const tamPremio = premio.length > 48 ? ' muy-largo' : premio.length > 22 ? ' largo' : ''
+  const casillas = meta <= 8
+    ? `<div class="pp-casillas">${Array.from({ length: meta }, (_, i) => i === meta - 1
+        ? `<span class="pp-casilla regalo">${ICONO_REGALO}</span>`
+        : `<span class="pp-casilla${i < ejemplo ? ' llena' : ''}">${i < ejemplo ? palomitaSVG(18, 'currentColor') : ''}</span>`).join('')}</div>`
+    : '<div class="pp-barra"><span></span></div>'
+  return `
+    <main class="pp" style="${vars}">
+      <header class="pp-cab">
+        <div class="pp-logo" aria-hidden="true">
+          <span class="pp-iniciales">${esc(inicialesNegocio(nombre))}</span>
+          ${logoUrl ? `<img src="${esc(logoUrl)}" alt="" decoding="async" onerror="this.remove()">` : ''}
+        </div>
+        <h1 class="pp-nombre">${esc(nombre)}</h1>
+        <p class="pp-sub">Programa de lealtad</p>
+      </header>
+      <div class="pp-oferta">
+        <p class="pp-meta"><span class="pp-num">${formatoNumero(meta)}</span><span class="pp-visitas">${meta === 1 ? 'visita' : 'visitas'}</span></p>
+        ${premio ? `<p class="pp-premio${tamPremio}">= ${esc(premio)}</p>` : ''}
+      </div>
+      <section class="pp-tarjeta" aria-label="Ejemplo de tarjeta: ${ejemplo} de ${meta} visitas">
+        <div class="pp-tarjeta-cab" aria-hidden="true"><span class="pp-tarjeta-lbl">Así se ve tu tarjeta</span><span class="pp-tarjeta-cuenta">${ejemplo} de ${formatoNumero(meta)}</span></div>
+        <div aria-hidden="true">${casillas}</div>
+      </section>
+      <ol class="pp-pasos" aria-label="Cómo funciona">
+        ${PASOS_PROGRAMA.map((p, i) => `<li>${i + 1} · ${p}</li>`).join('')}
+      </ol>
+      <footer class="pp-pie">
+        <div class="pp-pie-fila"><span>Gratis · Sin descargar nada</span><span class="pp-hecho">Hecho con Sello</span></div>
+        <button type="button" class="pp-aviso">Aviso de privacidad</button>
+      </footer>
+    </main>`
+}
+
+function inyectarEstilosPrograma() {
+  if (document.getElementById('sello-styles-programa')) return
+  const sistema = "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto, sans-serif"
+  const titulos = `'Bricolage Grotesque', 'Inter', ${sistema}`
+  const s = document.createElement('style')
+  s.id = 'sello-styles-programa'
+  s.textContent = `
+    @font-face {
+      font-family: 'Bricolage Grotesque'; font-style: normal; font-weight: 700 800; font-display: swap;
+      src: url('${import.meta.env.BASE_URL}fonts/bricolage-grotesque.woff2') format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    .pp-pagina { display: flex; min-height: 100vh; min-height: 100dvh; }
+    .pp { box-sizing: border-box; flex: 1; width: 100%; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column;
+      padding: calc(40px + env(safe-area-inset-top)) calc(24px + env(safe-area-inset-right)) calc(26px + env(safe-area-inset-bottom)) calc(24px + env(safe-area-inset-left));
+      background: var(--pp-color); color: var(--pp-texto); font-family: 'Inter', ${sistema}; font-size: 16px; line-height: 1.4; text-align: left; -webkit-font-smoothing: antialiased; }
+    .pp *, .pp *::before, .pp *::after { box-sizing: border-box; }
+    .pp-cab { display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .pp-logo { position: relative; flex-shrink: 0; width: 112px; height: 112px; border-radius: 50%; background: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.18); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .pp-logo img { position: absolute; inset: 0; width: 100%; height: 100%; padding: 16px; object-fit: contain; background: #ffffff; }
+    .pp-iniciales { font-family: ${titulos}; font-size: 38px; font-weight: 800; letter-spacing: -1px; color: var(--pp-tinta); }
+    .pp-nombre { margin: 12px 0 0; font-size: 18px; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+    .pp-sub { margin: 2px 0 0; font-size: 13px; opacity: 0.85; }
+    .pp-oferta { margin-top: 26px; text-align: center; }
+    .pp-meta { margin: 0; display: flex; align-items: baseline; justify-content: center; gap: 10px; font-family: ${titulos}; line-height: 0.85; }
+    .pp-num { font-size: 130px; font-weight: 800; letter-spacing: -5px; font-variant-numeric: tabular-nums; }
+    .pp-visitas { font-size: 30px; font-weight: 700; }
+    .pp-premio { margin: 12px 0 0; font-family: ${titulos}; font-size: 38px; font-weight: 800; line-height: 1.08; letter-spacing: -0.5px; text-wrap: balance; overflow-wrap: anywhere; }
+    .pp-premio.largo { font-size: 30px; }
+    .pp-premio.muy-largo { font-size: 24px; }
+    .pp-tarjeta { margin-top: 24px; padding: 18px; border-radius: 22px; background: #ffffff; color: #17201E; box-shadow: 0 10px 30px rgba(0,0,0,0.12); }
+    .pp-tarjeta-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 14px; }
+    .pp-tarjeta-lbl { color: #5B6661; }
+    .pp-tarjeta-cuenta { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .pp-casillas { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
+    .pp-casilla { flex: 1 1 0; max-width: 64px; height: 44px; border-radius: 12px; border: 2px dashed #C9CFCC; display: flex; align-items: center; justify-content: center; }
+    .pp-casilla.llena { border: none; background: var(--pp-color); color: var(--pp-texto); }
+    .pp-casilla.regalo { border: 2px solid var(--pp-tinta); color: var(--pp-tinta); }
+    .pp-barra { margin-top: 14px; height: 12px; border-radius: 999px; background: #E6EAE8; overflow: hidden; }
+    .pp-barra span { display: block; width: 25%; height: 100%; border-radius: inherit; background: var(--pp-color); }
+    .pp-pasos { list-style: none; margin: 16px 0 0; padding: 0; display: flex; gap: 6px; }
+    .pp-pasos li { flex: 1 1 auto; min-width: 0; padding: 10px 8px; border-radius: 14px; background: var(--pp-chip); font-size: 14px; font-weight: 600; line-height: 1.25; text-align: center; }
+    @media (min-width: 360px) { .pp-pasos li { white-space: nowrap; } }
+    .pp-pie { margin-top: auto; padding-top: 20px; font-size: 13px; }
+    .pp-pie-fila { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .pp-hecho { opacity: 0.75; white-space: nowrap; }
+    .pp-aviso { display: block; min-height: 44px; margin: 2px auto -10px; padding: 0 12px; border: none; background: none; color: inherit; font: inherit; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; opacity: 0.85; cursor: pointer; }
+    .pp-aviso:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 6px; }
+    @media (min-width: 600px) {
+      .pp-pagina { align-items: center; justify-content: center; padding: 32px 16px; background: #F2F4F3 !important; }
+      .pp-pagina .pp { flex: 0 1 420px; min-height: 0; border-radius: 28px; padding: 40px 24px 26px; box-shadow: 0 20px 60px rgba(15,23,42,0.12); }
+    }
+  `
+  document.head.appendChild(s)
+}
+
+const paginaProgramaNoEncontrada = () => pantallaEstadoCliente({
+  icono: '🔍', titulo: 'No encontramos este negocio', sub: 'Revisa el link que te compartieron.',
+})
+
+export async function paginaPrograma(slug) {
   inyectarEstilos()
-  document.getElementById('landing-registrar')?.addEventListener('click', () => navigate('negocio', negocioId))
+  inyectarEstilosPrograma()
+  aplicarColorNegocio(AZUL_RESPALDO)
+  const limpio = String(slug || '').trim().toLowerCase()
+  if (!SLUG_VALIDO.test(limpio) || limpio.length > 40) return paginaProgramaNoEncontrada()
+  try {
+    const { data, error } = await supabase.rpc('public_get_programa', { p_slug: limpio })
+    if (error) throw error
+    if (!data?.nombre) return paginaProgramaNoEncontrada()
+    const { color } = coloresPrograma(data.color)
+    aplicarColorNegocio(color)
+    document.title = `${data.nombre} · Programa de lealtad`
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color)
+    return `<div class="pp-pagina" style="background:${color}">${programaPublicoHTML(data)}</div>`
+  } catch (e) {
+    console.error('Error al cargar el programa:', e)
+    return pantallaEstadoCliente({
+      icono: '📶',
+      titulo: sinInternet(e) ? 'Necesitas internet para ver esta página' : 'No pudimos abrir esta página',
+      sub: 'Revisa tu señal e intenta de nuevo.',
+    })
+  }
+}
+
+export function initPrograma() {
+  document.querySelector('.pp-pagina .pp-aviso')?.addEventListener('click', abrirAvisoPrivacidadCliente)
 }
 
 // ═══════════════════════════════════════════════════════════
 // PANEL DEL DUEÑO (Fase 4)
 // Pestaña "Resumen": en 3 segundos, si Sello le está trayendo clientes de
-// vuelta. Todo lo calcula el servidor (resumen_dueno, resumen_meseros,
-// clientes_inactivos); el navegador solo pinta.
-// Pestaña "Personalización": programa, tarjeta de los clientes, personal y
-// exportar (con la página pública).
+// vuelta. Todo lo calcula el servidor (Fase B: resumen_inicio,
+// resumen_periodo, clientes_cerca_premio, actividad_reciente,
+// clientes_inactivos y logros_lista); el navegador solo pinta.
+// Pestaña "Personalización": programa, ventas, tarjeta de los clientes y
+// exportar (con la página pública). Pestaña "Equipo": cómo va el equipo,
+// visitas recientes, meseros, personal y QR abiertos.
 // Estilos: inyectarEstilosDueno (todo dentro de .ow).
 // ═══════════════════════════════════════════════════════════
-const PLANTILLAS_PREMIO = [
-  'Un café gratis', 'Un postre gratis', 'Un corte gratis', 'Un taco gratis',
-  '20% de descuento en tu cuenta', '10% de descuento', '2x1',
-]
+const PLANTILLAS_PREMIO = ['Un postre gratis', 'Una bebida gratis', '10% de descuento', '2×1']
+
+// Exportar la lista de clientes solo en el plan Pro (aún no existe el plan:
+// se queda en false; no depende de la base de datos).
+const PLAN_EXPORTAR_SOLO_PRO = false
+
+// "Color libre" (selector de cualquier color) solo en Pro. Con true no aparece
+// para nadie (aún no hay plan Pro). El servidor acepta cualquier #rrggbb.
+const PLAN_COLOR_LIBRE_SOLO_PRO = true
 
 // Mensaje de agradecimiento de la tarjeta (4E): máx. 40 caracteres, como el servidor.
 const MENSAJE_GRACIAS_MAX = 40
@@ -2866,18 +3252,27 @@ const PLANTILLAS_MENSAJE = ['¡Gracias por tu visita!', '¡Qué gusto verte de n
 const TICKET_MAX = 100000
 const COSTO_MAX = 100000
 
-// Paleta corta y sobria para la tarjeta del cliente. Todos tienen buen
-// contraste con texto blanco (botones de la tarjeta).
+// Paleta de la tarjeta del cliente: 12 colores, todos con contraste de al
+// menos 4.5:1 con texto blanco (fórmula de WCAG, la misma de textoSobreColor).
+// Un color guardado que ya no esté aquí se ofrece como "Tu color actual".
 const COLORES_TARJETA = [
-  { nombre: 'Grafito', valor: '#1f2937' },
-  { nombre: 'Verde', valor: '#0a5c47' },
-  { nombre: 'Verde azulado', valor: '#0f766e' },
-  { nombre: 'Azul', valor: '#1d4ed8' },
-  { nombre: 'Índigo', valor: '#4338ca' },
-  { nombre: 'Vino', valor: '#9f1239' },
-  { nombre: 'Terracota', valor: '#9a3412' },
-  { nombre: 'Café', valor: '#78350f' },
+  { nombre: 'Azul marino', valor: '#1e3a5f' },       // 11.50:1
+  { nombre: 'Azul', valor: '#1d4ed8' },              //  6.70:1
+  { nombre: 'Azul cielo oscuro', valor: '#0369a1' }, //  5.93:1
+  { nombre: 'Turquesa', valor: '#0f766e' },          //  5.47:1
+  { nombre: 'Verde', valor: '#0a5c47' },             //  7.97:1
+  { nombre: 'Verde olivo', valor: '#4d6418' },       //  6.66:1
+  { nombre: 'Mostaza oscuro', valor: '#8a6100' },    //  5.54:1
+  { nombre: 'Naranja quemado', valor: '#b2440c' },   //  5.64:1
+  { nombre: 'Rojo', valor: '#b91c1c' },              //  6.47:1
+  { nombre: 'Vino', valor: '#9f1239' },              //  8.02:1
+  { nombre: 'Morado', valor: '#6d28d9' },            //  7.10:1
+  { nombre: 'Gris carbón', valor: '#1f2937' },       // 14.68:1
 ]
+// El de un negocio nuevo (alta_negocio) y el de respaldo.
+const COLOR_TARJETA_INICIAL = '#0a5c47'
+// Variables de la vista previa para un color (fondo, texto encima y como texto).
+const varsVista = c => `--vista-color:${c};--vista-texto:${textoSobreColor(c)};--vista-tinta:${tintaSobreBlanco(c)}`
 const esColorHex = c => /^#[0-9a-f]{6}$/i.test(String(c || ''))
 
 // "+529981234567" → "998 123 4567"
@@ -2904,12 +3299,12 @@ function mensajeDueno(error) {
   if (sinInternet(error)) return 'Sin conexión. Revisa tu internet e intenta de nuevo.'
   if (m.includes('META_INVALIDA')) return 'Las visitas para el premio deben ser de 1 a 100.'
   if (m.includes('PREMIO_INVALIDO')) return 'Escribe el premio (máximo 80 letras).'
-  if (m.includes('MAX_CODIGOS_INVALIDO')) return 'Los códigos activos deben ser de 1 a 50.'
+  if (m.includes('MAX_CODIGOS_INVALIDO')) return 'Los QR abiertos deben ser de 1 a 50.'
   if (m.includes('TICKET_INVALIDO')) return `Lo que gasta un cliente debe ser de $1 a ${formatoPesos(TICKET_MAX)}, o déjalo vacío.`
   if (m.includes('COSTO_INVALIDO')) return `El costo del premio debe ser de $0 a ${formatoPesos(COSTO_MAX)}, o déjalo vacío.`
   if (m.includes('TELEFONO_INVALIDO')) return 'Escribe los 10 dígitos del número.'
   if (m.includes('NO_ENCONTRADO')) return 'Ese número ya no estaba en la lista.'
-  if (m.includes('COLOR_INVALIDO')) return 'Elige un color de la lista.'
+  if (m.includes('COLOR_INVALIDO')) return 'No pudimos guardar ese color. Intenta con otro.'
   if (m.includes('LOGO_INVALIDO')) return 'No pudimos guardar el logo. Vuelve a subirlo.'
   if (m.includes('MENSAJE_INVALIDO')) return `El mensaje debe tener máximo ${MENSAJE_GRACIAS_MAX} letras.`
   if (m.includes('Acceso denegado')) return 'Solo el dueño puede ver y cambiar esto. Sal y vuelve a entrar.'
@@ -2934,29 +3329,54 @@ function errorPanelHTML(texto, idBoton) {
   </div>`
 }
 
-// ── Resumen ──
-function cambioSemanaHTML(actual, anterior) {
-  const dif = (Number(actual) || 0) - (Number(anterior) || 0)
-  if (!actual && !anterior) return ''
-  if (dif > 0) return `<div class="ow-cambio sube">▲ ${formatoNumero(dif)} vs. la anterior</div>`
-  if (dif < 0) return `<div class="ow-cambio baja">▼ ${formatoNumero(-dif)} vs. la anterior</div>`
-  return `<div class="ow-cambio">Igual que la anterior</div>`
+// ── Resumen (Fase B) ──
+// Todo sale de supabase/fase-7-resumen.sql (resumen_inicio, resumen_periodo,
+// clientes_cerca_premio, actividad_reciente) y de
+// clientes_inactivos (Fase 4). Colores con significado: verde = crecimiento,
+// ámbar = oportunidad, gris azulado = información. Nada en rojo: si un número
+// baja, su comparación se ve en gris.
+const PERIODOS_RESUMEN = {
+  mes: { boton: 'Mes', titulo: 'Este mes', anterior: 'mes pasado', primero: 'Tu primer mes' },
+  semana: { boton: 'Semana', titulo: 'Esta semana', anterior: 'semana pasada', primero: 'Tu primera semana' },
 }
 
-function principalHTML(r) {
-  const n = Number(r.visitas_repetidas_semana) || 0
-  if (r.negocio?.ticket_promedio != null) {
-    return `<section class="ow-tarjeta ow-principal">
-      <div class="ow-principal-lbl">Esta semana tus clientes volvieron</div>
-      <div class="ow-principal-num">${n === 1 ? '1 vez' : `${formatoNumero(n)} veces`}</div>
-      <div class="ow-principal-sub" id="dn-ventas">≈ ${formatoPesos(r.ventas_estimadas)} en ventas <span class="ow-nota">(estimado)</span></div>
-    </section>`
+// Mes por defecto; Semana si el mes anterior no tiene con qué comparar y la
+// semana anterior sí.
+function periodoInicialResumen(d) {
+  return d?.mes?.anterior_con_datos !== true && d?.semana?.anterior_con_datos === true ? 'semana' : 'mes'
+}
+
+// Comparación contra el periodo anterior: sube = verde; baja o igual = gris.
+// Sin periodo anterior con datos, o si el anterior fue 0, no se compara:
+// solo se ve el número actual.
+function cambioPeriodoHTML(dato, conDatos, anterior) {
+  if (!conDatos || !dato || !(Number(dato.anterior) > 0)) return ''
+  const dif = (Number(dato.actual) || 0) - Number(dato.anterior)
+  if (dif > 0) return `<div class="ow-cambio sube">▲ ${formatoNumero(dif)} vs. ${anterior}</div>`
+  if (dif < 0) return `<div class="ow-cambio">▼ ${formatoNumero(-dif)} vs. ${anterior}</div>`
+  return `<div class="ow-cambio">Igual que ${anterior === 'mes pasado' ? 'el' : 'la'} ${anterior}</div>`
+}
+
+// Tarjeta principal (verde Sello sólido, texto blanco). Nunca un "0" grande
+// ni "$0": con 0 regresos, el mensaje de arranque.
+// "desde que empezaste · 1 de octubre": la fecha es el alta del negocio
+// (campo alta de grafica_clientes); si no llegó, va sin fecha.
+function principalInicioHTML(r, alta = null) {
+  const regresaron = Number(r.clientes_regresaron) || 0
+  const cabeza = regresaron > 0
+    ? `<div class="ow-principal-lbl">Ya regresaron</div>
+       <div class="ow-principal-num">${formatoNumero(regresaron)} ${regresaron === 1 ? 'cliente' : 'clientes'}</div>`
+    : `<div class="ow-principal-arranque">Tu primer cliente que regrese aparecerá aquí</div>
+       <div class="ow-principal-lbl">Cuenta desde su segunda visita.</div>`
+  let ventas = ''
+  if (r.ticket_promedio == null) {
+    ventas = '<button type="button" class="ow-enlace" id="dn-invita-ticket">Agrega en Personalización cuánto gasta un cliente para ver tus ventas estimadas</button>'
+  } else if (regresaron > 0 && r.ventas_estimadas_total != null) {
+    ventas = `<div class="ow-principal-sub" id="dn-ventas">≈ ${formatoPesos(r.ventas_estimadas_total)} en ventas <span class="ow-nota">(estimado)</span></div>`
   }
-  return `<section class="ow-tarjeta ow-principal">
-    <div class="ow-principal-num">${formatoNumero(n)}</div>
-    <div class="ow-principal-lbl">${n === 1 ? 'visita de un cliente que regresó' : 'visitas de clientes que regresaron'} esta semana</div>
-    <button type="button" class="ow-enlace" id="dn-invita-ticket">Agrega cuánto gasta un cliente para ver tus ventas estimadas</button>
-  </section>`
+  const fechaAlta = textoAlta(alta)
+  const desde = regresaron > 0 ? `<div class="ow-principal-desde">desde que empezaste${fechaAlta ? ` · ${fechaAlta}` : ''}</div>` : ''
+  return `<section class="ow-tarjeta ow-principal" aria-label="Clientes que regresaron">${cabeza}${ventas}${desde}</section>`
 }
 
 // Negocio nuevo: en vez de ceros, qué hacer para empezar.
@@ -2971,337 +3391,497 @@ function vacioResumenHTML() {
   </section>`
 }
 
-function meserosHTML(meseros) {
+// "Cómo va tu equipo esta semana" (pestaña Equipo): una línea por persona con
+// lo que devuelve resumen_meseros. Sumó = reclamados + manuales. El aviso
+// ámbar sale solo si revisar es verdadero; la frase se elige según las reglas
+// que marcó el servidor en "motivo".
+const AVISOS_EQUIPO = [
+  { patron: /c[oó]digos sin usar/i, texto: 'Tiene muchos códigos sin usar. Pregúntale si los clientes no alcanzan a escanear.' },
+  { patron: /a mano/i, texto: 'Suma muchas visitas a mano. Pregúntale si el QR le está fallando.' },
+  { patron: /c[oó]digo de canje/i, texto: 'Se equivocó varias veces al escribir el código de canje.' },
+]
+function equipoSemanaHTML(meseros) {
   const lista = meseros || []
+  const cab = '<h2 class="ow-titulo-sec">Cómo va tu equipo esta semana</h2>'
   if (lista.length === 0) {
-    return `<section class="ow-tarjeta">
-      <h2 class="ow-titulo-sec">Tu equipo esta semana</h2>
-      <p class="ow-vacio">Cuando tu equipo cobre con "Cobré una cuenta", aquí verás a cada mesero.</p>
-    </section>`
+    return `${cab}<p class="ow-vacio">Cuando tu equipo cobre con "Cobré una cuenta", aquí verás a cada mesero.</p>`
   }
-  const filas = lista.map(m => `<tr>
-      <td><span class="ow-persona">${esc(m.nombre)}</span>${m.rol === 'owner' ? ' <span class="ow-nota">(tú)</span>' : ''}
-        ${m.revisar ? `<span class="ow-revisar">Revisar${m.motivo ? `: ${esc(m.motivo)}` : ''}</span>` : ''}</td>
-      <td>${formatoNumero(m.generados)}</td>
-      <td>${formatoNumero(m.reclamados)}</td>
-      <td>${formatoNumero(m.manuales)}</td>
-      <td>${formatoNumero(m.bloqueos_canje)}</td>
-    </tr>`).join('')
-  return `<section class="ow-tarjeta">
-    <h2 class="ow-titulo-sec">Tu equipo esta semana</h2>
-    <div class="ow-tabla-wrap">
-      <table class="ow-tabla">
-        <thead><tr>
-          <th scope="col">Persona</th><th scope="col">Códigos</th><th scope="col">Usados</th>
-          <th scope="col">A mano</th><th scope="col">Bloqueos</th>
-        </tr></thead>
-        <tbody>${filas}</tbody>
-      </table>
+  const filas = lista.map(m => {
+    const sumo = (Number(m.reclamados) || 0) + (Number(m.manuales) || 0)
+    const manuales = Number(m.manuales) || 0
+    const avisos = m.revisar ? AVISOS_EQUIPO.filter(a => a.patron.test(m.motivo || '')) : []
+    return `<div class="ow-eq-persona">
+      <div class="ow-eq-linea"><span class="ow-persona" style="color:var(--ow-texto)">${m.rol === 'owner' ? 'Tú' : esc(m.nombre)}</span> · sumó ${formatoNumero(sumo)} ${sumo === 1 ? 'visita' : 'visitas'}${manuales > 0 ? ` · ${formatoNumero(manuales)} a mano` : ''}</div>
+      ${avisos.map(a => `<p class="ow-eq-aviso">${a.texto}</p>`).join('')}
+    </div>`
+  }).join('')
+  return `${cab}${filas}`
+}
+
+// "Este mes" / "Esta semana": selector y 3 números grandes.
+function periodoHTML(d, periodo) {
+  const P = PERIODOS_RESUMEN[periodo] || PERIODOS_RESUMEN.mes
+  const r = d?.[periodo] || {}
+  const con = r.anterior_con_datos === true
+  // "Tu primer mes": el negocio empezó (primera visita, resumen_inicio.desde)
+  // dentro de este periodo y no hay periodo anterior con datos. Si es más
+  // viejo y el anterior no tiene datos, no se muestra nada.
+  const empezo = d?.inicio?.desde
+  const primero = !con && !!empezo && !!r.desde && String(empezo) >= String(r.desde)
+  const cifra = (dato, lbl) => `<div class="ow-cifra">
+      <div class="ow-cifra-num">${formatoNumero(dato?.actual)}</div>
+      <div class="ow-cifra-lbl">${lbl}</div>
+      ${primero ? `<span class="ow-primer">${P.primero}</span>` : cambioPeriodoHTML(dato, con, P.anterior)}
+    </div>`
+  return `<div class="ow-periodo-cab">
+      <h2 class="ow-titulo-sec" id="dn-periodo-titulo" style="margin:0">${P.titulo}</h2>
+      <div class="ow-seg chico" role="group" aria-label="Periodo">
+        ${Object.entries(PERIODOS_RESUMEN).map(([k, p]) => `<button type="button" data-periodo="${k}" aria-pressed="${k === periodo}">${p.boton}</button>`).join('')}
+      </div>
     </div>
-    <p class="ow-ayuda" style="margin-top:12px">Bloqueos: veces que escribió mal el código de canje (total, no solo esta semana).</p>
+    <div class="ow-cifras">
+      ${cifra(r.clientes_nuevos, 'Clientes nuevos')}
+      ${cifra(r.visitas_regreso, 'Visitas de regreso')}
+      ${cifra(r.premios_entregados, 'Premios entregados')}
+    </div>`
+}
+
+// Tarjeta ámbar (oportunidad): solo si hay alguien a 1 visita de su premio.
+function cercaPremioHTML(c) {
+  const total = Number(c?.total) || 0
+  const lista = c?.clientes || []
+  if (total === 0 || lista.length === 0) return ''
+  const nombres = lista.slice(0, 3).map(x => esc(x.nombre))
+  const resto = total - nombres.length
+  return `<button type="button" class="ow-fila atencion" id="dn-ver-cerca">
+    <span><span class="ow-fila-titulo">${total === 1 ? '1 cliente está a 1 visita de su premio' : `${formatoNumero(total)} clientes están a 1 visita de su premio`}</span>
+      <span class="ow-fila-sub">${nombres.join(', ')}${resto > 0 ? ` y ${formatoNumero(resto)} más` : ''}</span></span>
+    <span class="ow-fila-ver">Ver</span>
+  </button>`
+}
+
+// Tarjeta gris azulada (información): solo si hay clientes que no vienen.
+// Solo informativa: el botón para invitarlos llega con WhatsApp (la hoja ya
+// acepta una acción por fila, ver abrirListaClientes).
+function inactivosHTML(i) {
+  const n = (i?.clientes || []).length
+  if (n === 0) return ''
+  const cuantos = n >= 300 ? 'Más de 300 clientes no vienen' : n === 1 ? '1 cliente no viene' : `${formatoNumero(n)} clientes no vienen`
+  return `<button type="button" class="ow-fila info" id="dn-ver-inactivos">
+    <span><span class="ow-fila-titulo">${cuantos} desde hace 21 días</span>
+      <span class="ow-fila-sub">Para que sepas quiénes son.</span></span>
+    <span class="ow-fila-ver">Ver</span>
+  </button>`
+}
+
+// Hoja con una lista de clientes (primer nombre y ···4821).
+// detalle(cliente): texto opcional bajo el nombre.
+// accion (para después, hoy nadie la pasa): { texto, alTocar(cliente, hoja) }
+// agrega un botón a cada fila.
+function abrirListaClientes({ titulo, sub = '', clientes = [], nota = '', detalle = null, accion = null }) {
+  const h = abrirHojaDueno({ titulo: esc(titulo), sub: esc(sub) })
+  h.cuerpo.innerHTML = clientes.length === 0
+    ? '<p class="ow-vacio">Nadie por ahora.</p>'
+    : clientes.map((c, i) => `<div class="ow-lista-fila">
+        <div><div><span class="ow-persona">${esc(c.nombre)}</span> <span class="ow-nota" style="font-variant-numeric:tabular-nums">···${esc(c.ultimos4)}</span></div>
+          ${detalle ? `<div class="ow-ayuda" style="margin-top:2px">${esc(detalle(c))}</div>` : ''}</div>
+        ${accion ? `<button type="button" class="ow-btn secundario chico" data-fila="${i}">${esc(accion.texto)}</button>` : ''}
+      </div>`).join('') + (nota ? `<p class="ow-ayuda" style="text-align:center">${esc(nota)}</p>` : '')
+  if (accion) {
+    h.cuerpo.querySelectorAll('[data-fila]').forEach(b => b.addEventListener('click', () => accion.alTocar(clientes[Number(b.dataset.fila)], h)))
+  }
+  return h
+}
+
+// "Lo que está pasando": 5 actividades en lenguaje humano, sin botones.
+const ORDINALES = ['', 'primera', 'segunda', 'tercera', 'cuarta', 'quinta', 'sexta', 'séptima', 'octava', 'novena', 'décima']
+function textoActividad(a) {
+  const quien = `<strong>${esc(a.nombre)}</strong>`
+  if (a.tipo === 'canje') return `${quien} recibió su premio`
+  if (a.tipo === 'nuevo') return `${quien} vino por primera vez`
+  const n = Number(a.numero) || 0
+  return ORDINALES[n] ? `${quien} regresó: es su ${ORDINALES[n]} visita` : `${quien} regresó: es su visita número ${formatoNumero(n)}`
+}
+// Tiempos relativos en la zona del negocio (America/Cancun): "hace un
+// momento", "hace 20 min", "hace 1 h", "ayer", "hace 3 días"; con más de 7
+// días, fecha corta ("12 nov"; con año si no es este año).
+const ZONA_ACTIVIDAD = 'America/Cancun'
+const diaEnZona = f => {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: ZONA_ACTIVIDAD, year: 'numeric', month: '2-digit', day: '2-digit' })
+    .formatToParts(f).map(x => [x.type, x.value]))
+  return Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day))
+}
+const anioEnZona = f => new Intl.DateTimeFormat('en', { timeZone: ZONA_ACTIVIDAD, year: 'numeric' }).format(f)
+function tiempoRelativo(iso, ahora = new Date()) {
+  const f = new Date(iso)
+  if (isNaN(f)) return ''
+  const minutos = Math.floor((ahora - f) / 60000)
+  if (minutos < 1) return 'hace un momento'
+  if (minutos < 60) return `hace ${minutos} min`
+  const dias = Math.round((diaEnZona(ahora) - diaEnZona(f)) / 86400000)
+  if (dias <= 0) return `hace ${Math.floor(minutos / 60)} h`
+  if (dias === 1) return 'ayer'
+  if (dias <= 7) return `hace ${dias} días`
+  const conAnio = anioEnZona(f) !== anioEnZona(ahora) ? { year: 'numeric' } : {}
+  return sinPunto(f.toLocaleDateString('es-MX', { timeZone: ZONA_ACTIVIDAD, day: 'numeric', month: 'short', ...conAnio }))
+}
+const MAX_ACTIVIDAD_RESUMEN = 5
+const MAX_ACTIVIDAD_TODA = 20
+const filasActividadHTML = lista => `<ul class="ow-act">${lista.map(a => `<li class="ow-act-fila">
+    <span class="ow-act-punto ${a.tipo === 'canje' ? 'canje' : a.tipo === 'nuevo' ? 'nuevo' : 'regreso'}" aria-hidden="true"></span>
+    <span class="ow-act-texto">${textoActividad(a)}</span>
+    <span class="ow-act-hora">${esc(tiempoRelativo(a.fecha))}</span>
+  </li>`).join('')}</ul>`
+function actividadHTML(act) {
+  if (!act) return ''
+  const lista = (act.actividad || []).slice(0, MAX_ACTIVIDAD_RESUMEN)
+  return `<section class="ow-tarjeta" aria-labelledby="dn-act-titulo">
+    <h2 class="ow-titulo-sec" id="dn-act-titulo">Lo que está pasando</h2>
+    ${lista.length === 0
+      ? '<p class="ow-vacio">Aquí verás cada visita y cada premio entregado.</p>'
+      : filasActividadHTML(lista)}
+    ${lista.length >= MAX_ACTIVIDAD_RESUMEN ? '<button type="button" class="ow-enlace" id="dn-ver-actividad">Ver toda la actividad</button>' : ''}
   </section>`
 }
 
-// "Dejaron de venir" (tarjeta y lista) queda oculto hasta la fase de WhatsApp:
-// sin un mensaje para invitarlos de vuelta, la lista no le da al dueño nada
-// que hacer. El código (abrirInactivos) y la función SQL clientes_inactivos()
-// siguen listos; para reactivarlo basta con poner esto en true.
-const MOSTRAR_INACTIVOS = false
-
-function resumenHTML(r, meseros, prefGrafica) {
-  if (!(Number(r.clientes_registrados) > 0)) return vacioResumenHTML()
-  const deCada10 = Math.round((Number(r.porcentaje_regresan) || 0) / 10)
-  const entregados = Number(r.premios_entregados_semana) || 0
-  const inactivos = Number(r.inactivos) || 0
-  return `
-    ${principalHTML(r)}
-    <div class="ow-cifras">
-      <div class="ow-cifra"><div class="ow-cifra-num">${formatoNumero(r.clientes_registrados)}</div><div class="ow-cifra-lbl">Clientes registrados</div></div>
-      <div class="ow-cifra"><div class="ow-cifra-num">${formatoNumero(r.visitas_semana)}</div><div class="ow-cifra-lbl">Visitas esta semana</div>${cambioSemanaHTML(r.visitas_semana, r.visitas_semana_anterior)}</div>
-      <div class="ow-cifra"><div class="ow-cifra-num positivo sin-corte">${deCada10}<span class="ow-cifra-de"> de 10</span></div><div class="ow-cifra-lbl">Clientes que regresaron</div></div>
-    </div>
-    ${graficaSeccionHTML(prefGrafica)}
-    ${MOSTRAR_INACTIVOS ? `<button type="button" class="ow-fila${inactivos > 0 ? ' atencion' : ''}" id="dn-ver-inactivos"${inactivos > 0 ? '' : ' disabled'}>
-      <span><span class="ow-fila-titulo">Dejaron de venir</span><span class="ow-fila-sub">Más de 21 días sin venir</span></span>
-      <span class="ow-fila-der"><span class="ow-fila-num">${formatoNumero(inactivos)}</span>${inactivos > 0 ? '<span class="ow-fila-ver">Ver</span>' : ''}</span>
-    </button>` : ''}
-    <div class="ow-cifras dos">
-      <div class="ow-cifra"><div class="ow-cifra-num positivo">${formatoNumero(entregados)}</div><div class="ow-cifra-lbl">Premios entregados esta semana</div>${r.costo_premios_semana != null && entregados > 0 ? `<div class="ow-cambio">≈ ${formatoPesos(r.costo_premios_semana)} de costo</div>` : ''}</div>
-      <div class="ow-cifra"><div class="ow-cifra-num positivo">${formatoNumero(r.premios_listos)}</div><div class="ow-cifra-lbl">Listos para canjear</div></div>
-    </div>
-    ${meserosHTML(meseros)}`
+// Hoja con los últimos 20 movimientos (actividad_reciente(20)), mismo formato.
+function abrirActividad() {
+  const h = abrirHojaDueno({ titulo: `Últimos ${MAX_ACTIVIDAD_TODA} movimientos` })
+  async function cargar() {
+    h.cuerpo.innerHTML = [44, 44, 44, 44].map(bloqueEsq).join('')
+    try {
+      const { data, error } = await supabase.rpc('actividad_reciente', { p_limite: MAX_ACTIVIDAD_TODA })
+      if (!h.hoja.isConnected) return
+      if (error) throw error
+      const lista = data?.actividad || []
+      h.cuerpo.innerHTML = lista.length === 0
+        ? '<p class="ow-vacio">Aquí verás cada visita y cada premio entregado.</p>'
+        : filasActividadHTML(lista)
+    } catch (e) {
+      if (!h.hoja.isConnected) return
+      if (e?.message?.includes('NEGOCIO_INACTIVO')) { h.cerrar(); const { logout } = await import('./auth.js'); logout('negocio'); return }
+      console.error('Error al cargar la actividad:', e)
+      h.cuerpo.innerHTML = errorPanelHTML(sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar la actividad.', 'act-reintentar')
+      h.cuerpo.querySelector('#act-reintentar')?.addEventListener('click', cargar)
+    }
+  }
+  cargar()
 }
 
-// Hoja con la lista de quienes dejaron de venir (primer nombre y ···4821).
-async function abrirInactivos() {
-  inyectarEstilosDueno()
-  const hoja = document.createElement('div')
-  hoja.className = 'ow-hoja-fondo'
-  hoja.innerHTML = `<div class="ow-hoja" role="dialog" aria-modal="true" aria-labelledby="dn-hoja-titulo">
-    <div class="ow-hoja-cab">
-      <div><h2 class="ow-h2" id="dn-hoja-titulo">Dejaron de venir</h2><p class="ow-sub">Más de 21 días sin venir. Los más recientes primero.</p></div>
-      <button class="ow-btn secundario chico" id="dn-hoja-cerrar">Cerrar</button>
-    </div>
-    <div id="dn-hoja-lista">${[52, 52, 52, 52].map(bloqueEsq).join('')}</div>
-  </div>`
-  document.body.appendChild(hoja)
-  const cerrar = () => { hoja.remove(); document.removeEventListener('keydown', alTeclear) }
-  const alTeclear = e => { if (e.key === 'Escape') cerrar() }
-  document.addEventListener('keydown', alTeclear)
-  hoja.querySelector('#dn-hoja-cerrar').addEventListener('click', cerrar)
-  hoja.addEventListener('click', e => { if (e.target === hoja) cerrar() })
-  const lista = hoja.querySelector('#dn-hoja-lista')
-  try {
-    const { data, error } = await supabase.rpc('clientes_inactivos')
-    if (error) throw error
-    if (!hoja.isConnected) return
-    const clientes = data?.clientes || []
-    lista.innerHTML = clientes.length === 0
-      ? `<p class="ow-vacio">Nadie. Todos tus clientes vinieron en las últimas 3 semanas.</p>`
-      : clientes.map(c => `<div class="ow-lista-fila">
-          <div><div><span class="ow-persona">${esc(c.nombre)}</span> <span class="ow-nota" style="font-variant-numeric:tabular-nums">···${esc(c.ultimos4)}</span></div>
-          <div class="ow-ayuda" style="margin-top:2px">Última visita hace ${formatoNumero(c.dias)} días</div></div>
-          <div class="ow-nota" style="white-space:nowrap">${formatoNumero(c.visitas)} ${c.visitas === 1 ? 'visita' : 'visitas'}</div>
-        </div>`).join('')
-  } catch (e) {
-    console.error('Error al cargar los clientes inactivos:', e)
-    if (hoja.isConnected) lista.innerHTML = `<p class="ow-vacio">${mensajeDueno(e)}</p>`
+// La pestaña completa, en este orden: tarjeta principal, Logros, el periodo,
+// (lugar de la gráfica "Clientes en tu programa", pendiente de la fase 9),
+// tarjetas de acción y Lo que está pasando. Sin clientes: los pasos para empezar.
+// Cada parte que llega por separado va en su "ranura" (dn-r-*), para pintarla
+// en cuanto llega su dato sin redibujar lo demás (ver ranuraResumenHTML).
+function resumenHTML(d, periodo) {
+  const inicio = d?.inicio || {}
+  if (!(Number(inicio.clientes_registrados) > 0)) return vacioResumenHTML() + `<div id="dn-r-logros">${ranuraResumenHTML('logros', d)}</div>`
+  return `
+    <div id="dn-r-principal">${ranuraResumenHTML('principal', d)}</div>
+    <div id="dn-r-logros">${ranuraResumenHTML('logros', d)}</div>
+    <section class="ow-periodo" id="dn-periodo" aria-labelledby="dn-periodo-titulo">${periodoHTML(d, periodo)}</section>
+    <div id="dn-grafica-clientes"></div>
+    <div id="dn-r-cerca">${ranuraResumenHTML('cerca', d)}</div>
+    <div id="dn-r-inactivos">${ranuraResumenHTML('inactivos', d)}</div>
+    <div id="dn-r-actividad">${ranuraResumenHTML('actividad', d)}</div>`
+}
+
+// undefined = todavía no llega (esqueleto, o nada si la tarjeta es de las que
+// solo aparecen a veces); null = falló (no se muestra).
+function ranuraResumenHTML(clave, d) {
+  const espera = v => v === undefined
+  switch (clave) {
+    case 'principal': return principalInicioHTML(d.inicio || {}, d.grafica?.alta)
+    case 'logros': return espera(d.logros) ? bloqueEsq(64) : logrosFilaHTML(d)
+    case 'cerca': return espera(d.cerca) ? '' : cercaPremioHTML(d.cerca)
+    case 'inactivos': return espera(d.inactivos) ? '' : inactivosHTML(d.inactivos)
+    case 'actividad': return espera(d.actividad) ? bloqueEsq(150) : actividadHTML(d.actividad)
+    default: return ''
   }
 }
 
-// ── Gráfica (4D) ──
-// Las series llegan YA agregadas de grafica_dueno(periodo) (solo conteos,
-// nunca clientes). Aquí solo se dibujan con SVG propio, sin librerías:
-//   Visitas  = barras azules del periodo actual y una raya azul grisáceo
-//              claro con el periodo anterior en el mismo tramo.
-//   Clientes = línea azul de clientes registrados acumulados.
-// Solo la gráfica usa este azul; el resto del panel sigue igual.
-// Sin rojo ni alarma: si las visitas bajan, un texto neutro y nada más.
-const AZUL_GRAFICA = '#065FD4'
-const AZUL_ANTERIOR = '#C3D0E0'   // periodo anterior: azul grisáceo muy claro
-const AZUL_RESALTE = '#EEF3FB'    // fondo de la columna tocada
-const PERIODOS_GRAFICA = {
-  semana: { boton: 'Semana', actual: 'Esta semana', anterior: 'Semana anterior', nuevos: 'esta semana' },
-  mes: { boton: 'Mes', actual: 'Últimas 4 semanas', anterior: 'Las 4 anteriores', nuevos: 'en 4 semanas' },
+// ── "Clientes en tu programa" (grafica_clientes, fase 9) ──
+// Área azul con degradado, máx. 3 guías, punto en el último valor y solo dos
+// fechas (inicio del rango y "Hoy"). SVG propio dibujado al ancho real.
+const RANGOS_GRAFICA = [['30', '30 días'], ['todo', 'Todo']]
+const AZUL_GRAFICA = '#2563EB'
+function fechaCortaGrafica(d) {
+  const f = fechaLocal(d)
+  const conAnio = f.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}
+  return sinPunto(f.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', ...conAnio }))
 }
-const DIAS_PARA_MES = 14
-const CLAVE_GRAFICA = 'sello_grafica_dueno'
-function leerPrefGrafica() {
-  try {
-    const p = JSON.parse(sessionStorage.getItem(CLAVE_GRAFICA) || '{}')
-    return { periodo: PERIODOS_GRAFICA[p.periodo] ? p.periodo : 'semana', vista: p.vista === 'clientes' ? 'clientes' : 'visitas' }
-  } catch (e) { return { periodo: 'semana', vista: 'visitas' } }
+function graficaClientesHTML(g, modo, ancho, cargando = false) {
+  const puntos = (g?.puntos || []).map(p => ({ fecha: p.fecha, total: Number(p.total) || 0 }))
+  const total = Number(g?.total) || 0
+  const chips = RANGOS_GRAFICA.map(([k, t]) => `<button type="button" class="ow-gc-chip" data-rango="${k}" aria-pressed="${k === modo}"><span>${t}</span></button>`).join('')
+  let cuerpo
+  if (cargando) {
+    cuerpo = '<div class="ow-esq ow-gc-esq"></div>'
+  } else if (puntos.length < 2) {
+    cuerpo = '<p class="ow-vacio">Tu gráfica aparecerá cuando tengas más días de clientes.</p>'
+  } else {
+    const W = Math.max(200, Math.round(ancho)), H = 140, PT = 10, PB = 6, PX = 7
+    const techo = Math.max(1, ...puntos.map(p => p.total)) * 1.12
+    const x = i => PX + i * (W - 2 * PX) / (puntos.length - 1)
+    const y = v => PT + (H - PT - PB) * (1 - v / techo)
+    const linea = puntos.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.total).toFixed(1)}`).join('')
+    const base = (H - PB).toFixed(1)
+    const area = `${linea}L${x(puntos.length - 1).toFixed(1)},${base}L${x(0).toFixed(1)},${base}Z`
+    const guias = [0, 0.5, 1].map(k => { const yy = (PT + (H - PT - PB) * k).toFixed(1); return `<line x1="0" x2="${W}" y1="${yy}" y2="${yy}" stroke="#EEF1F4" stroke-width="1"/>` }).join('')
+    const ult = puntos[puntos.length - 1]
+    const desc = `${formatoNumero(puntos[0].total)} clientes el ${fechaCortaGrafica(puntos[0].fecha)} y ${formatoNumero(ult.total)} hoy`
+    cuerpo = `<svg class="ow-gc-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(desc)}">
+        <defs><linearGradient id="gc-degradado" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${AZUL_GRAFICA}" stop-opacity="0.25"/><stop offset="1" stop-color="${AZUL_GRAFICA}" stop-opacity="0"/></linearGradient></defs>
+        ${guias}
+        <path d="${area}" fill="url(#gc-degradado)"/>
+        <path d="${linea}" fill="none" stroke="${AZUL_GRAFICA}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="${x(puntos.length - 1).toFixed(1)}" cy="${y(ult.total).toFixed(1)}" r="4.5" fill="${AZUL_GRAFICA}" stroke="#ffffff" stroke-width="2"/>
+      </svg>
+      <div class="ow-gc-fechas" aria-hidden="true"><span>${fechaCortaGrafica(puntos[0].fecha)}</span><span>Hoy</span></div>`
+  }
+  return `<section class="ow-tarjeta" aria-labelledby="dn-gc-titulo">
+    <div class="ow-gc-cab">
+      <div><h2 class="ow-titulo-sec" id="dn-gc-titulo" style="margin:0">Clientes en tu programa</h2>
+        <p class="ow-gc-sub">${modo === '30' ? 'Últimos 30 días' : 'Desde que empezaste'}</p></div>
+      <div class="ow-gc-total" aria-label="${formatoNumero(total)} clientes">${formatoNumero(total)}</div>
+    </div>
+    <div class="ow-gc-chips" role="group" aria-label="Rango de la gráfica">${chips}</div>
+    ${cuerpo}
+  </section>`
 }
-function guardarPrefGrafica(p) { try { sessionStorage.setItem(CLAVE_GRAFICA, JSON.stringify(p)) } catch (e) {} }
 
+// "1 de octubre" (con año si ya pasó más de un año). alta = "AAAA-MM-DD".
+function textoAlta(alta) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(alta || ''))) return ''
+  const f = fechaLocal(alta)
+  const conAnio = Date.now() - f.getTime() > 365 * 86400000 ? { year: 'numeric' } : {}
+  return f.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', ...conAnio })
+}
+
+// ── "Tu WhatsApp" (menú ☰): mi_telefono_dueno / guardar_telefono_dueno ──
+function abrirWhatsappDueno() {
+  const h = abrirHojaDueno({ titulo: 'Tu WhatsApp (opcional)', sub: 'Solo lo usa el equipo de Sello para felicitarte y avisarte de novedades. Tus clientes no lo ven.' })
+  h.cuerpo.innerHTML = `
+    <div class="ow-campo">
+      <label class="ow-label" for="wa-dueno">Número de WhatsApp</label>
+      <input type="tel" id="wa-dueno" class="ow-input" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="Cargando..." disabled />
+    </div>
+    <button id="btn-guardar-wa" class="ow-btn primario" disabled>Guardar</button>
+    <div id="msg-wa"></div>`
+  initWhatsappDueno().then(() => { const c = h.cuerpo.querySelector('#wa-dueno'); if (c?.isConnected) c.focus() })
+}
+const MENSAJE_TELEFONO_DUENO = 'Revisa el número: escribe los 10 dígitos (ej. 998 123 4567) o, si es de otro país, empieza con + y la lada.'
+const telefonoDuenoLegible = t => !t ? '' : /^\+52\d{10}$/.test(t) ? telefonoLegible(t) : t
+async function initWhatsappDueno() {
+  const campo = document.getElementById('wa-dueno')
+  const btn = document.getElementById('btn-guardar-wa')
+  const msg = document.getElementById('msg-wa')
+  if (!campo || !btn) return
+  try {
+    const { data, error } = await supabase.rpc('mi_telefono_dueno')
+    if (error) throw error
+    if (!campo.isConnected) return
+    campo.value = telefonoDuenoLegible(data?.telefono_dueno)
+  } catch (e) {
+    if (!campo.isConnected) return
+    console.error('Error al cargar tu WhatsApp:', e)
+    msg.innerHTML = '<p class="ow-ayuda">No pudimos cargar tu número. Puedes escribirlo de nuevo.</p>'
+  }
+  campo.disabled = false; btn.disabled = false
+  campo.placeholder = 'Ej: 998 123 4567'
+  let guardando = false
+  async function guardar() {
+    if (guardando) return
+    guardando = true; btn.disabled = true; btn.textContent = 'Guardando...'; msg.innerHTML = ''
+    try {
+      const { data, error } = await supabase.rpc('guardar_telefono_dueno', { p_telefono: campo.value.trim() })
+      if (error) throw error
+      campo.value = telefonoDuenoLegible(data?.telefono_dueno)
+      msg.innerHTML = avisoOk(data?.telefono_dueno ? 'WhatsApp guardado' : 'Número quitado')
+      setTimeout(() => { if (msg.isConnected) msg.innerHTML = '' }, 2500)
+    } catch (e) {
+      console.error('Error al guardar tu WhatsApp:', e)
+      msg.innerHTML = avisoError(e?.message?.includes('TELEFONO_INVALIDO') ? MENSAJE_TELEFONO_DUENO : mensajeDueno(e))
+    } finally {
+      guardando = false; btn.disabled = false; btn.textContent = 'Guardar'
+    }
+  }
+  btn.addEventListener('click', guardar)
+  campo.addEventListener('keydown', e => { if (e.key === 'Enter') guardar() })
+}
+
+// ── Visitas recientes y "Anular visita" (Fase 6) ──
+// La lista se lee directo con la sesión del dueño: las políticas
+// visitas_select_owner y clientes_select_owner (fase-4.sql) solo le dejan ver
+// filas de SU negocio. Los nombres de los meseros salen de equipo_negocio()
+// (profiles solo deja leer la fila propia). Anular pasa siempre por la RPC
+// anular_visita (fase-6-anular.sql), que valida todo en el servidor.
+const DIAS_VISITAS_RECIENTES = 7
+const MAX_VISITAS_RECIENTES = 200   // tope de lo que se trae (una semana muy llena)
+const VISITAS_POR_PAGINA = 15
+const MOTIVO_MIN = 3
+const MOTIVO_MAX = 200
+const MOTIVOS_RAPIDOS = ['Se sumó por error', 'No era el cliente', 'Fue una prueba']
+
+const MENSAJES_ANULAR = {
+  VISITA_CANJEADA: 'Esta visita ya se usó para un premio entregado. No se puede anular.',
+  VISITA_YA_ANULADA: 'Esta visita ya estaba anulada.',
+  MOTIVO_INVALIDO: `Escribe el motivo (de ${MOTIVO_MIN} a ${MOTIVO_MAX} letras).`,
+  VISITA_NO_ENCONTRADA: 'Ya no encontramos esta visita. Actualiza la lista.',
+  NEGOCIO_INACTIVO: 'Este negocio está desactivado. Contacta a Sello.',
+}
+function mensajeAnular(e) {
+  if (sinInternet(e)) return 'Sin conexión. Revisa tu internet e intenta de nuevo.'
+  const m = e?.message || ''
+  const clave = Object.keys(MENSAJES_ANULAR).find(k => m.includes(k))
+  return clave ? MENSAJES_ANULAR[clave] : mensajeDueno(e)
+}
+
+// Igual que lo hace el servidor: espacios repetidos se juntan.
+const limpiarMotivo = t => String(t || '').replace(/\s+/g, ' ').trim()
+
+// "Hoy, 3:42 p.m." / "Ayer, 9:05 a.m." / "lun 17 nov, 1:10 p.m." (hora del celular)
+function formatoMomento(iso) {
+  const f = new Date(iso)
+  const hora = f.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' })
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+  const dia = new Date(f); dia.setHours(0, 0, 0, 0)
+  const dif = Math.round((hoy - dia) / 86400000)
+  if (dif === 0) return `Hoy, ${hora}`
+  if (dif === 1) return `Ayer, ${hora}`
+  return `${sinPunto(f.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' }))}, ${hora}`
+}
+
+const ultimos4 = tel => String(tel || '').replace(/\D/g, '').slice(-4)
+const etiquetaOrigen = o => o === 'qr' ? '<span class="ow-origen">QR</span>' : o === 'manual' ? '<span class="ow-origen manual">Manual</span>' : ''
+
+// lista: filas ya preparadas ({ id, nombre, u4, momento, origen, mesero, anulada, motivo })
+function visitasHTML(lista, mostrar, aviso, topado) {
+  const cab = `<h2 class="ow-titulo-sec" id="dn-visitas-titulo" style="margin-bottom:4px">Visitas recientes</h2>
+    <p class="ow-ayuda" style="margin:0 0 10px">Últimos ${DIAS_VISITAS_RECIENTES} días. Si una visita no debió contar, anúlala y se le resta el punto al cliente.</p>
+    ${aviso ? avisoOk(esc(aviso)) : ''}`
+  if (lista.length === 0) return `${cab}<p class="ow-vacio">No hay visitas en los últimos ${DIAS_VISITAS_RECIENTES} días.</p>`
+  const filas = lista.slice(0, mostrar).map(v => `<div class="ow-visita${v.anulada ? ' anulada' : ''}">
+      <div class="ow-visita-info">
+        <div class="ow-visita-linea"><span class="ow-persona">${esc(v.nombre)}</span><span class="ow-nota" style="font-variant-numeric:tabular-nums">···${esc(v.u4)}</span>${etiquetaOrigen(v.origen)}</div>
+        <div class="ow-visita-dato">${esc(v.momento)}${v.mesero ? ` · ${esc(v.mesero)}` : ''}</div>
+        ${v.anulada ? `<div class="ow-visita-dato">Anulada${v.motivo ? `: ${esc(v.motivo)}` : ''}</div>` : ''}
+      </div>
+      ${v.anulada
+        ? '<span class="ow-estado inactivo">Anulada</span>'
+        : `<button class="ow-btn secundario chico ow-texto-atencion" data-anular="${esc(v.id)}" aria-label="Anular la visita de ${esc(v.nombre)} ···${esc(v.u4)}, ${esc(v.momento)}">Anular</button>`}
+    </div>`).join('')
+  const quedan = lista.length - mostrar
+  return `${cab}<div>${filas}</div>
+    ${quedan > 0 ? `<button class="ow-btn secundario" id="dn-visitas-mas" style="margin-top:12px">Ver ${formatoNumero(Math.min(quedan, VISITAS_POR_PAGINA))} más</button>` : ''}
+    ${quedan <= 0 && topado ? `<p class="ow-ayuda" style="text-align:center">Se muestran las ${formatoNumero(MAX_VISITAS_RECIENTES)} más recientes.</p>` : ''}`
+}
+
+// Hoja para anular: motivo obligatorio (3 a 200), "Anular visita" y "Cancelar".
+// alAnular(visita, motivo) se llama solo si el servidor la anuló.
+function abrirAnularVisita(v, alAnular, alFallar) {
+  const h = abrirHojaDueno({ titulo: '¿Anular esta visita?', sub: 'Se le resta el punto al cliente. La visita se queda en tu historial con el motivo.' })
+  h.cuerpo.innerHTML = `
+    <div class="ow-resumen-visita">
+      <div class="ow-visita-linea"><span class="ow-persona">${esc(v.nombre)}</span><span class="ow-nota" style="font-variant-numeric:tabular-nums">···${esc(v.u4)}</span>${etiquetaOrigen(v.origen)}</div>
+      <div class="ow-visita-dato">${esc(v.momento)}${v.mesero ? ` · ${esc(v.mesero)}` : ''}</div>
+    </div>
+    <div class="ow-campo">
+      <label class="ow-label" for="an-motivo">Motivo <span class="ow-cuenta" id="an-cuenta">0/${MOTIVO_MAX}</span></label>
+      <textarea id="an-motivo" class="ow-input ow-textarea" maxlength="${MOTIVO_MAX}" rows="3" autocomplete="off" placeholder="Ej: El cliente no estaba en el negocio"></textarea>
+      <div class="ow-chips">${MOTIVOS_RAPIDOS.map(m => `<button type="button" class="ow-chip" data-motivo="${esc(m)}">${esc(m)}</button>`).join('')}</div>
+    </div>
+    <button class="ow-btn ow-btn-atencion" id="an-si">Anular visita</button>
+    <button class="ow-btn secundario" id="an-no">Cancelar</button>
+    <div id="an-msg"></div>`
+  const campo = h.cuerpo.querySelector('#an-motivo')
+  const cuenta = h.cuerpo.querySelector('#an-cuenta')
+  const btn = h.cuerpo.querySelector('#an-si')
+  const msg = h.cuerpo.querySelector('#an-msg')
+  const contar = () => { cuenta.textContent = `${limpiarMotivo(campo.value).length}/${MOTIVO_MAX}` }
+  campo.addEventListener('input', () => { contar(); if (msg.innerHTML) msg.innerHTML = '' })
+  h.cuerpo.querySelectorAll('[data-motivo]').forEach(b => b.addEventListener('click', () => {
+    campo.value = b.dataset.motivo; contar(); msg.innerHTML = ''; campo.focus()
+  }))
+  h.cuerpo.querySelector('#an-no').addEventListener('click', () => h.cerrar())
+  setTimeout(() => campo.focus(), 50)
+
+  btn.addEventListener('click', async () => {
+    if (btn.disabled) return
+    const motivo = limpiarMotivo(campo.value)
+    if (motivo.length < MOTIVO_MIN || motivo.length > MOTIVO_MAX) {
+      msg.innerHTML = avisoError(MENSAJES_ANULAR.MOTIVO_INVALIDO); campo.focus(); return
+    }
+    btn.disabled = true; btn.textContent = 'Anulando...'; msg.innerHTML = ''
+    h.fija = true  // que no se cierre a medio camino
+    try {
+      const { error } = await supabase.rpc('anular_visita', { p_visita_id: v.id, p_motivo: motivo })
+      if (error) throw error
+      h.cerrar()
+      alAnular(v, motivo)
+    } catch (e) {
+      console.error('Error al anular la visita:', e?.message)
+      h.fija = false
+      btn.disabled = false; btn.textContent = 'Anular visita'
+      msg.innerHTML = avisoError(mensajeAnular(e))
+      alFallar?.(e)
+    }
+  })
+}
+
+// ── Fechas cortas ──
 // "2026-11-04" → fecha local (sin que el navegador la corra por zona horaria).
 const fechaLocal = d => { const [a, m, dd] = String(d).split('-').map(Number); return new Date(a, (m || 1) - 1, dd || 1) }
 const sinPunto = t => t.replace(/\./g, '')
-const formatoDiaSemana = d => sinPunto(fechaLocal(d).toLocaleDateString('es-MX', { weekday: 'short' }))
-const formatoFechaCorta = d => sinPunto(fechaLocal(d).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }))
-
-// Etiqueta corta del eje (cabe en celular) y la larga de la lectura.
-function etiquetaCorta(periodo, p, ultimo) {
-  if (periodo === 'semana') return ultimo ? 'Hoy' : formatoDiaSemana(p.dia)
-  return formatoFechaCorta(p.dia)
-}
-function etiquetaLarga(periodo, p, ultimo) {
-  if (periodo === 'semana') return ultimo ? 'Hoy' : sinPunto(fechaLocal(p.dia).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric' }))
-  if (ultimo) return 'Últimos 7 días'
-  const fin = fechaLocal(p.dia); fin.setDate(fin.getDate() + 6)
-  return `Del ${formatoFechaCorta(p.dia)} al ${sinPunto(fin.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }))}`
-}
-
-// Tope del eje: un número redondo y par (para que la línea de en medio sea entera).
-function topeEje(max) {
-  if (!(max > 0)) return 2
-  const k = Math.pow(10, Math.floor(Math.log10(max / 2)))
-  for (const f of [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) {
-    const paso = f * k
-    if (Number.isInteger(paso) && paso * 2 >= max) return paso * 2
-  }
-  return Math.ceil(max)
-}
-
-// Barra con las esquinas de arriba redondeadas, apoyada en la base.
-function barraPath(x, y, w, h, r = 4) {
-  r = Math.min(r, w / 2, h)
-  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`
-}
-
-const ALTO_GRAFICA = 170
-const MARGEN_GRAFICA = { l: 32, r: 4, t: 10, b: 22 }
-const r1 = n => Math.round(n * 10) / 10
-
-// Lo común a las dos: rejilla, etiquetas del eje x, resaltado y zonas para tocar.
-function marcoGrafica(pts, periodo, ancho, sel, ticks, y) {
-  const m = MARGEN_GRAFICA, pw = ancho - m.l - m.r, ph = ALTO_GRAFICA - m.t - m.b
-  const banda = pw / pts.length
-  const cadaN = Math.max(1, Math.ceil(pts.length / Math.max(2, Math.floor(pw / 38))))
-  let fondo = ''
-  let frente = ''
-  if (sel != null && pts[sel]) fondo += `<rect x="${r1(m.l + banda * sel)}" y="${m.t}" width="${r1(banda)}" height="${ph}" rx="6" fill="${AZUL_RESALTE}"/>`
-  for (const t of ticks) {
-    fondo += `<line x1="${m.l}" x2="${ancho - m.r}" y1="${r1(y(t.v))}" y2="${r1(y(t.v))}" stroke="${t.base ? '#c9d6cf' : '#e6eee9'}" stroke-width="1"/>`
-    fondo += `<text x="${m.l - 6}" y="${r1(y(t.v) + 4)}" text-anchor="end">${formatoNumero(t.v)}</text>`
-  }
-  pts.forEach((p, i) => {
-    const cx = m.l + banda * i + banda / 2
-    if ((pts.length - 1 - i) % cadaN === 0) {
-      frente += `<text x="${r1(cx)}" y="${ALTO_GRAFICA - 5}" text-anchor="middle"${i === sel ? ' style="fill:var(--ow-texto);font-weight:600"' : ''}>${etiquetaCorta(periodo, p, i === pts.length - 1)}</text>`
-    }
-    // Zona para tocar: toda la columna, más grande que la barra.
-    frente += `<rect data-i="${i}" x="${r1(m.l + banda * i)}" y="0" width="${r1(banda)}" height="${ALTO_GRAFICA}" fill="transparent" style="cursor:pointer"/>`
-  })
-  return { fondo, frente, banda }
-}
-
-function svgVisitas(pts, periodo, ancho, sel, resumenTexto) {
-  const max = topeEje(Math.max(1, ...pts.map(p => Math.max(p.actual || 0, p.anterior || 0))))
-  const m = MARGEN_GRAFICA, ph = ALTO_GRAFICA - m.t - m.b
-  const y = v => m.t + ph - (v / max) * ph
-  const ticks = [{ v: 0, base: true }, { v: max / 2 }, { v: max }]
-  const { fondo, frente, banda } = marcoGrafica(pts, periodo, ancho, sel, ticks, y)
-  const bw = Math.max(3, Math.min(28, banda * 0.62))
-  const rw = Math.min(banda * 0.86, bw + 10)
-  let barras = '', rayas = ''
-  pts.forEach(p => {
-    const cx = m.l + banda * p.i + banda / 2
-    if (p.actual > 0) {
-      barras += `<path d="${barraPath(r1(cx - bw / 2), r1(y(p.actual)), r1(bw), r1(y(0) - y(p.actual)))}" fill="${AZUL_GRAFICA}"/>`
-    }
-    if (p.anterior > 0) {
-      const yy = r1(y(p.anterior))
-      // Anillo blanco para que la raya se lea encima de la barra.
-      rayas += `<line x1="${r1(cx - rw / 2)}" x2="${r1(cx + rw / 2)}" y1="${yy}" y2="${yy}" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>`
-      rayas += `<line x1="${r1(cx - rw / 2)}" x2="${r1(cx + rw / 2)}" y1="${yy}" y2="${yy}" stroke="${AZUL_ANTERIOR}" stroke-width="3" stroke-linecap="round"/>`
-    }
-  })
-  return `<svg viewBox="0 0 ${ancho} ${ALTO_GRAFICA}" height="${ALTO_GRAFICA}" role="img" aria-label="${esc(resumenTexto)}">${fondo}${barras}${rayas}${frente}</svg>`
-}
-
-function svgClientes(pts, periodo, ancho, sel, resumenTexto) {
-  const vals = pts.map(p => Number(p.clientes) || 0)
-  const min = Math.min(...vals), max = Math.max(...vals)
-  // Si crecieron poco, el eje no empieza en 0 para que se note la subida;
-  // las etiquetas siempre dicen los números reales.
-  const tramo = Math.max(1, max - min)
-  const yMin = min > tramo * 2 ? Math.max(0, Math.floor(min - tramo)) : 0
-  const yMax = Math.max(yMin + 2, Math.ceil(max + tramo * 0.15))
-  const m = MARGEN_GRAFICA, ph = ALTO_GRAFICA - m.t - m.b
-  const y = v => m.t + ph - ((v - yMin) / (yMax - yMin)) * ph
-  const ticks = [{ v: yMin, base: true }, { v: max }]
-  const { fondo, frente, banda } = marcoGrafica(pts, periodo, ancho, sel, ticks, y)
-  const xy = vals.map((v, i) => [r1(m.l + banda * i + banda / 2), r1(y(v))])
-  const linea = xy.map((c, i) => `${i ? 'L' : 'M'}${c[0]},${c[1]}`).join('')
-  let dibujo = `<path d="${linea}L${xy[xy.length - 1][0]},${r1(y(yMin))}L${xy[0][0]},${r1(y(yMin))}Z" fill="${AZUL_GRAFICA}" fill-opacity="0.08"/>`
-  dibujo += `<path d="${linea}" fill="none" stroke="${AZUL_GRAFICA}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
-  if (sel != null && xy[sel]) {
-    const [cx, cy] = xy[sel]
-    dibujo += `<line x1="${cx}" x2="${cx}" y1="${m.t}" y2="${r1(y(yMin))}" stroke="${AZUL_ANTERIOR}" stroke-width="1"/>`
-    dibujo += `<circle cx="${cx}" cy="${cy}" r="5" stroke="#ffffff" stroke-width="2" fill="${AZUL_GRAFICA}"/>`
-  }
-  return `<svg viewBox="0 0 ${ancho} ${ALTO_GRAFICA}" height="${ALTO_GRAFICA}" role="img" aria-label="${esc(resumenTexto)}">${fondo}${dibujo}${frente}</svg>`
-}
-
-// Sección completa: selector de periodo (fijo) y el cuerpo (se repinta).
-function graficaSeccionHTML(pref) {
-  return `<section class="ow-tarjeta ow-graf" id="dn-grafica" aria-label="Gráfica">
-    <div class="ow-seg" role="group" aria-label="Periodo">
-      ${Object.entries(PERIODOS_GRAFICA).map(([k, p]) => `<button type="button" data-periodo="${k}" aria-pressed="${pref.periodo === k}">${p.boton}</button>`).join('')}
-    </div>
-    <div id="dn-graf-cuerpo">${bloqueEsq(230)}</div>
-  </section>`
-}
-
-function cuerpoGraficaHTML(g, pref, ancho, sel) {
-  if (!g) return `<div style="margin-top:18px">${bloqueEsq(230)}</div>`
-  if (g.error) return `<div style="margin-top:18px"><p style="margin-bottom:12px">${g.error}</p><button class="ow-btn secundario" id="dn-graf-reintentar">Reintentar</button></div>`
-  if (!g.suficiente || !(g.puntos || []).length) return `<p class="ow-vacio" style="margin-top:18px">Tu gráfica aparece cuando tengas una semana de visitas.</p>`
-  // "Mes" compara 4 semanas: con menos de 2 semanas de datos se vería casi vacía.
-  if (pref.periodo === 'mes' && Number(g.dias_de_datos) < DIAS_PARA_MES) return `<p class="ow-vacio" style="margin-top:18px">Disponible con 2 semanas de datos.</p>`
-
-  const P = PERIODOS_GRAFICA[pref.periodo] || PERIODOS_GRAFICA.semana
-  const pts = g.puntos
-  // Sin tocar nada, la lectura muestra el tramo más reciente.
-  const s = sel != null && pts[sel] ? sel : pts.length - 1
-  const p = pts[s]
-  const esUltimo = s === pts.length - 1
-  const conmutador = `<div class="ow-seg chico" role="group" aria-label="Qué ver">
-      <button type="button" data-vista="visitas" aria-pressed="${pref.vista === 'visitas'}">Visitas</button>
-      <button type="button" data-vista="clientes" aria-pressed="${pref.vista === 'clientes'}">Clientes</button>
-    </div>`
-
-  if (pref.vista === 'clientes') {
-    const total = Number(pts[pts.length - 1].clientes) || 0
-    const nuevos = total - (Number(g.clientes_inicio) || 0)
-    const tabla = pts.map((x, i) => `<tr><th scope="row">${etiquetaLarga(pref.periodo, x, i === pts.length - 1)}</th><td>${formatoNumero(x.clientes)}</td></tr>`).join('')
-    return `
-      <div class="ow-graf-cab">
-        <div><div class="ow-graf-num">${formatoNumero(total)} <small>clientes registrados</small></div>
-          <div class="ow-graf-comp">${nuevos > 0 ? `+${formatoNumero(nuevos)} ${nuevos === 1 ? 'nuevo' : 'nuevos'} ${P.nuevos}` : `Sin clientes nuevos ${P.nuevos}`}</div></div>
-        ${conmutador}
-      </div>
-      ${svgClientes(pts, pref.periodo, ancho, s, `Clientes registrados: ${formatoNumero(total)}`)}
-      <p class="ow-graf-lectura" aria-live="polite"><strong>${etiquetaLarga(pref.periodo, p, esUltimo)}</strong> · ${formatoNumero(p.clientes)} ${Number(p.clientes) === 1 ? 'cliente' : 'clientes'} en total</p>
-      <table class="ow-oculto"><caption>Clientes registrados acumulados</caption><tbody>${tabla}</tbody></table>`
-  }
-
-  const total = Number(g.total) || 0
-  const anterior = Number(g.total_anterior) || 0
-  const texto = `Visitas, ${P.actual.toLowerCase()}: ${formatoNumero(total)}. ${P.anterior}: ${formatoNumero(anterior)}.`
-  const tabla = pts.map((x, i) => `<tr><th scope="row">${etiquetaLarga(pref.periodo, x, i === pts.length - 1)}</th><td>${formatoNumero(x.actual)}</td><td>${formatoNumero(x.anterior)}</td></tr>`).join('')
-  return `
-    <div class="ow-graf-cab">
-      <div><div class="ow-graf-num">${formatoNumero(total)} <small>${total === 1 ? 'visita' : 'visitas'}</small></div>
-        <div class="ow-graf-comp">${P.anterior}: ${formatoNumero(anterior)}</div></div>
-      ${conmutador}
-    </div>
-    <div class="ow-graf-leyenda" aria-hidden="true"><span><i></i>${P.actual}</span><span><i class="linea"></i>${P.anterior}</span></div>
-    ${svgVisitas(pts, pref.periodo, ancho, s, texto)}
-    <p class="ow-graf-lectura" aria-live="polite"><strong>${etiquetaLarga(pref.periodo, p, esUltimo)}</strong> · ${formatoNumero(p.actual)} ${Number(p.actual) === 1 ? 'visita' : 'visitas'} · ${P.anterior}: ${formatoNumero(p.anterior)}</p>
-    ${g.bajaron ? '<p class="ow-graf-nota">Las visitas bajaron frente al periodo anterior.</p>' : ''}
-    <table class="ow-oculto"><caption>Visitas por tramo</caption><thead><tr><th scope="col">Tramo</th><th scope="col">${P.actual}</th><th scope="col">${P.anterior}</th></tr></thead><tbody>${tabla}</tbody></table>`
-}
 
 // ── Personalización ──
-// Vista previa de la tarjeta del cliente (mismo acomodo que su pantalla).
+// Vista previa: la tarjeta REAL del cliente (tarjetaClienteHTML, la misma
+// función que pinta su pantalla) con un cliente de ejemplo, dibujada al ancho
+// de un teléfono (ANCHO_TELEFONO) y escalada para caber (escalarVista).
 // logoUrl: el logo guardado o el recién elegido (aún sin guardar); mensaje: el
 // que está escrito en el campo. Así la vista previa cambia en vivo.
+// Es inerte: sus botones no se pueden tocar ni enfocar.
+const ANCHO_TELEFONO = 390
 function vistaTarjetaHTML(nd, { logoUrl = null, mensaje = '' } = {}) {
   const meta = Math.max(1, Number(nd.meta_puntos) || 10)
-  const puntos = Math.min(meta - 1, Math.max(1, Math.round(meta * 0.4)))
-  const sellos = meta <= 10
-    ? `<div class="ow-vista-sellos">${Array.from({ length: meta }, (_, i) => `<span class="ow-vista-sello${i < puntos ? ' lleno' : ''}"></span>`).join('')}</div>`
-    : ''
-  const ini = esc(inicialNegocio(nd.nombre || 'Tu negocio'))
-  const avatar = logoUrl
-    ? `<span class="ow-vista-avatar con-logo">${ini}<img src="${esc(logoUrl)}" alt="" onerror="this.parentNode.classList.remove('con-logo');this.remove()"></span>`
-    : `<span class="ow-vista-avatar">${ini}</span>`
-  const msj = String(mensaje || '').trim()
-  return `
-    <div class="ow-vista-sellotop">${logoSVG(11, '#94a3b8')}<span>Sello</span></div>
-    <div class="ow-vista-marca">${avatar}<span><span class="ow-vista-nombre">${esc(nd.nombre || 'Tu negocio')}</span>${msj ? `<span class="ow-vista-mensaje">${esc(msj)}</span>` : ''}</span></div>
-    <div class="ow-vista-saludo">Buenas tardes, Ana</div>
-    <div class="ow-vista-tarjeta">
-      <div><span class="ow-vista-num">${puntos}</span><span class="ow-vista-meta"> / ${meta}</span></div>
-      ${sellos}
-    </div>
-    <div class="ow-vista-premio"><span>TU PREMIO</span>${esc(nd.premio || 'Tu premio')}</div>
-    ${MOSTRAR_PIE_SELLO ? '<div class="ow-vista-pie">Hecho con Sello</div>' : ''}`
+  const puntos = Math.max(1, Math.min(meta - 1, Math.round(meta * 0.4)))
+  const negocio = {
+    nombre: String(nd.nombre || '').trim() || 'Tu negocio',
+    logo: null,
+    logoUrlVista: logoUrl,
+    mensaje_gracias: mensaje,
+  }
+  const ejemplo = { nombre: 'Ana', meta, puntos, premio: nd.premio || '', premio_listo: false }
+  return `<div class="ow-vista-escala" inert>${tarjetaClienteHTML(negocio, ejemplo)}</div>`
 }
 
-function ajustesHTML(nd, negocioId) {
-  const landingUrl = `${window.location.origin}/#/landing/${negocioId}`
+// Las variables de color que usa la tarjeta del cliente, solo dentro de la vista previa.
+const varsTarjeta = c => `--negocio-color:${c};--negocio-texto:${textoSobreColor(c)};--negocio-tinta:${tintaSobreBlanco(c)}`
+
+// Escala la tarjeta al ancho disponible (nunca más grande que un teléfono) y le
+// da a la caja la altura ya escalada. Con la pestaña oculta (ancho 0) no hace
+// nada: el ResizeObserver la vuelve a llamar al mostrarse.
+function escalarVista(vista) {
+  const interior = vista.querySelector('.ow-vista-escala')
+  if (!interior || !vista.clientWidth) return
+  const escala = Math.min(1, vista.clientWidth / ANCHO_TELEFONO)
+  interior.style.transform = `scale(${escala})`
+  vista.style.height = `${Math.ceil(interior.offsetHeight * escala)}px`
+}
+
+// Personalización, en este orden: Tu programa, Para calcular tus ventas,
+// Tarjeta de tus clientes y Exportar. Cada sección guarda con su propio
+// botón (programa, ventas y QR abiertos usan la misma RPC guardar_programa).
+function ajustesHTML(nd) {
   const pesos = v => v == null ? '' : String(Number(v))
-  const actual = esColorHex(nd.color_principal) ? nd.color_principal.toLowerCase() : COLORES_TARJETA[1].valor
+  const actual = esColorHex(nd.color_principal) ? nd.color_principal.toLowerCase() : COLOR_TARJETA_INICIAL
   // Si el color guardado no está en la paleta, se ofrece como "Tu color actual".
   const colores = COLORES_TARJETA.some(c => c.valor === actual)
     ? COLORES_TARJETA
     : [{ nombre: 'Tu color actual', valor: actual }, ...COLORES_TARJETA]
   return `
     <section class="ow-seccion" aria-labelledby="sec-programa">
-      <h2 class="ow-seccion-titulo" id="sec-programa">Programa</h2>
+      <h2 class="ow-seccion-titulo" id="sec-programa">Tu programa</h2>
       <p class="ow-seccion-sub">Qué gana tu cliente y cuándo.</p>
       <div class="ow-tarjeta">
         <div class="ow-campo">
@@ -3313,14 +3893,15 @@ function ajustesHTML(nd, negocioId) {
           <input type="text" id="prog-premio" class="ow-input" maxlength="80" value="${esc(nd.premio || '')}" placeholder="Ej: Un café gratis" />
           <div class="ow-chips">${PLANTILLAS_PREMIO.map(p => `<button type="button" class="ow-chip" data-premio="${esc(p)}">${esc(p)}</button>`).join('')}</div>
         </div>
-        <div class="ow-campo">
-          <label class="ow-label" for="prog-max">Códigos activos por mesero</label>
-          <input type="number" inputmode="numeric" id="prog-max" class="ow-input" min="1" max="50" value="${nd.max_codigos_activos ?? 3}" />
-          <p class="ow-ayuda">Cuántos QR puede tener abiertos un mesero a la vez. Súbelo si hay mucha gente.</p>
-        </div>
-        <div class="ow-separador"></div>
-        <p class="ow-titulo-sec" style="margin-bottom:4px">Para calcular tus ventas <span class="ow-nota">(opcional)</span></p>
-        <p class="ow-ayuda" style="margin:0 0 14px">Con esto te decimos cuánto te dejan los clientes que regresan.</p>
+        <button id="btn-guardar-programa" class="ow-btn primario">Guardar programa</button>
+        <div id="msg-programa"></div>
+      </div>
+    </section>
+
+    <section class="ow-seccion" aria-labelledby="sec-ventas">
+      <h2 class="ow-seccion-titulo" id="sec-ventas">Para calcular tus ventas <span class="ow-nota">(opcional)</span></h2>
+      <p class="ow-seccion-sub">Con esto te decimos cuánto te dejan los clientes que regresan.</p>
+      <div class="ow-tarjeta">
         <div class="ow-campo">
           <label class="ow-label" for="prog-ticket">¿Cuánto gasta en promedio un cliente?</label>
           <div class="ow-pesos"><span>$</span><input type="text" inputmode="decimal" id="prog-ticket" class="ow-input" value="${pesos(nd.ticket_promedio)}" placeholder="Ej: 120" autocomplete="off" /></div>
@@ -3329,8 +3910,8 @@ function ajustesHTML(nd, negocioId) {
           <label class="ow-label" for="prog-costo">¿Cuánto te cuesta el premio?</label>
           <div class="ow-pesos"><span>$</span><input type="text" inputmode="decimal" id="prog-costo" class="ow-input" value="${pesos(nd.costo_premio)}" placeholder="Ej: 25" autocomplete="off" /></div>
         </div>
-        <button id="btn-guardar-programa" class="ow-btn primario">Guardar programa</button>
-        <div id="msg-programa"></div>
+        <button id="btn-guardar-ventas" class="ow-btn primario">Guardar</button>
+        <div id="msg-ventas"></div>
       </div>
     </section>
 
@@ -3342,6 +3923,10 @@ function ajustesHTML(nd, negocioId) {
         <div class="ow-colores" role="radiogroup" aria-labelledby="lbl-color-tarjeta">
           ${colores.map(c => `<button type="button" class="ow-color" role="radio" aria-checked="${c.valor === actual}" aria-label="${esc(c.nombre)}" title="${esc(c.nombre)}" data-color="${c.valor}" style="background:${c.valor}"></button>`).join('')}
         </div>
+        ${PLAN_COLOR_LIBRE_SOLO_PRO ? '' : `<div class="ow-color-libre">
+          <input type="color" id="color-libre" value="${actual}" aria-describedby="color-libre-nota" /><label class="ow-label" for="color-libre">Color libre</label>
+        </div>
+        <p class="ow-ayuda" id="color-libre-nota" style="margin:0 0 18px">Si es muy claro, el texto de la tarjeta se pone oscuro.</p>`}
         <div class="ow-campo">
           <div class="ow-label">Logo</div>
           <div class="ow-logo-fila">
@@ -3361,14 +3946,30 @@ function ajustesHTML(nd, negocioId) {
           <div class="ow-chips">${PLANTILLAS_MENSAJE.map(p => `<button type="button" class="ow-chip" data-mensaje="${esc(p)}">${esc(p)}</button>`).join('')}</div>
         </div>
         <div class="ow-label">Vista previa</div>
-        <div class="ow-vista" id="vista-tarjeta" style="--vista-color:${actual}">${vistaTarjetaHTML(nd, { logoUrl: urlLogo(nd.logo_ruta), mensaje: nd.mensaje_gracias })}</div>
+        <div class="ow-vista" id="vista-tarjeta" style="${varsTarjeta(actual)}">${vistaTarjetaHTML(nd, { logoUrl: urlLogo(nd.logo_ruta), mensaje: nd.mensaje_gracias })}</div>
         <button id="btn-guardar-tarjeta" class="ow-btn primario">Guardar</button>
         <div id="msg-tarjeta"></div>
       </div>
     </section>
 
+    <section class="ow-seccion" aria-labelledby="sec-exportar">
+      <h2 class="ow-seccion-titulo" id="sec-exportar">Exportar</h2>
+      <p class="ow-seccion-sub">Tu lista de clientes, para abrirla en Excel.</p>
+      <div class="ow-tarjeta">
+        <button id="btn-exportar-csv" class="ow-btn secundario">Descargar clientes (.csv)</button>
+        <div id="msg-exportar"></div>
+      </div>
+    </section>
+    <p style="text-align:center"><button type="button" class="ow-enlace" id="ayuda-otra-vez">Ver ayuda otra vez</button></p>
+    <div id="msg-ayuda" style="text-align:center"></div>`
+}
+
+// Pestaña Equipo, al final: Números del personal y QR abiertos por mesero.
+// Salen de los mismos datos del negocio que Personalización.
+function equipoAjustesHTML(nd) {
+  return `
     <section class="ow-seccion" aria-labelledby="sec-personal">
-      <h2 class="ow-seccion-titulo" id="sec-personal">Personal</h2>
+      <h2 class="ow-seccion-titulo" id="sec-personal">Números del personal</h2>
       <p class="ow-seccion-sub">Los números de tu equipo no suman puntos.</p>
       <div class="ow-tarjeta">
         <div class="ow-agregar">
@@ -3380,40 +3981,33 @@ function ajustesHTML(nd, negocioId) {
       </div>
     </section>
 
-    <section class="ow-seccion" aria-labelledby="sec-exportar">
-      <h2 class="ow-seccion-titulo" id="sec-exportar">Exportar</h2>
-      <p class="ow-seccion-sub">Tu lista de clientes y tu página para compartir.</p>
-      <div class="ow-tarjeta">
-        <p class="ow-label">Lista de clientes</p>
-        <p class="ow-ayuda" style="margin:0 0 12px">Para abrirla en Excel.</p>
-        <button id="btn-exportar-csv" class="ow-btn secundario">Descargar clientes (.csv)</button>
-        <div id="msg-exportar"></div>
-        <div class="ow-separador"></div>
-        <p class="ow-label">Tu página pública</p>
-        <p class="ow-ayuda" style="margin:0 0 12px">Compártela en Instagram o WhatsApp.</p>
-        <div class="ow-url">${esc(landingUrl)}</div>
-        <div class="ow-botones">
-          <button id="btn-copiar-landing" class="ow-btn secundario">Copiar link</button>
-          <button id="btn-ver-landing" class="ow-btn secundario">Ver página</button>
-        </div>
-        <div id="msg-landing"></div>
-      </div>
-    </section>
-
-    <section class="ow-seccion" aria-labelledby="sec-contrasena">
-      <h2 class="ow-seccion-titulo" id="sec-contrasena">Tu contraseña</h2>
-      <p class="ow-seccion-sub">Si te dieron una contraseña temporal, cámbiala aquí.</p>
+    <section class="ow-seccion" aria-labelledby="sec-qr-abiertos">
+      <h2 class="ow-seccion-titulo" id="sec-qr-abiertos">QR abiertos por mesero</h2>
+      <p class="ow-seccion-sub">Cuántos QR puede tener abiertos un mesero a la vez. Súbelo si hay mucha gente.</p>
       <div class="ow-tarjeta">
         <div class="ow-campo">
-          <label class="ow-label" for="nueva-contrasena">Nueva contraseña</label>
-          <div class="ow-clave"><input type="password" id="nueva-contrasena" class="ow-input" autocomplete="new-password" minlength="${CONTRASENA_MIN}" placeholder="Mínimo ${CONTRASENA_MIN} caracteres" /><button type="button" id="ver-nueva-contrasena" aria-label="Mostrar contraseña">Mostrar</button></div>
+          <label class="ow-label" for="prog-max">QR abiertos por mesero</label>
+          <input type="number" inputmode="numeric" id="prog-max" class="ow-input" min="1" max="50" value="${nd.max_codigos_activos ?? 3}" />
         </div>
-        <button id="btn-cambiar-contrasena" class="ow-btn secundario">Cambiar contraseña</button>
-        <div id="msg-contrasena"></div>
+        <button id="btn-guardar-qr" class="ow-btn primario">Guardar</button>
+        <div id="msg-qr"></div>
       </div>
-    </section>
-    <p style="text-align:center"><button type="button" class="ow-enlace" id="ayuda-otra-vez">Ver ayuda otra vez</button></p>
-    <div id="msg-ayuda" style="text-align:center"></div>`
+    </section>`
+}
+
+// Cambiar contraseña (5A), ahora desde el menú ☰. Supabase Auth la guarda;
+// nunca pasa por nuestras tablas.
+function abrirCambiarContrasena() {
+  const h = abrirHojaDueno({ titulo: 'Cambiar contraseña', sub: 'Si te dieron una contraseña temporal, cámbiala aquí.' })
+  h.cuerpo.innerHTML = `
+    <div class="ow-campo">
+      <label class="ow-label" for="nueva-contrasena">Nueva contraseña</label>
+      <div class="ow-clave"><input type="password" id="nueva-contrasena" class="ow-input" autocomplete="new-password" minlength="${CONTRASENA_MIN}" placeholder="Mínimo ${CONTRASENA_MIN} caracteres" /><button type="button" id="ver-nueva-contrasena" aria-label="Mostrar contraseña">Mostrar</button></div>
+    </div>
+    <button id="btn-cambiar-contrasena" class="ow-btn primario">Cambiar contraseña</button>
+    <div id="msg-contrasena"></div>`
+  initContrasenaDueno()
+  setTimeout(() => h.cuerpo.querySelector('#nueva-contrasena')?.focus(), 50)
 }
 
 // Sección "Tu contraseña" (5A): el dueño cambia la contraseña temporal que
@@ -3453,45 +4047,143 @@ function initContrasenaDueno() {
   campo.addEventListener('keydown', e => { if (e.key === 'Enter') cambiar() })
 }
 
-// Sección "Programa": se guarda con la RPC guardar_programa (2G, ampliada en Fase 4).
-function initProgramaDueno(alGuardar) {
+// Mismo arreglo que guardar_programa en el servidor ("  café   gratis " →
+// "café gratis"), para no avisar de un premio "nuevo" que solo cambió espacios.
+const normalizarPremio = t => String(t || '').replace(/\s+/g, ' ').trim()
+
+// 6B: antes de guardar un cambio de meta o premio, pregunta a
+// impacto_programa (supabase/fase-6b-impacto.sql) cuántos clientes cambian.
+// Devuelve las líneas del aviso, o [] si no hay clientes afectados (por
+// ejemplo en la configuración inicial, sin clientes todavía).
+// Si la consulta falla (sin internet, función aún no aplicada), devuelve []
+// y se guarda sin aviso: el aviso informa, no debe impedir guardar.
+async function lineasImpactoPrograma({ metaAntes, premioAntes, meta, premio }) {
+  const cambiaMeta = meta !== metaAntes
+  const cambiaPremio = normalizarPremio(premio) !== normalizarPremio(premioAntes)
+  if (!cambiaMeta && !cambiaPremio) return []
+  let r
+  try {
+    const { data, error } = await supabase.rpc('impacto_programa', { p_meta: meta })
+    if (error) throw error
+    r = data
+  } catch (e) {
+    console.warn('No se pudo calcular el impacto del cambio:', e?.message)
+    return []
+  }
+  const clientes = Number(r?.clientes) || 0
+  const yaAlcanzan = Number(r?.ya_alcanzan) || 0
+  const masLejos = Number(r?.mas_lejos) || 0
+  const lineas = []
+  if (cambiaMeta && meta < metaAntes && yaAlcanzan > 0) {
+    lineas.push(yaAlcanzan === 1
+      ? 'Con la nueva meta, 1 cliente ya podrá canjear su premio hoy'
+      : `Con la nueva meta, ${formatoNumero(yaAlcanzan)} clientes ya podrán canjear su premio hoy`)
+  }
+  if (cambiaMeta && meta > metaAntes && masLejos > 0) {
+    lineas.push(masLejos === 1
+      ? 'Con la nueva meta, 1 cliente quedará más lejos de su premio'
+      : `Con la nueva meta, ${formatoNumero(masLejos)} clientes quedarán más lejos de su premio`)
+  }
+  if (cambiaPremio && clientes > 0) lineas.push('Tus clientes verán el premio nuevo. Los canjes ya entregados no cambian')
+  if (lineas.length === 0) return []
+  lineas.push('Los puntos de tus clientes se conservan')
+  return lineas
+}
+
+// Hoja "Vas a cambiar tu programa". Resuelve true con "Guardar cambios" y
+// false con "Cancelar", "Cerrar", Escape o tocando fuera.
+function confirmarCambioPrograma(lineas) {
+  return new Promise(resolver => {
+    const h = abrirHojaDueno({ titulo: 'Vas a cambiar tu programa' })
+    h.cuerpo.innerHTML = `
+      ${lineas.map(l => `<p class="ow-sub" style="margin:0 0 12px">${esc(l)}.</p>`).join('')}
+      <button class="ow-btn primario" id="prog-si" style="margin-top:8px">Guardar cambios</button>
+      <button class="ow-btn secundario" id="prog-no">Cancelar</button>`
+    const cerrarHoja = h.cerrar
+    let respondido = false
+    const responder = valor => {
+      if (respondido) return
+      respondido = true
+      cerrarHoja.call(h)
+      resolver(valor)
+    }
+    h.cerrar = () => responder(false)
+    h.cuerpo.querySelector('#prog-si').addEventListener('click', () => responder(true))
+    h.cuerpo.querySelector('#prog-no').addEventListener('click', () => responder(false))
+    setTimeout(() => h.cuerpo.querySelector('#prog-si')?.focus(), 50)
+  })
+}
+
+/// "Tu programa", "Para calcular tus ventas" (Personalización) y "QR abiertos
+// por mesero" (Equipo) se guardan con la MISMA RPC guardar_programa, que
+// recibe los cinco valores juntos. Cada botón manda lo que se escribió en SU
+// sección y, para lo demás, lo último guardado: así un cambio a medias en otra
+// sección no se guarda sin querer.
+// nd: los datos guardados del negocio. alGuardar({ meta, premio }) al guardar.
+function initProgramaDueno(nd, alGuardar) {
   const $ = id => document.getElementById(id)
-  const btn = $('btn-guardar-programa'); const msg = $('msg-programa')
-  if (!btn) return
+  const guardado = {
+    meta: Number(nd?.meta_puntos) || 10,
+    premio: nd?.premio || '',
+    max: Number(nd?.max_codigos_activos) || 3,
+    ticket: nd?.ticket_promedio == null ? null : Number(nd.ticket_promedio),
+    costo: nd?.costo_premio == null ? null : Number(nd.costo_premio),
+  }
   document.querySelectorAll('.ow-chip[data-premio]').forEach(chip => {
     chip.addEventListener('click', () => { $('prog-premio').value = chip.dataset.premio; $('prog-premio').focus() })
   })
-  btn.addEventListener('click', async () => {
-    const meta = parseInt($('prog-meta').value, 10)
-    const premio = $('prog-premio').value.trim()
-    const max = parseInt($('prog-max').value, 10)
-    const ticket = leerPesos($('prog-ticket').value)
-    const costo = leerPesos($('prog-costo').value)
+
+  let guardando = false
+  async function guardar({ btn, msg, textoBoton, textoOk, cambios, conAviso = false }) {
+    if (!btn || !msg) return
+    const d = { ...guardado, ...cambios() }
     // Las mismas reglas que revisa el servidor, para avisar antes de mandar.
     let error = ''
-    if (!(meta >= 1 && meta <= 100)) error = 'META_INVALIDA'
-    else if (!premio || premio.length > 80) error = 'PREMIO_INVALIDO'
-    else if (ticket !== null && !(ticket >= 1 && ticket <= TICKET_MAX)) error = 'TICKET_INVALIDO'
-    else if (costo !== null && !(costo >= 0 && costo <= COSTO_MAX)) error = 'COSTO_INVALIDO'
-    else if (!(max >= 1 && max <= 50)) error = 'MAX_CODIGOS_INVALIDO'
+    if (!(d.meta >= 1 && d.meta <= 100)) error = 'META_INVALIDA'
+    else if (!d.premio || d.premio.length > 80) error = 'PREMIO_INVALIDO'
+    else if (d.ticket !== null && !(d.ticket >= 1 && d.ticket <= TICKET_MAX)) error = 'TICKET_INVALIDO'
+    else if (d.costo !== null && !(d.costo >= 0 && d.costo <= COSTO_MAX)) error = 'COSTO_INVALIDO'
+    else if (!(d.max >= 1 && d.max <= 50)) error = 'MAX_CODIGOS_INVALIDO'
     if (error) { msg.innerHTML = avisoError(mensajeDueno({ message: error })); return }
+    if (guardando || btn.disabled) return
+    guardando = true
     btn.disabled = true; btn.textContent = 'Guardando...'; msg.innerHTML = ''
     try {
+      // 6B: el aviso de impacto solo aplica a meta y premio.
+      if (conAviso) {
+        const lineas = await lineasImpactoPrograma({ metaAntes: guardado.meta, premioAntes: guardado.premio, meta: d.meta, premio: d.premio })
+        if (lineas.length > 0 && !(await confirmarCambioPrograma(lineas))) return
+      }
       const { error: e } = await supabase.rpc('guardar_programa', {
-        p_meta_puntos: meta, p_premio: premio, p_max_codigos_activos: max,
-        p_ticket_promedio: ticket, p_costo_premio: costo,
+        p_meta_puntos: d.meta, p_premio: d.premio, p_max_codigos_activos: d.max,
+        p_ticket_promedio: d.ticket, p_costo_premio: d.costo,
       })
       if (e) throw e
-      msg.innerHTML = avisoOk('Programa guardado')
+      Object.assign(guardado, d)
+      msg.innerHTML = avisoOk(textoOk)
       setTimeout(() => { if (msg.isConnected) msg.innerHTML = '' }, 2500)
-      alGuardar?.({ meta, premio })
+      alGuardar?.({ meta: d.meta, premio: d.premio })
     } catch (e) {
       console.error('Error al guardar el programa:', e)
       msg.innerHTML = avisoError(mensajeDueno(e))
     } finally {
-      btn.disabled = false; btn.textContent = 'Guardar programa'
+      guardando = false
+      btn.disabled = false; btn.textContent = textoBoton
     }
-  })
+  }
+
+  $('btn-guardar-programa')?.addEventListener('click', () => guardar({
+    btn: $('btn-guardar-programa'), msg: $('msg-programa'), textoBoton: 'Guardar programa', textoOk: 'Programa guardado', conAviso: true,
+    cambios: () => ({ meta: parseInt($('prog-meta').value, 10), premio: $('prog-premio').value.trim() }),
+  }))
+  $('btn-guardar-ventas')?.addEventListener('click', () => guardar({
+    btn: $('btn-guardar-ventas'), msg: $('msg-ventas'), textoBoton: 'Guardar', textoOk: 'Guardado',
+    cambios: () => ({ ticket: leerPesos($('prog-ticket').value), costo: leerPesos($('prog-costo').value) }),
+  }))
+  $('btn-guardar-qr')?.addEventListener('click', () => guardar({
+    btn: $('btn-guardar-qr'), msg: $('msg-qr'), textoBoton: 'Guardar', textoOk: 'Guardado',
+    cambios: () => ({ max: parseInt($('prog-max').value, 10) }),
+  }))
 }
 
 // Sección "Tarjeta de tus clientes" (4E): color, logo y mensaje de
@@ -3554,7 +4246,7 @@ function mensajeLogo(e) {
 
 // Devuelve { actualizar(cambios) } para que la vista previa siga a Programa
 // (meta y premio) sin perder el logo ni el mensaje que se están editando.
-function initTarjetaDueno(negocioId, nd) {
+function initTarjetaDueno(negocioId, nd, alGuardar) {
   const $ = id => document.getElementById(id)
   const btn = $('btn-guardar-tarjeta'); const msg = $('msg-tarjeta'); const vista = $('vista-tarjeta')
   if (!btn) return { actualizar() {} }
@@ -3564,7 +4256,7 @@ function initTarjetaDueno(negocioId, nd) {
   const msgLogo = $('msg-logo'); const muestra = $('logo-muestra')
   const datos = { ...nd }
   const estado = {
-    color: opciones.find(o => o.getAttribute('aria-checked') === 'true')?.dataset.color || COLORES_TARJETA[1].valor,
+    color: opciones.find(o => o.getAttribute('aria-checked') === 'true')?.dataset.color || COLOR_TARJETA_INICIAL,
     logoGuardado: RUTA_LOGO.test(nd.logo_ruta || '') ? nd.logo_ruta : null,
     logoNuevo: null,      // Blob ya reducido, aún sin subir
     logoNuevoUrl: null,   // URL local para la vista previa
@@ -3573,22 +4265,53 @@ function initTarjetaDueno(negocioId, nd) {
   }
 
   const logoVisible = () => estado.logoNuevoUrl || (estado.quitar ? null : urlLogo(estado.logoGuardado))
+  // La vista previa se reescala si cambia el ancho del panel o el alto de la
+  // tarjeta (mensaje largo, fuentes que terminan de cargar).
+  const observador = typeof ResizeObserver === 'function'
+    ? new ResizeObserver(() => { if (vista.isConnected) escalarVista(vista); else observador.disconnect() })
+    : null
+  // El color NO redibuja la tarjeta: solo cambia sus variables CSS (la tarjeta
+  // del cliente usa --negocio-*). pintar() redibuja el contenido (logo,
+  // mensaje, meta, premio); al escribir el mensaje espera un momento
+  // (pintarPronto) para no redibujar en cada letra.
+  function ponerColor() {
+    const c = estado.color
+    const vars = [['color', c], ['texto', textoSobreColor(c)], ['tinta', tintaSobreBlanco(c)]]
+    vars.forEach(([k, v]) => vista.style.setProperty(`--negocio-${k}`, v))
+    const avatar = muestra.firstElementChild
+    if (avatar) vars.forEach(([k, v]) => avatar.style.setProperty(`--vista-${k}`, v))
+  }
+  let tPintar = 0
+  function pintarPronto() {
+    cuenta.textContent = `${mensaje.value.length}/${MENSAJE_GRACIAS_MAX}`
+    clearTimeout(tPintar)
+    tPintar = setTimeout(() => { if (vista.isConnected) pintar() }, 150)
+  }
   function pintar() {
+    clearTimeout(tPintar)
     const url = logoVisible()
-    vista.style.setProperty('--vista-color', estado.color)
     vista.innerHTML = vistaTarjetaHTML(datos, { logoUrl: url, mensaje: mensaje.value })
-    muestra.innerHTML = `<span class="ow-vista-avatar${url ? ' con-logo' : ''}" style="--vista-color:${estado.color}">${esc(inicialNegocio(datos.nombre || 'Tu negocio'))}${url ? `<img src="${esc(url)}" alt="" onerror="this.parentNode.classList.remove('con-logo');this.remove()">` : ''}</span>`
+    escalarVista(vista)
+    if (observador) {
+      observador.disconnect()
+      observador.observe(vista)
+      observador.observe(vista.querySelector('.ow-vista-escala'))
+    }
+    muestra.innerHTML = `<span class="ow-vista-avatar${url ? ' con-logo' : ''}" style="${varsVista(estado.color)}">${esc(inicialNegocio(datos.nombre || 'Tu negocio'))}${url ? `<img src="${esc(url)}" alt="" onerror="this.parentNode.classList.remove('con-logo');this.remove()">` : ''}</span>`
     elegirLogo.textContent = url ? 'Cambiar logo' : 'Subir logo'
     quitarLogo.hidden = !url
     cuenta.textContent = `${mensaje.value.length}/${MENSAJE_GRACIAS_MAX}`
+    ponerColor()
   }
   const cambiado = () => { msg.innerHTML = '' }
 
   // Color: grupo de opciones accesible (flechas para moverse).
+  const libre = $('color-libre')
   function elegir(boton, enfocar = false) {
+    libre?.classList.remove('activo')
     opciones.forEach(o => { o.setAttribute('aria-checked', String(o === boton)); o.tabIndex = o === boton ? 0 : -1 })
     estado.color = boton.dataset.color
-    cambiado(); pintar()
+    cambiado(); ponerColor()
     if (enfocar) boton.focus()
   }
   opciones.forEach(o => { o.tabIndex = o.getAttribute('aria-checked') === 'true' ? 0 : -1 })
@@ -3602,8 +4325,20 @@ function initTarjetaDueno(negocioId, nd) {
     })
   })
 
+  // Color libre: cualquier color (si coincide con uno de la lista, se elige ese).
+  libre?.addEventListener('input', () => {
+    const v = String(libre.value || '').toLowerCase()
+    if (!esColorHex(v)) return
+    const igual = opciones.find(o => o.dataset.color === v)
+    if (igual) { elegir(igual); return }
+    opciones.forEach((o, i) => { o.setAttribute('aria-checked', 'false'); o.tabIndex = i === 0 ? 0 : -1 })
+    libre.classList.add('activo')
+    estado.color = v
+    cambiado(); ponerColor()
+  })
+
   // Mensaje: en vivo en la vista previa, con plantillas.
-  mensaje.addEventListener('input', () => { cambiado(); pintar() })
+  mensaje.addEventListener('input', () => { cambiado(); pintarPronto() })
   document.querySelectorAll('.ow-chip[data-mensaje]').forEach(chip => chip.addEventListener('click', () => {
     mensaje.value = chip.dataset.mensaje.slice(0, MENSAJE_GRACIAS_MAX); cambiado(); pintar(); mensaje.focus()
   }))
@@ -3675,6 +4410,7 @@ function initTarjetaDueno(negocioId, nd) {
       subido = null
       if (anterior && anterior !== estado.logoGuardado) borrarArchivo(anterior)
       aplicarColorNegocio(estado.color)
+      alGuardar?.({ color: estado.color, logo_ruta: estado.logoGuardado })
       pintar()
       msgLogo.innerHTML = ''
       msg.innerHTML = avisoOk('Tarjeta guardada')
@@ -3795,8 +4531,29 @@ function exportarCSV(clientes, negocioNombre) {
 function initAjustesExtra(negocioId, nombreNegocio) {
   const $ = id => document.getElementById(id)
 
-  $('btn-exportar-csv')?.addEventListener('click', async () => {
+  // Antes de descargar, un recordatorio de que son datos de sus clientes.
+  // Con PLAN_EXPORTAR_SOLO_PRO = true, en vez de descargar avisa que es de Pro.
+  $('btn-exportar-csv')?.addEventListener('click', () => {
+    if ($('btn-exportar-csv').disabled) return
+    if (PLAN_EXPORTAR_SOLO_PRO) {
+      const h = abrirHojaDueno({ titulo: 'Exportar es parte del plan Pro', sub: `Escríbenos a ${CORREO_CONTACTO} para activarlo.` })
+      h.cuerpo.innerHTML = '<button class="ow-btn secundario" id="exp-cerrar">Entendido</button>'
+      h.cuerpo.querySelector('#exp-cerrar').addEventListener('click', () => h.cerrar())
+      return
+    }
+    const h = abrirHojaDueno({ titulo: 'Descargar tus clientes' })
+    h.cuerpo.innerHTML = `
+      <p class="ow-sub" style="margin:0 0 20px">Estos datos son de tus clientes. Úsalos solo para tu programa de lealtad.</p>
+      <button class="ow-btn primario" id="exp-si">Continuar</button>
+      <button class="ow-btn secundario" id="exp-no">Cancelar</button>`
+    h.cuerpo.querySelector('#exp-no').addEventListener('click', () => h.cerrar())
+    h.cuerpo.querySelector('#exp-si').addEventListener('click', () => { h.cerrar(); descargarCSV() })
+    setTimeout(() => h.cuerpo.querySelector('#exp-si')?.focus(), 50)
+  })
+
+  async function descargarCSV() {
     const btn = $('btn-exportar-csv'); const msg = $('msg-exportar')
+    if (!btn) return
     btn.textContent = 'Preparando...'; btn.disabled = true
     try {
       const { data: clientes, error } = await supabase.from('clientes')
@@ -3808,18 +4565,8 @@ function initAjustesExtra(negocioId, nombreNegocio) {
       setTimeout(() => { if (msg.isConnected) msg.innerHTML = '' }, 3000)
     } catch (e) { msg.innerHTML = avisoError(mensajeDueno(e)) }
     finally { btn.textContent = 'Descargar clientes (.csv)'; btn.disabled = false }
-  })
+  }
 
-  $('btn-copiar-landing')?.addEventListener('click', () => {
-    const url = `${window.location.origin}/#/landing/${negocioId}`
-    const msg = $('msg-landing')
-    navigator.clipboard.writeText(url).then(() => {
-      if (!msg) return
-      msg.innerHTML = avisoOk('Link copiado')
-      setTimeout(() => { if (msg.isConnected) msg.innerHTML = '' }, 2000)
-    }).catch(() => { if (msg) msg.innerHTML = avisoError('No se pudo copiar. Selecciona el link y cópialo a mano.') })
-  })
-  $('btn-ver-landing')?.addEventListener('click', () => navigate('landing', negocioId))
 }
 
 // ── EQUIPO (Fase 4C) ──
@@ -4068,7 +4815,7 @@ function equipoHTML(eq) {
       </div>`).join('')
   return `
     <section class="ow-seccion" aria-labelledby="sec-equipo">
-      <h2 class="ow-seccion-titulo" id="sec-equipo">Tu equipo</h2>
+      <h2 class="ow-seccion-titulo" id="sec-equipo">Meseros</h2>
       <p class="ow-seccion-sub">Cada mesero entra una sola vez en su celular y su sesión se queda abierta.</p>
       <div class="ow-tarjeta">
         ${lista}
@@ -4082,6 +4829,322 @@ function equipoHTML(eq) {
 // de una visita anterior se ignoran.
 let duenoSesion = 0
 
+// ═══════════════════════════════════════════════════════════
+// LOGROS (Fase C) — supabase/fase-8-logros.sql
+// logros_pendientes(): hitos alcanzados y sin celebrar.
+// celebrar_logro(tipo, hito): los marca (también los menores) en el servidor.
+// logros_lista(): celebrados + próximo hito de cada tipo.
+// Aquí solo vive la presentación. Ni la pantalla ni la imagen llevan
+// nombres o teléfonos de clientes.
+// ═══════════════════════════════════════════════════════════
+// La misma lista de hitos que logros_hitos() en el SQL (14 en total).
+const HITOS_LOGRO = {
+  regresos: [1, 5, 10, 25, 50, 100, 250],
+  clientes: [10, 25, 50, 100, 250, 500, 1000],
+}
+const TIPOS_LOGRO = ['regresos', 'clientes']   // orden en que se celebran
+const esLogro = l => !!l && TIPOS_LOGRO.includes(l.tipo) && HITOS_LOGRO[l.tipo].includes(Number(l.hito))
+const reduceMovimiento = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+const ICONO_COMPARTIR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>'
+const ICONO_MEDALLA = '<svg class="ow-lg-medalla" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7.5 2h3.2l1.3 5.2-2.6 1.2zM16.5 2h-3.2L12 7.2l2.6 1.2z" fill="#B8902F" opacity="0.65"/><circle cx="12" cy="15" r="6.5" fill="#B8902F"/><circle cx="12" cy="15" r="3.6" fill="none" stroke="#F6EED6" stroke-width="1.5"/></svg>'
+const ICONO_CERRAR = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg>'
+
+const nombreNegocioLogro = n => String(n || '').trim() || 'tu negocio'
+
+// Textos: dicen lo que pasó en el negocio, nunca que Sello lo causó.
+function tituloCelebracion(l, nombre) {
+  const n = Number(l.hito), neg = nombreNegocioLogro(nombre)
+  if (l.tipo === 'regresos' && n === 1) return '¡Tu primer cliente ya regresó!'
+  return l.tipo === 'regresos'
+    ? `¡${formatoNumero(n)} clientes ya regresaron a ${neg}!`
+    : `¡${formatoNumero(n)} clientes ya son parte de ${neg}!`
+}
+function tituloCortoLogro(l) {
+  if (l.tipo === 'regresos') return Number(l.hito) === 1 ? 'Tu primer regreso' : 'clientes que regresaron'
+  return 'clientes registrados'
+}
+function textoImagenLogro(l, nombre) {
+  const neg = nombreNegocioLogro(nombre)
+  if (l.tipo === 'regresos') return Number(l.hito) === 1 ? `cliente ya regresó a ${neg}` : `clientes ya regresaron a ${neg}`
+  return `personas ya juntan visitas en ${neg}`
+}
+const FRASE_IMAGEN_LOGRO = '¿Y tú? Pregunta cómo unirte'
+const formatoFechaLogro = iso => {
+  const d = iso ? new Date(iso) : null
+  return !d || isNaN(d) ? '' : sinPunto(d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }))
+}
+const nombreArchivoLogro = l => `logro-${l.tipo}-${l.hito}.png`
+
+// Los 14 hitos con su estado. Desbloqueado = ya celebrado o ya alcanzado con
+// los números del Resumen. Orden: desbloqueados (el más reciente arriba) y
+// luego bloqueados (el más cercano primero).
+function tarjetasLogros(lista, inicio) {
+  const conteos = {
+    clientes: Number(inicio?.clientes_registrados) || 0,
+    regresos: Number(inicio?.clientes_regresaron) || 0,
+  }
+  const celebrados = new Map((lista?.celebrados || []).filter(esLogro).map(c => [`${c.tipo}-${Number(c.hito)}`, c.celebrado_en || null]))
+  const todas = TIPOS_LOGRO.flatMap(tipo => HITOS_LOGRO[tipo].map(hito => {
+    const clave = `${tipo}-${hito}`
+    const actual = conteos[tipo]
+    return { tipo, hito, actual, falta: Math.max(0, hito - actual), fecha: celebrados.get(clave) || null, ok: celebrados.has(clave) || actual >= hito }
+  }))
+  const cuando = t => (t.fecha ? Date.parse(t.fecha) : NaN) || Infinity   // alcanzado sin fecha: arriba
+  const desbloqueadas = todas.filter(t => t.ok).sort((a, b) => cuando(b) - cuando(a) || b.hito - a.hito)
+  const bloqueadas = todas.filter(t => !t.ok).sort((a, b) => a.falta - b.falta || a.hito - b.hito)
+  return { desbloqueadas, bloqueadas, total: todas.length }
+}
+
+// Fila de Logros bajo la tarjeta principal: medallas de los últimos 3
+// ganados, el próximo logro más cercano (menor "faltan", de cualquier tipo)
+// con su barra, y una flecha. Toda la fila abre Logros.
+const medallaTexto = h => h >= 1000 ? `${formatoNumero(Math.floor(h / 1000))}K` : formatoNumero(h)
+const nombreProximoLogro = t => t.tipo === 'regresos'
+  ? (t.hito === 1 ? 'tu primer regreso' : `${formatoNumero(t.hito)} regresos`)
+  : `${formatoNumero(t.hito)} clientes`
+function logrosFilaHTML(d) {
+  const { desbloqueadas, bloqueadas, total } = tarjetasLogros(d?.logros, d?.inicio)
+  const medallas = desbloqueadas.slice(0, 3)
+  const sig = bloqueadas[0]   // ya viene ordenada: la más cercana primero
+  const titulo = sig ? `Próximo logro: ${nombreProximoLogro(sig)}` : 'Ganaste todos los logros'
+  const falta = sig ? (sig.falta === 1 ? 'falta 1' : `faltan ${formatoNumero(sig.falta)}`) : ''
+  const pct = sig ? Math.min(100, Math.round(sig.actual / sig.hito * 100)) : 100
+  const etiqueta = `Logros: ${desbloqueadas.length} de ${total}. ${titulo}${falta ? `, ${falta}` : ''}`
+  return `<button type="button" class="ow-lgfila" id="dn-ver-logros" aria-label="${esc(etiqueta)}">
+    ${medallas.length ? `<span class="ow-medallas" aria-hidden="true">${medallas.map(m => `<span class="ow-medalla">${medallaTexto(m.hito)}</span>`).join('')}</span>` : ''}
+    <span class="ow-lgfila-centro" aria-hidden="true">
+      <span class="ow-lgfila-linea"><span class="ow-lgfila-titulo">${titulo}</span>${falta ? `<span class="ow-lgfila-falta">${falta}</span>` : ''}</span>
+      ${sig ? `<span class="ow-lgfila-barra"><span style="width:${pct}%"></span></span>` : ''}
+    </span>
+    <span class="ow-lgfila-flecha" aria-hidden="true">›</span>
+  </button>`
+}
+
+// Módulo de imagen/confeti/compartir, cargado una sola vez y solo al celebrar.
+// Si no carga (sin red), la celebración se muestra igual sin imagen.
+let mediaLogros = null
+function cargarMediaLogros() {
+  if (!mediaLogros) {
+    mediaLogros = import('./logros-media.js').catch(e => {
+      console.error('No se pudo cargar la imagen del logro:', e)
+      mediaLogros = null
+      return null
+    })
+  }
+  return mediaLogros
+}
+
+// Celebración de un logro. Nuevo: "NUEVO LOGRO", confeti y se marca como
+// celebrado en cuanto aparece (si cierra la app ahí, no vuelve a salir).
+// reabrir (desde Logros): "LOGRO DESBLOQUEADO" con la fecha, "Cerrar" y sin
+// llamar a celebrar_logro. Resuelve al cerrarse.
+// Solo "clientes registrados" se comparte (vista previa y "Compartir");
+// "clientes que regresaron" solo trae "Seguir" (o "Cerrar" al reabrir).
+const logroCompartible = l => l?.tipo === 'clientes'
+function mostrarCelebracion(l, marca, { reabrir = false, fecha = null } = {}) {
+  inyectarEstilosDueno()
+  const compartible = logroCompartible(l)
+  return new Promise(resolve => {
+    const titulo = tituloCelebracion(l, marca.nombre)
+    const numero = formatoNumero(l.hito)
+    const etiqueta = reabrir ? ['Logro desbloqueado', formatoFechaLogro(fecha)].filter(Boolean).join(' · ') : 'Nuevo logro'
+    const focoAntes = document.activeElement
+    const el = document.createElement('div')
+    el.className = 'ow-festejo'
+    el.setAttribute('role', 'dialog')
+    el.setAttribute('aria-modal', 'true')
+    el.setAttribute('aria-labelledby', 'ow-festejo-titulo')
+    el.innerHTML = `
+      <div class="ow-festejo-tarjeta">
+        <div class="ow-festejo-cont">
+          <p class="ow-festejo-etiqueta">${esc(etiqueta)}</p>
+          <div class="ow-festejo-num${numero.length >= 4 ? ' largo' : ''}" aria-hidden="true">${esc(numero)}</div>
+          <h2 class="ow-festejo-titulo" id="ow-festejo-titulo">${esc(titulo)}</h2>
+          ${compartible ? `<p class="ow-festejo-sub">Compártelo con tus clientes. Que se enteren de que tu programa está creciendo.</p>
+          <figure class="ow-festejo-vista">
+            <div class="ow-festejo-mini cargando"><img alt="Imagen para compartir: ${esc(numero)} ${esc(textoImagenLogro(l, marca.nombre))}" hidden></div>
+            <figcaption>Vista previa</figcaption>
+          </figure>
+          <button type="button" class="ow-festejo-compartir" data-festejo="compartir" disabled>${ICONO_COMPARTIR}<span>Compartir</span></button>
+          <p class="ow-festejo-nota" role="status" aria-live="polite"></p>
+          <button type="button" class="ow-festejo-despues" data-festejo="cerrar">${reabrir ? 'Cerrar' : 'Después'}</button>`
+          : `<button type="button" class="ow-festejo-compartir" data-festejo="cerrar">${reabrir ? 'Cerrar' : 'Seguir'}</button>`}
+          ${reabrir ? '' : '<p class="ow-festejo-pista">Lo encuentras luego en Logros</p>'}
+        </div>
+      </div>
+      ${reabrir || reduceMovimiento() ? '' : '<canvas class="ow-confeti" aria-hidden="true"></canvas>'}`
+    document.body.appendChild(el)
+    const overflowAntes = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    if (!reabrir) supabase.rpc('celebrar_logro', { p_tipo: l.tipo, p_hito: Number(l.hito) }).then(() => {}, () => {})
+
+    const btnCerrar = el.querySelector('[data-festejo="cerrar"]')
+    const confeti = el.querySelector('.ow-confeti')
+    let urlMini = null, abierta = true
+    // Imagen, confeti y Compartir viven en src/logros-media.js: se cargan
+    // aquí, al abrir, y no con la app.
+    const media = cargarMediaLogros()
+    let pararConfeti = () => {}
+    if (confeti) media.then(m => { if (abierta && m) pararConfeti = m.lanzarConfeti(confeti) })
+
+    if (compartible) {
+      const btnCompartir = el.querySelector('[data-festejo="compartir"]')
+      const nota = el.querySelector('.ow-festejo-nota')
+      const mini = el.querySelector('.ow-festejo-mini')
+      const img = mini.querySelector('img')
+      // La imagen se genera UNA vez al abrir; la miniatura es esa misma imagen.
+      // "Compartir" se habilita hasta tener el módulo y el blob, para que el
+      // toque llame a navigator.share sin esperar nada antes.
+      let blob = null, m = null
+      media.then(mod => { m = mod; return mod ? mod.imagenLogro(l, marca) : null }).then(b => b, () => null).then(b => {
+        if (!abierta) return
+        blob = b
+        mini.classList.remove('cargando')
+        if (b) { urlMini = URL.createObjectURL(b); img.src = urlMini; img.hidden = false }
+        btnCompartir.disabled = false
+      })
+      btnCompartir.addEventListener('click', () => {
+        if (btnCompartir.disabled) return
+        nota.textContent = ''
+        if (!blob || !m) { nota.textContent = 'No pudimos preparar la imagen.'; return }
+        m.compartirPNG(blob, nombreArchivoLogro(l), titulo)
+      })
+    }
+
+    function cerrar() {
+      if (!abierta) return
+      abierta = false
+      document.removeEventListener('keydown', alTeclear, true)
+      window.removeEventListener('hashchange', cerrar)
+      pararConfeti()
+      if (urlMini) URL.revokeObjectURL(urlMini)
+      document.body.style.overflow = overflowAntes
+      el.remove()
+      if (focoAntes?.isConnected) focoAntes.focus?.({ preventScroll: true })
+      resolve()
+    }
+    function alTeclear(e) {
+      if (document.querySelector('.ow-guardar')) return   // la hoja de guardar atiende sus teclas
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cerrar() }
+      else if (e.key === 'Tab') {   // el foco se queda dentro
+        const botones = [...el.querySelectorAll('button:not([disabled])')]
+        if (!botones.length) return
+        const i = botones.indexOf(document.activeElement)
+        e.preventDefault(); e.stopPropagation()
+        botones[(i + (e.shiftKey ? -1 : 1) + botones.length) % botones.length].focus()
+      }
+    }
+    document.addEventListener('keydown', alTeclear, true)
+    window.addEventListener('hashchange', cerrar)   // si sale del panel (atrás), se va con él
+    btnCerrar.addEventListener('click', cerrar)
+    btnCerrar.focus({ preventScroll: true })
+  })
+}
+
+// Pantalla "Logros": los 14 hitos en cuadrícula. Las desbloqueadas abren su
+// celebración (sin volver a marcarla).
+// previos(): { lista, inicio } ya traídos por el Resumen (o null para pedirlos).
+function abrirLogros(marca, previos = null) {
+  inyectarEstilosDueno()
+  const focoAntes = document.activeElement
+  const fondo = document.createElement('div')
+  fondo.className = 'ow-lg-fondo'
+  fondo.innerHTML = `<section class="ow-lg" role="dialog" aria-modal="true" aria-labelledby="ow-lg-titulo">
+    <header class="ow-lg-cab">
+      <div><h2 class="ow-lg-titulo" id="ow-lg-titulo">Logros</h2><p class="ow-lg-cuenta" id="ow-lg-cuenta"></p></div>
+      <button type="button" class="ow-lg-cerrar" aria-label="Cerrar logros">${ICONO_CERRAR}</button>
+    </header>
+    <div class="ow-lg-cuerpo"></div>
+  </section>`
+  document.body.appendChild(fondo)
+  const overflowAntes = document.body.style.overflow
+  document.body.style.overflow = 'hidden'
+  const cuerpo = fondo.querySelector('.ow-lg-cuerpo')
+  const cuenta = fondo.querySelector('#ow-lg-cuenta')
+  const btnCerrar = fondo.querySelector('.ow-lg-cerrar')
+
+  function cerrar() {
+    if (!fondo.isConnected) return
+    document.removeEventListener('keydown', alTeclear)
+    window.removeEventListener('hashchange', cerrar)
+    document.body.style.overflow = overflowAntes
+    fondo.remove()
+    if (focoAntes?.isConnected) focoAntes.focus?.({ preventScroll: true })
+  }
+  function alTeclear(e) {
+    if (document.querySelector('.ow-festejo')) return   // la celebración atiende sus teclas
+    if (e.key === 'Escape') cerrar()
+  }
+  document.addEventListener('keydown', alTeclear)
+  window.addEventListener('hashchange', cerrar)
+  btnCerrar.addEventListener('click', cerrar)
+  fondo.addEventListener('click', e => { if (e.target === fondo) cerrar() })
+  btnCerrar.focus({ preventScroll: true })
+
+  const tarjetaHTML = (t, i) => t.ok
+    ? `<button type="button" class="ow-lg-t ok" data-logro="${i}" aria-label="${esc(tituloCelebracion(t, marca().nombre))}. ${logroCompartible(t) ? 'Ver y compartir' : 'Ver'}">
+        ${logroCompartible(t) ? `<span class="ow-lg-icono">${ICONO_COMPARTIR}</span>` : ''}
+        <span class="ow-lg-cifra"><span class="ow-lg-num">${formatoNumero(t.hito)}</span>${ICONO_MEDALLA}</span>
+        <span class="ow-lg-nombre">${tituloCortoLogro(t)}</span>
+        <span class="ow-lg-pie"><span class="ow-lg-fecha">${t.fecha ? esc(formatoFechaLogro(t.fecha)) : 'Desbloqueado'}</span></span>
+      </button>`
+    : `<div class="ow-lg-t bloq">
+        <span class="ow-lg-num">${formatoNumero(t.hito)}</span>
+        <span class="ow-lg-nombre">${tituloCortoLogro(t)}</span>
+        <span class="ow-lg-pie">
+          <span class="ow-lg-barra" role="progressbar" aria-label="${formatoNumero(t.hito)} ${tituloCortoLogro(t)}" aria-valuemin="0" aria-valuemax="${t.hito}" aria-valuenow="${Math.min(t.actual, t.hito)}"><span style="width:${Math.min(100, Math.round(t.actual / t.hito * 100))}%"></span></span>
+          <span class="ow-lg-falta">${t.falta === 1 ? 'falta 1' : `faltan ${formatoNumero(t.falta)}`}</span>
+        </span>
+      </div>`
+
+  async function cargar() {
+    cuenta.textContent = ''
+    cuerpo.innerHTML = `<div class="ow-lg-grid">${'<div class="ow-lg-esq"></div>'.repeat(6)}</div>`
+    try {
+      const p = previos?.()
+      const [lista, inicio] = p
+        ? [{ data: p.lista }, { data: p.inicio }]
+        : await Promise.all([supabase.rpc('logros_lista'), supabase.rpc('resumen_inicio')])
+      if (!fondo.isConnected) return
+      if (lista.error) throw lista.error
+      if (inicio.error) throw inicio.error
+      const { desbloqueadas, bloqueadas, total } = tarjetasLogros(lista.data, inicio.data)
+      const todas = [...desbloqueadas, ...bloqueadas]
+      cuenta.textContent = `${desbloqueadas.length} de ${total} desbloqueados`
+      // Dos apartados; dentro de cada uno se conserva el orden (desbloqueadas
+      // primero, la más reciente arriba; luego la más cercana).
+      cuerpo.innerHTML = [['clientes', 'Clientes registrados'], ['regresos', 'Clientes que regresaron']].map(([tipo, titulo]) => `
+        <section class="ow-lg-seccion" aria-labelledby="lg-sec-${tipo}">
+          <h3 class="ow-lg-sec" id="lg-sec-${tipo}">${titulo}</h3>
+          <div class="ow-lg-grid">${todas.map((t, i) => t.tipo === tipo ? tarjetaHTML(t, i) : '').join('')}</div>
+        </section>`).join('')
+      cuerpo.querySelectorAll('[data-logro]').forEach(b => b.addEventListener('click', () => {
+        const t = todas[Number(b.dataset.logro)]
+        if (t?.ok) mostrarCelebracion(t, marca(), { reabrir: true, fecha: t.fecha })
+      }))
+    } catch (e) {
+      if (!fondo.isConnected) return
+      if (e?.message?.includes('NEGOCIO_INACTIVO')) { cerrar(); const { logout } = await import('./auth.js'); logout('negocio'); return }
+      console.error('Error al cargar los logros:', e)
+      cuerpo.innerHTML = errorPanelHTML(sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar tus logros.', 'lg-reintentar')
+      cuerpo.querySelector('#lg-reintentar')?.addEventListener('click', cargar)
+    }
+  }
+  cargar()
+}
+
+// Título del encabezado según la pestaña.
+const TITULOS_PESTANA = { resumen: 'Resumen', ajustes: 'Personalización', equipo: 'Equipo' }
+
+// Logo del negocio en el encabezado (o su inicial sobre su color).
+function cabLogoHTML(nombre, logoRuta) {
+  const url = urlLogo(logoRuta)
+  const ini = esc(inicialNegocio(nombre || 'Tu negocio'))
+  return `<span class="ow-vista-avatar ow-cab-logo${url ? ' con-logo' : ''}" style="--vista-color:var(--ow-acento);--vista-texto:var(--ow-acento-texto)" aria-hidden="true">${ini}${url ? `<img src="${esc(url)}" alt="" onerror="this.parentNode.classList.remove('con-logo');this.remove()">` : ''}</span>`
+}
+
 export async function paginaDueno() {
   inyectarEstilosDueno()
   const { getNegocioActual } = await import('./auth.js'); const negocio = getNegocioActual()
@@ -4089,7 +5152,24 @@ export async function paginaDueno() {
   const pestana = leerPestanaDueno()
   return `
     <div class="ow" id="dn-root">
-      <header class="ow-cab">${logoSelloHTML(22)}<span class="ow-cab-negocio">${esc(negocio.nombre || '')}</span></header>
+      <header class="ow-cab">
+        <div class="ow-cab-id">
+          <span id="dn-cab-logo">${cabLogoHTML(negocio.nombre, negocio.logo_ruta)}</span>
+          <div class="ow-cab-textos">
+            <div class="ow-cab-hola" id="dn-cab-hola">Hola, ${esc(negocio.nombre || '')}</div>
+            <h1 class="ow-cab-titulo" id="dn-cab-titulo">${TITULOS_PESTANA[pestana]}</h1>
+          </div>
+        </div>
+        <div class="ow-menu-caja">
+          <button type="button" class="ow-menu-btn" id="dn-menu-btn" aria-label="Menú" aria-haspopup="true" aria-expanded="false" aria-controls="dn-menu">☰</button>
+          <div class="ow-menu" id="dn-menu" hidden>
+            <button type="button" id="dn-menu-logros">Logros</button>
+            <button type="button" id="dn-menu-contrasena">Cambiar contraseña</button>
+            <button type="button" id="dn-menu-salir">Salir</button>
+            <button type="button" id="dn-menu-whatsapp">Tu WhatsApp (opcional)</button>
+          </div>
+        </div>
+      </header>
       <main class="ow-cuerpo">
         <div class="ow-tabs" role="tablist" aria-label="Mi panel">
           <button class="ow-tab" role="tab" id="tab-resumen" aria-controls="dn-resumen" data-pestana="resumen" aria-selected="${pestana === 'resumen'}">Resumen</button>
@@ -4098,11 +5178,47 @@ export async function paginaDueno() {
         </div>
         <div id="dn-resumen" role="tabpanel" aria-labelledby="tab-resumen"${pestana === 'resumen' ? '' : ' hidden'}>${esqueletoResumen()}</div>
         <div id="dn-ajustes" role="tabpanel" aria-labelledby="tab-ajustes"${pestana === 'ajustes' ? '' : ' hidden'}>${esqueletoAjustes()}</div>
-        <div id="dn-equipo" role="tabpanel" aria-labelledby="tab-equipo"${pestana === 'equipo' ? '' : ' hidden'}>${[160, 60].map(bloqueEsq).join('')}</div>
+        <div id="dn-equipo" role="tabpanel" aria-labelledby="tab-equipo"${pestana === 'equipo' ? '' : ' hidden'}>
+          <section class="ow-tarjeta" id="dn-eq-semana">${[52, 52].map(bloqueEsq).join('')}</section>
+          <section class="ow-tarjeta" id="dn-visitas" aria-labelledby="dn-visitas-titulo">${[52, 52, 52].map(bloqueEsq).join('')}</section>
+          <div id="dn-eq-meseros">${[160].map(bloqueEsq).join('')}</div>
+          <div id="dn-eq-ajustes">${[120, 120].map(bloqueEsq).join('')}</div>
+        </div>
       </main>
       ${navBarDueno('panel')}
     </div>
   `
+}
+
+// Menú ☰ del encabezado: Logros, Cambiar contraseña, Salir y Tu WhatsApp.
+function initMenuDueno({ alLogros = null } = {}) {
+  const btn = document.getElementById('dn-menu-btn')
+  const menu = document.getElementById('dn-menu')
+  if (!btn || !menu) return
+  const abierto = () => !menu.hidden
+  function cerrar(devolverFoco = false) {
+    if (!abierto()) return
+    menu.hidden = true; btn.setAttribute('aria-expanded', 'false')
+    document.removeEventListener('click', alTocarFuera, true)
+    document.removeEventListener('keydown', alTeclear)
+    if (devolverFoco) btn.focus()
+  }
+  function abrir() {
+    menu.hidden = false; btn.setAttribute('aria-expanded', 'true')
+    document.addEventListener('click', alTocarFuera, true)
+    document.addEventListener('keydown', alTeclear)
+    menu.querySelector('button')?.focus()
+  }
+  const alTocarFuera = e => { if (!menu.contains(e.target) && e.target !== btn) cerrar() }
+  const alTeclear = e => { if (e.key === 'Escape') cerrar(true) }
+  btn.addEventListener('click', () => abierto() ? cerrar() : abrir())
+  document.getElementById('dn-menu-logros').addEventListener('click', () => { cerrar(); alLogros?.() })
+  document.getElementById('dn-menu-contrasena').addEventListener('click', () => { cerrar(); abrirCambiarContrasena() })
+  document.getElementById('dn-menu-whatsapp').addEventListener('click', () => { cerrar(); abrirWhatsappDueno() })
+  document.getElementById('dn-menu-salir').addEventListener('click', async () => {
+    cerrar()
+    const { logout } = await import('./auth.js'); logout()
+  })
 }
 
 export async function initDueno(negocioId) {
@@ -4111,7 +5227,46 @@ export async function initDueno(negocioId) {
   const sesion = ++duenoSesion
   const $ = id => document.getElementById(id)
   const vigente = () => sesion === duenoSesion && !!$('dn-root')
-  const estado = { resumenCargado: 0, resumenViejo: false, ajustesCargados: false, cargandoResumen: false, cargandoAjustes: false, equipoCargado: false, cargandoEquipo: false, nombre: '' }
+  const estado = { resumenCargado: 0, resumenViejo: false, ajustesCargados: false, cargandoResumen: false, cargandoAjustes: false, equipoCargado: false, cargandoEquipo: false, equipoAbierto: false, logrosViejos: false, nombre: '', logoRuta: undefined, logrosRevisados: false }
+
+  // Nombre, color y logo del negocio para los logros: lo más reciente de
+  // Personalización y, mientras carga, lo guardado al entrar.
+  const negocioLocal = () => { try { return JSON.parse(localStorage.getItem('negocio')) || {} } catch (e) { return {} } }
+  const marca = () => {
+    const local = negocioLocal()
+    return {
+      nombre: estado.nombre || local.nombre || '',
+      color: document.documentElement.style.getPropertyValue('--negocio-color').trim() || local.color_principal,
+      logoRuta: estado.logoRuta !== undefined ? estado.logoRuta : local.logo_ruta,
+    }
+  }
+  initMenuDueno({ alLogros: () => abrirLogros(marca, logrosPrevios) })
+
+  // Los logros esperan a Personalización (trae color y logo), máx. 5 s.
+  let avisarMarca
+  const marcaLista = new Promise(r => { avisarMarca = r })
+
+  // Celebración (Fase C): una vez por visita al panel, cuando el Resumen está
+  // a la vista. Del mayor hito pendiente de cada tipo: primero regresos y
+  // luego clientes, una pantalla a la vez. Si algo falla, no se muestra nada.
+  async function revisarLogros() {
+    if (estado.logrosRevisados || !vigente() || $('dn-resumen').hidden) return
+    estado.logrosRevisados = true
+    try {
+      const { data, error } = await supabase.rpc('logros_pendientes')
+      if (error || !Array.isArray(data) || !vigente()) return
+      const mayor = {}
+      for (const l of data) if (esLogro(l) && Number(l.hito) > (mayor[l.tipo] || 0)) mayor[l.tipo] = Number(l.hito)
+      const cola = TIPOS_LOGRO.filter(t => mayor[t]).map(t => ({ tipo: t, hito: mayor[t] }))
+      if (cola.length === 0) return
+      await Promise.race([marcaLista, new Promise(r => setTimeout(r, 5000))])
+      for (const l of cola) {
+        if (!vigente()) return
+        await mostrarCelebracion(l, marca())
+        estado.logrosViejos = true
+      }
+    } catch (e) { /* en silencio */ }
+  }
 
   async function salirSiInactivo(e) {
     if (!e?.message?.includes('NEGOCIO_INACTIVO')) return false
@@ -4125,39 +5280,44 @@ export async function initDueno(negocioId) {
     $('dn-resumen').hidden = p !== 'resumen'
     $('dn-ajustes').hidden = p !== 'ajustes'
     $('dn-equipo').hidden = p !== 'equipo'
+    $('dn-cab-titulo').textContent = TITULOS_PESTANA[p] || ''
     if (p === 'resumen' && estado.resumenViejo) cargarResumen()
-    else if (p === 'resumen') pintarGrafica()  // ya visible: al ancho real
+    if (p === 'resumen' && estado.resumenCargado) revisarLogros()
+    if (p === 'resumen') pintarGrafica()   // se dibuja al ancho real
     if (p === 'ajustes' && !estado.ajustesCargados) cargarAjustes()
-    if (p === 'equipo' && !estado.equipoCargado) cargarEquipo()
+    if (p === 'equipo') abrirEquipo()
   }
 
-  // Pestaña "Equipo" (Fase 4C): lista con equipo_negocio(); altas, nuevas
-  // contraseñas y bajas con la Edge Function crear-mesero.
-  async function cargarEquipo() {
+  // Pestaña "Equipo", sección Meseros (Fase 4C): lista con equipo_negocio();
+  // altas, nuevas contraseñas y bajas con la Edge Function crear-mesero.
+  // Las otras secciones de la pestaña: "Cómo va tu equipo" y Visitas recientes
+  // (con el resumen) y Números del personal / QR abiertos (con Personalización).
+  // nuevo = true (o el evento de "Reintentar"): pide otra vez, sin compartir.
+  async function cargarEquipo(nuevo = false) {
     if (estado.cargandoEquipo) return
     estado.cargandoEquipo = true
-    if (!estado.equipoCargado) $('dn-equipo').innerHTML = [160, 60].map(bloqueEsq).join('')
+    if (!estado.equipoCargado) $('dn-eq-meseros').innerHTML = bloqueEsq(160)
     try {
-      const { data, error } = await supabase.rpc('equipo_negocio')
+      const { data, error } = await pedirEquipo(!!nuevo)
       if (!vigente()) return
       if (error) throw error
       const meseros = data?.meseros || []
-      $('dn-equipo').innerHTML = equipoHTML(data)
+      $('dn-eq-meseros').innerHTML = equipoHTML(data)
       estado.equipoCargado = true
       const nombreNegocio = estado.nombre || (() => { try { return JSON.parse(localStorage.getItem('negocio'))?.nombre || '' } catch (e) { return '' } })()
       const buscar = id => meseros.find(m => m.usuario_id === id)
-      $('eq-agregar')?.addEventListener('click', () => abrirAgregarMesero(nombreNegocio, cargarEquipo))
-      $('dn-equipo').querySelectorAll('[data-nueva]').forEach(b => b.addEventListener('click', () => {
+      $('eq-agregar')?.addEventListener('click', () => abrirAgregarMesero(nombreNegocio, () => cargarEquipo(true)))
+      $('dn-eq-meseros').querySelectorAll('[data-nueva]').forEach(b => b.addEventListener('click', () => {
         const m = buscar(b.dataset.nueva); if (m) abrirNuevaContrasena(m, nombreNegocio)
       }))
-      $('dn-equipo').querySelectorAll('[data-desactivar]').forEach(b => b.addEventListener('click', () => {
-        const m = buscar(b.dataset.desactivar); if (m) abrirDesactivar(m, () => { cargarEquipo(); estado.resumenViejo = true })
+      $('dn-eq-meseros').querySelectorAll('[data-desactivar]').forEach(b => b.addEventListener('click', () => {
+        const m = buscar(b.dataset.desactivar); if (m) abrirDesactivar(m, () => { cargarEquipo(true); estado.resumenViejo = true })
       }))
     } catch (e) {
       if (!vigente() || await salirSiInactivo(e)) return
       console.error('Error al cargar el equipo:', e)
       if (!estado.equipoCargado) {
-        $('dn-equipo').innerHTML = errorPanelHTML(sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar tu equipo.', 'dn-reintentar-equipo')
+        $('dn-eq-meseros').innerHTML = errorPanelHTML(sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar tu equipo.', 'dn-reintentar-equipo')
         $('dn-reintentar-equipo')?.addEventListener('click', cargarEquipo)
       }
     } finally {
@@ -4165,116 +5325,266 @@ export async function initDueno(negocioId) {
     }
   }
 
-  // Gráfica (4D): una llamada a grafica_dueno por periodo; lo ya traído se
-  // guarda mientras el panel está abierto y se refresca con el resumen.
-  const graf = { pref: leerPrefGrafica(), datos: {}, sel: null, pedido: 0 }
+  // Resumen (Fase B): todo llega en una sola carga; el selector Mes/Semana
+  // cambia sin volver a pedir nada. "elegido": el dueño tocó el selector en
+  // esta visita al panel (si no, cada carga vuelve a decidir con la regla).
+  const res = { datos: null, periodo: 'mes', elegido: false }
 
+  // Gráfica "Clientes en tu programa": "Todo" llega con el resumen; "30 días"
+  // se pide solo cuando se toca ese chip (y se guarda hasta la siguiente carga).
+  const gc = { modo: 'todo', d30: null, pedido30: 0 }
   function pintarGrafica() {
-    const caja = $('dn-graf-cuerpo')
+    const caja = $('dn-grafica-clientes')
     if (!caja) return
-    // dias_de_datos llega con cualquier periodo: con menos de 14, "Mes" se ve
-    // apagado y al tocarlo explica cuándo se activa (sin pedir nada al servidor).
-    const dias = graf.datos.semana?.dias_de_datos ?? graf.datos.mes?.dias_de_datos
-    graf.mesApagado = dias != null && Number(dias) < DIAS_PARA_MES
-    $('dn-grafica').querySelectorAll('[data-periodo]').forEach(b => {
-      b.setAttribute('aria-pressed', String(b.dataset.periodo === graf.pref.periodo))
-      if (b.dataset.periodo === 'mes') b.classList.toggle('apagado', graf.mesApagado)
-    })
-    // El SVG se dibuja al ancho real (texto nítido, sin estirarse). Si la
-    // pestaña está oculta se usa un ancho estimado y se repinta al mostrarla.
-    const ancho = Math.max(240, caja.clientWidth || Math.min(608, window.innerWidth - 32) - 40)
-    caja.innerHTML = cuerpoGraficaHTML(graf.datos[graf.pref.periodo], graf.pref, ancho, graf.sel)
-    $('dn-graf-reintentar')?.addEventListener('click', () => { graf.datos[graf.pref.periodo] = null; cargarGrafica() })
-    caja.querySelectorAll('[data-vista]').forEach(b => b.addEventListener('click', () => {
-      if (graf.pref.vista === b.dataset.vista) return
-      graf.pref.vista = b.dataset.vista; guardarPrefGrafica(graf.pref); pintarGrafica()
-    }))
-    const svg = caja.querySelector('svg')
-    if (svg) {
-      const elegir = e => {
-        const i = Number(e.target?.dataset?.i)
-        if (!Number.isInteger(i) || i === graf.sel) return
-        graf.sel = i; pintarGrafica()
-      }
-      svg.addEventListener('click', elegir)
-      svg.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') elegir(e) })
-    }
-  }
-
-  async function cargarGrafica(refrescar = false) {
-    const periodo = graf.pref.periodo
-    // "Mes" apagado: ya se sabe que faltan días, no hace falta preguntar.
-    const sem = graf.datos.semana
-    if (periodo === 'mes' && sem && !sem.error && Number(sem.dias_de_datos) < DIAS_PARA_MES) {
-      graf.datos.mes = { ...sem }
-      graf.sel = null
+    const todo = res.datos?.grafica
+    if (todo === undefined) { caja.innerHTML = bloqueEsq(250); return }   // todavía no llega
+    if (!todo) { caja.innerHTML = ''; return }   // si falló, no se muestra
+    const cargando = gc.modo === '30' && !gc.d30
+    const g = gc.modo === '30' ? (gc.d30 || todo) : todo
+    caja.innerHTML = graficaClientesHTML(g, gc.modo, (caja.clientWidth || 320) - 42, cargando)
+    caja.querySelectorAll('[data-rango]').forEach(b => b.addEventListener('click', () => {
+      if (gc.modo === b.dataset.rango) return
+      gc.modo = b.dataset.rango
+      if (gc.modo === '30' && !gc.d30) cargar30()
       pintarGrafica()
-      return
-    }
-    const hay = graf.datos[periodo] && !graf.datos[periodo].error
-    pintarGrafica()  // lo que ya había (o el esqueleto) al instante
-    if (hay && !refrescar) return
-    const pedido = ++graf.pedido
+      caja.querySelector(`[data-rango="${gc.modo}"]`)?.focus()
+    }))
+  }
+  async function cargar30() {
+    const pedido = ++gc.pedido30
     try {
-      const { data, error } = await supabase.rpc('grafica_dueno', { p_periodo: periodo })
-      if (!vigente() || pedido !== graf.pedido) return
+      const { data, error } = await supabase.rpc('grafica_clientes', { p_dias: 30 })
+      if (!vigente() || pedido !== gc.pedido30) return
       if (error) throw error
-      graf.datos[periodo] = data || { suficiente: false }
+      gc.d30 = data
     } catch (e) {
-      if (!vigente() || pedido !== graf.pedido || await salirSiInactivo(e)) return
-      console.error('Error al cargar la gráfica:', e)
-      // Si ya había una gráfica, se queda; si no, aviso con "Reintentar".
-      if (!hay) graf.datos[periodo] = { error: sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar la gráfica.' }
+      if (!vigente() || pedido !== gc.pedido30) return
+      console.error('Error al cargar la gráfica de 30 días:', e)
+      gc.modo = 'todo'
     }
-    graf.sel = null
     pintarGrafica()
   }
 
-  function initGrafica() {
-    if (!$('dn-grafica')) return
-    // Al refrescar el resumen, los otros periodos se vuelven a pedir cuando se elijan.
-    graf.datos = { [graf.pref.periodo]: graf.datos[graf.pref.periodo] }
-    $('dn-grafica').querySelectorAll('[data-periodo]').forEach(b => b.addEventListener('click', () => {
-      if (graf.pref.periodo === b.dataset.periodo) return
-      graf.pref.periodo = b.dataset.periodo; guardarPrefGrafica(graf.pref)
-      graf.sel = null; cargarGrafica()
+  function pintarPeriodo() {
+    const caja = $('dn-periodo')
+    if (!caja || !res.datos) return
+    caja.innerHTML = periodoHTML(res.datos, res.periodo)
+    caja.querySelectorAll('[data-periodo]').forEach(b => b.addEventListener('click', () => {
+      if (res.periodo === b.dataset.periodo) return
+      res.periodo = b.dataset.periodo; res.elegido = true
+      pintarPeriodo()
+      caja.querySelector(`[data-periodo="${res.periodo}"]`)?.focus()
     }))
-    cargarGrafica(true)
   }
 
-  let esperaAncho = null
-  const alCambiarAncho = () => {
-    if (!vigente()) { window.removeEventListener('resize', alCambiarAncho); return }
-    clearTimeout(esperaAncho)
-    esperaAncho = setTimeout(() => { if (vigente() && !$('dn-resumen').hidden) pintarGrafica() }, 150)
+  function pintarResumen() {
+    const d = res.datos
+    if (!d) return
+    if (!res.elegido) res.periodo = periodoInicialResumen(d)
+    $('dn-resumen').innerHTML = resumenHTML(d, res.periodo)
+    pintarPeriodo()
+    pintarGrafica()
   }
-  window.addEventListener('resize', alCambiarAncho)
 
+  // Una parte del Resumen que acaba de llegar, sin redibujar lo demás.
+  function pintarRanura(clave) {
+    if (!res.datos) return
+    if (clave === 'grafica') { pintarRanura('principal'); pintarGrafica(); return }
+    const caja = $(`dn-r-${clave}`)
+    if (caja) caja.innerHTML = ranuraResumenHTML(clave, res.datos)
+  }
+
+  // Los botones del Resumen se atienden con UN listener en el contenedor (que
+  // no se redibuja): así no hay que volver a conectarlos en cada pintada.
+  const accionesResumen = {
+    'dn-ir-cajero': () => navigate('cajero'),
+    'dn-ver-logros': () => abrirLogros(marca, logrosPrevios),
+    'dn-ver-actividad': () => abrirActividad(),
+    'dn-invita-ticket': () => {
+      mostrarPestana('ajustes')
+      // Cuando Personalización termine de cargar, el campo del ticket queda a la vista.
+      const enfocar = (intentos = 20) => {
+        const campo = $('prog-ticket')
+        if (campo) { campo.scrollIntoView({ behavior: 'smooth', block: 'center' }); campo.focus({ preventScroll: true }) }
+        else if (intentos > 0 && vigente()) setTimeout(() => enfocar(intentos - 1), 150)
+      }
+      enfocar()
+    },
+    'dn-ver-cerca': () => {
+      const c = res.datos?.cerca || {}
+      const total = Number(c.total) || 0
+      const lista = c.clientes || []
+      abrirListaClientes({
+        titulo: total === 1 ? '1 cliente está a 1 visita de su premio' : `${formatoNumero(total)} clientes están a 1 visita de su premio`,
+        sub: 'Su próxima visita les da el premio',
+        clientes: lista,
+        nota: total > lista.length ? `Se muestran ${formatoNumero(lista.length)} de ${formatoNumero(total)}.` : '',
+      })
+    },
+    'dn-ver-inactivos': () => {
+      const lista = res.datos?.inactivos?.clientes || []
+      abrirListaClientes({
+        titulo: 'No vienen desde hace 21 días',
+        sub: 'Los que vinieron más recientemente, primero.',
+        clientes: lista,
+        detalle: c => `Última visita hace ${formatoNumero(c.dias)} días · ${formatoNumero(c.visitas)} ${Number(c.visitas) === 1 ? 'visita' : 'visitas'}`,
+      })
+    },
+  }
+  const selectorAccionesResumen = Object.keys(accionesResumen).map(id => '#' + id).join(', ')
+  $('dn-resumen').addEventListener('click', e => {
+    const b = e.target.closest(selectorAccionesResumen)
+    if (b) accionesResumen[b.id]()
+  })
+
+  // Logros (pantalla del menú): reusa lo que ya trajo el Resumen si es
+  // reciente y no se celebró nada desde entonces.
+  const logrosPrevios = () => {
+    const d = res.datos
+    if (!d?.logros || !d.inicio || estado.logrosViejos || Date.now() - estado.resumenCargado > 60 * 1000) return null
+    return { lista: d.logros, inicio: d.inicio }
+  }
+
+  // Visitas recientes (Fase 6). Lo ya traído se guarda para repintar al
+  // instante cuando el resumen se vuelve a dibujar.
+  const vis = { lista: null, mostrar: VISITAS_POR_PAGINA, topado: false, aviso: '', avisoHasta: 0, pedido: 0, error: '' }
+
+  function pintarVisitas() {
+    const caja = $('dn-visitas')
+    if (!caja) return
+    if (!vis.lista) {
+      caja.innerHTML = vis.error
+        ? `<h2 class="ow-titulo-sec" id="dn-visitas-titulo">Visitas recientes</h2><p style="margin-bottom:12px">${vis.error}</p><button class="ow-btn secundario" id="dn-visitas-reintentar">Reintentar</button>`
+        : [52, 52, 52].map(bloqueEsq).join('')
+      $('dn-visitas-reintentar')?.addEventListener('click', () => { vis.error = ''; cargarVisitas() })
+      return
+    }
+    const aviso = Date.now() < vis.avisoHasta ? vis.aviso : ''
+    caja.innerHTML = visitasHTML(vis.lista, vis.mostrar, aviso, vis.topado)
+    $('dn-visitas-mas')?.addEventListener('click', () => { vis.mostrar += VISITAS_POR_PAGINA; pintarVisitas() })
+    caja.querySelectorAll('[data-anular]').forEach(b => b.addEventListener('click', () => {
+      const v = vis.lista.find(x => x.id === b.dataset.anular)
+      if (!v || v.anulada) return
+      abrirAnularVisita(v, (anulada, motivo) => {
+        if (!vigente()) return
+        anulada.anulada = true; anulada.motivo = motivo
+        vis.aviso = `Visita anulada. Se le restó el punto a ${anulada.nombre}.`
+        vis.avisoHasta = Date.now() + 8000
+        pintarVisitas()
+        // Cambian "visitas esta semana", la gráfica y la tabla del equipo.
+        cargarResumen()
+      }, async e => {
+        if (!vigente()) return
+        if (await salirSiInactivo(e)) return
+        if (/VISITA_YA_ANULADA|VISITA_NO_ENCONTRADA/.test(e?.message || '')) cargarVisitas()
+      })
+    }))
+  }
+
+  async function cargarVisitas() {
+    if (!$('dn-visitas')) return
+    const pedido = ++vis.pedido
+    pintarVisitas()
+    try {
+      const desde = new Date(Date.now() - DIAS_VISITAS_RECIENTES * 86400000).toISOString()
+      const [v, eq, ses] = await Promise.all([
+        supabase.from('visitas')
+          .select('id, fecha, origen, mesero_id, anulada_en, anulada_motivo, clientes(nombre, telefono)')
+          .eq('negocio_id', negocioId)
+          .gte('fecha', desde)
+          .order('fecha', { ascending: false })
+          .limit(MAX_VISITAS_RECIENTES),
+        pedirEquipo(),
+        supabase.auth.getSession(),
+      ])
+      if (!vigente() || pedido !== vis.pedido) return
+      if (v.error) throw v.error
+      // Si no llegan los nombres del equipo, la lista se muestra igual sin ellos.
+      if (eq.error) console.error('Error al cargar los nombres del equipo:', eq.error)
+      const nombres = new Map((eq.data?.meseros || []).map(m => [m.usuario_id, m.nombre]))
+      const yo = ses.data?.session?.user?.id
+      vis.lista = (v.data || []).map(r => ({
+        id: r.id,
+        nombre: r.clientes?.nombre || 'Cliente',
+        u4: ultimos4(r.clientes?.telefono),
+        momento: formatoMomento(r.fecha),
+        origen: r.origen,
+        mesero: r.mesero_id ? (r.mesero_id === yo ? 'Tú' : nombres.get(r.mesero_id) || 'Mesero') : '',
+        anulada: !!r.anulada_en,
+        motivo: r.anulada_motivo || '',
+      }))
+      vis.topado = (v.data || []).length >= MAX_VISITAS_RECIENTES
+      vis.error = ''
+    } catch (e) {
+      if (!vigente() || pedido !== vis.pedido || await salirSiInactivo(e)) return
+      console.error('Error al cargar las visitas recientes:', e)
+      // Si ya había una lista, se queda; si no, aviso con "Reintentar".
+      if (!vis.lista) vis.error = sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar las visitas.'
+    }
+    pintarVisitas()
+  }
+
+  // supabase.rpc devuelve un "thenable" que vuelve a pedir cada vez que se le
+  // llama .then: se convierte en promesa para pedir UNA sola vez.
+  const rpc = (nombre, args) => Promise.resolve(supabase.rpc(nombre, args))
+
+  // equipo_negocio lo usan la lista de meseros y Visitas recientes: una sola
+  // petición compartida (30 s). nuevo = true después de un cambio en el equipo.
+  let equipoPedido = null, equipoHora = 0
+  function pedirEquipo(nuevo = false) {
+    if (nuevo || !equipoPedido || Date.now() - equipoHora > 30 * 1000) {
+      equipoPedido = rpc('equipo_negocio'); equipoHora = Date.now()
+    }
+    return equipoPedido
+  }
+
+  // Resumen (pestaña Resumen). Las 8 consultas salen juntas; se pinta en cuanto
+  // llegan las obligatorias (resumen_inicio y resumen_periodo mes y semana) y
+  // cada tarjeta opcional aparece cuando llega la suya. Si una opcional falla,
+  // simplemente no aparece (el error queda en consola). En una recarga, lo de
+  // antes se queda en pantalla hasta que llega lo nuevo.
+  const OPCIONALES_RESUMEN = {
+    cerca: ['clientes_cerca_premio', undefined, 'los clientes cerca del premio'],
+    inactivos: ['clientes_inactivos', undefined, 'los clientes que no vienen'],
+    actividad: ['actividad_reciente', { p_limite: 5 }, 'la actividad reciente'],
+    logros: ['logros_lista', undefined, 'los logros'],
+    grafica: ['grafica_clientes', { p_dias: null }, 'la gráfica de clientes'],
+  }
   async function cargarResumen() {
     if (estado.cargandoResumen) return
     estado.cargandoResumen = true
     // Si ya había datos, se quedan en pantalla mientras se actualizan.
     if (!estado.resumenCargado) $('dn-resumen').innerHTML = esqueletoResumen()
+    // Lo de la pestaña Equipo solo si ya se abrió en esta visita.
+    if (estado.equipoAbierto) { cargarSemanaEquipo(); cargarVisitas() }
+    const opcionales = Object.entries(OPCIONALES_RESUMEN).map(([clave, [fn, args, que]]) =>
+      [clave, que, rpc(fn, args).catch(error => ({ error }))])
     try {
-      const [res, mes] = await Promise.all([supabase.rpc('resumen_dueno'), supabase.rpc('resumen_meseros')])
+      const [ini, mes, sem] = await Promise.all([
+        rpc('resumen_inicio'),
+        rpc('resumen_periodo', { p_periodo: 'mes' }),
+        rpc('resumen_periodo', { p_periodo: 'semana' }),
+      ])
       if (!vigente()) return
-      if (res.error) throw res.error
-      if (mes.error) throw mes.error
-      $('dn-resumen').innerHTML = resumenHTML(res.data || {}, res.data?.clientes_registrados > 0 ? mes.data?.meseros : [], graf.pref)
-      estado.resumenCargado = Date.now(); estado.resumenViejo = false
-      initGrafica()
-      $('dn-ver-inactivos')?.addEventListener('click', abrirInactivos)
-      $('dn-ir-cajero')?.addEventListener('click', () => navigate('cajero'))
-      $('dn-invita-ticket')?.addEventListener('click', () => {
-        mostrarPestana('ajustes')
-        // Cuando Personalización termine de cargar, el campo del ticket queda a la vista.
-        const enfocar = (intentos = 20) => {
-          const campo = $('prog-ticket')
-          if (campo) { campo.scrollIntoView({ behavior: 'smooth', block: 'center' }); campo.focus({ preventScroll: true }) }
-          else if (intentos > 0 && vigente()) setTimeout(() => enfocar(intentos - 1), 150)
-        }
-        enfocar()
-      })
+      for (const r of [ini, mes, sem]) if (r.error) throw r.error
+      const antes = res.datos || {}
+      const datos = {
+        inicio: ini.data || {}, mes: mes.data || {}, semana: sem.data || {},
+        cerca: antes.cerca, inactivos: antes.inactivos, actividad: antes.actividad, logros: antes.logros, grafica: antes.grafica,
+      }
+      res.datos = datos
+      // "30 días" se vuelve a pedir solo si está a la vista.
+      gc.d30 = null
+      if (gc.modo === '30') cargar30()
+      pintarResumen()
+      estado.resumenCargado = Date.now(); estado.resumenViejo = false; estado.logrosViejos = false
+      revisarLogros()
+      await Promise.all(opcionales.map(([clave, que, p]) => p.then(r => {
+        if (!vigente() || res.datos !== datos) return
+        if (r.error) console.error(`Error al cargar ${que}:`, r.error)
+        datos[clave] = r.error ? null : r.data
+        pintarRanura(clave)
+      })))
     } catch (e) {
       if (!vigente() || await salirSiInactivo(e)) return
       console.error('Error al cargar el resumen:', e)
@@ -4285,6 +5595,39 @@ export async function initDueno(negocioId) {
     } finally {
       estado.cargandoResumen = false
     }
+  }
+
+  // "Cómo va tu equipo esta semana" (pestaña Equipo): resumen_meseros. Se pide
+  // al abrir Equipo y se refresca junto con el Resumen después.
+  let semanaPedido = 0
+  async function cargarSemanaEquipo() {
+    const pedido = ++semanaPedido
+    const caja = () => $('dn-eq-semana')
+    const fallo = e => {
+      caja().innerHTML = `<h2 class="ow-titulo-sec">Cómo va tu equipo esta semana</h2><p style="margin-bottom:12px">${sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar esta semana.'}</p><button class="ow-btn secundario" id="dn-reintentar-semana">Reintentar</button>`
+      $('dn-reintentar-semana')?.addEventListener('click', () => cargarSemanaEquipo())
+    }
+    try {
+      const meseros = await rpc('resumen_meseros')
+      if (!vigente() || pedido !== semanaPedido || !caja()) return
+      if (meseros.error) throw meseros.error
+      // Sin clientes todavía, la tabla sale vacía (igual que antes).
+      const conClientes = res.datos ? Number(res.datos.inicio?.clientes_registrados) > 0 : true
+      caja().innerHTML = equipoSemanaHTML(conClientes ? meseros.data?.meseros : [])
+    } catch (e) {
+      if (!vigente() || pedido !== semanaPedido || !caja() || await salirSiInactivo(e)) return
+      console.error('Error al cargar el equipo de la semana:', e)
+      fallo(e)
+    }
+  }
+
+  // La pestaña Equipo pide lo suyo la primera vez que se abre.
+  function abrirEquipo() {
+    if (!estado.equipoCargado) cargarEquipo()
+    if (estado.equipoAbierto) return
+    estado.equipoAbierto = true
+    cargarSemanaEquipo()
+    cargarVisitas()
   }
 
   async function cargarAjustes() {
@@ -4299,18 +5642,26 @@ export async function initDueno(negocioId) {
       if (error) throw error
       if (nd?.activo === false) { const { logout } = await import('./auth.js'); logout('negocio'); return }
       estado.nombre = nd.nombre || ''
+      estado.logoRuta = nd.logo_ruta || null
       aplicarColorNegocio(nd.color_principal)
-      $('dn-ajustes').innerHTML = ajustesHTML(nd, negocioId)
+      // Encabezado: nombre y logo al día (lo guardado en el celular puede ser viejo).
+      $('dn-cab-hola').textContent = `Hola, ${estado.nombre}`
+      $('dn-cab-logo').innerHTML = cabLogoHTML(estado.nombre, nd.logo_ruta)
+      $('dn-ajustes').innerHTML = ajustesHTML(nd)
+      // Números del personal y QR abiertos viven en la pestaña Equipo.
+      $('dn-eq-ajustes').innerHTML = equipoAjustesHTML(nd)
       estado.ajustesCargados = true
       // Si cambian ticket, costo o premio, el resumen y la vista previa se ponen al día.
-      const tarjeta = initTarjetaDueno(negocioId, nd)
-      initProgramaDueno(({ meta, premio }) => {
+      const tarjeta = initTarjetaDueno(negocioId, nd, ({ logo_ruta }) => {
+        estado.logoRuta = logo_ruta || null
+        if (vigente()) $('dn-cab-logo').innerHTML = cabLogoHTML(estado.nombre, logo_ruta)
+      })
+      initProgramaDueno(nd, ({ meta, premio }) => {
         estado.resumenViejo = true
         tarjeta.actualizar({ meta_puntos: meta, premio })
       })
       initPersonalDueno(negocioId)
       initAjustesExtra(negocioId, estado.nombre)
-      initContrasenaDueno()
       // 4F: las ayudas de primera vez vuelven a salir en este celular.
       $('ayuda-otra-vez')?.addEventListener('click', () => {
         reiniciarAyudas()
@@ -4319,10 +5670,14 @@ export async function initDueno(negocioId) {
     } catch (e) {
       if (!vigente()) return
       console.error('Error al cargar los ajustes:', e)
-      $('dn-ajustes').innerHTML = errorPanelHTML(sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar tus ajustes.', 'dn-reintentar-ajustes')
+      const texto = sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar tus ajustes.'
+      $('dn-ajustes').innerHTML = errorPanelHTML(texto, 'dn-reintentar-ajustes')
       $('dn-reintentar-ajustes')?.addEventListener('click', cargarAjustes)
+      $('dn-eq-ajustes').innerHTML = errorPanelHTML(texto, 'dn-reintentar-eq-ajustes')
+      $('dn-reintentar-eq-ajustes')?.addEventListener('click', cargarAjustes)
     } finally {
       estado.cargandoAjustes = false
+      avisarMarca()
     }
   }
 
@@ -4332,14 +5687,29 @@ export async function initDueno(negocioId) {
   const alVolver = () => {
     if (!vigente()) { document.removeEventListener('visibilitychange', alVolver); return }
     if (document.visibilityState !== 'visible') return
-    if (!$('dn-resumen').hidden && Date.now() - estado.resumenCargado > 60 * 1000) cargarResumen()
+    // Resumen y Equipo ("Cómo va tu equipo" y Visitas recientes) se refrescan juntos.
+    if ((!$('dn-resumen').hidden || !$('dn-equipo').hidden) && Date.now() - estado.resumenCargado > 60 * 1000) cargarResumen()
   }
   document.addEventListener('visibilitychange', alVolver)
+
+  // La gráfica se vuelve a dibujar al cambiar el ancho (girar el celular).
+  let tGrafica = 0
+  const alCambiarAncho = () => {
+    if (!vigente()) { window.removeEventListener('resize', alCambiarAncho); return }
+    clearTimeout(tGrafica)
+    tGrafica = setTimeout(() => { if (vigente() && !$('dn-resumen').hidden) pintarGrafica() }, 150)
+  }
+  window.addEventListener('resize', alCambiarAncho)
+  alSalirDePantalla(() => {
+    document.removeEventListener('visibilitychange', alVolver)
+    window.removeEventListener('resize', alCambiarAncho)
+    clearTimeout(tGrafica)
+  })
 
   // Personalización se carga desde el principio: trae el color del negocio (el acento).
   cargarResumen()
   cargarAjustes()
-  if (leerPestanaDueno() === 'equipo') cargarEquipo()
+  if (leerPestanaDueno() === 'equipo') abrirEquipo()
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -4404,7 +5774,7 @@ function adminCifrasHTML(negocios) {
   </div>`
 }
 
-function adminListaHTML(negocios) {
+function adminListaHTML(negocios, logros = null) {
   if (negocios.length === 0) {
     return `<div class="ow-tarjeta"><div class="ow-vacio">Aún no hay negocios. Crea el primero: toma menos de un minuto.</div></div>`
   }
@@ -4417,8 +5787,12 @@ function adminListaHTML(negocios) {
         </div>
         <span class="ow-negocio-datos">${n.correo ? `${esc(n.correo)} · ` : ''}Alta: ${esc(formatoFechaAlta(n.creado_en))}</span>
         <span class="ow-negocio-datos">${plural(n.clientes, 'cliente', 'clientes')} · ${plural(n.visitas_7_dias, 'visita', 'visitas')} en 7 días</span>
+        ${(() => { const l = logros?.get(n.id); return l ? `<span class="ow-negocio-datos">Logros: ${formatoNumero(l.cantidad)}${l.ultimo_hito ? ` · último: ${ultimoLogroCorto(l.ultimo_tipo, l.ultimo_hito)}` : ''}</span>` : '' })()}
       </div>
-      <button class="ow-btn secundario chico${n.activo ? ' ow-texto-atencion' : ''}" data-cambiar="${esc(n.id)}">${n.activo ? 'Desactivar' : 'Activar'}</button>
+      <div class="ow-mesero-acciones">
+        <button class="ow-btn secundario chico" data-telefono="${esc(n.id)}">WhatsApp</button>
+        <button class="ow-btn secundario chico${n.activo ? ' ow-texto-atencion' : ''}" data-cambiar="${esc(n.id)}">${n.activo ? 'Desactivar' : 'Activar'}</button>
+      </div>
     </div>`).join('')}
   </div>`
 }
@@ -4428,10 +5802,12 @@ function abrirCrearNegocio(alCrear) {
   h.cuerpo.innerHTML = `
     <div class="ow-campo"><label class="ow-label" for="ad-nombre">Nombre del negocio</label><input id="ad-nombre" class="ow-input" maxlength="60" autocomplete="off" autocapitalize="words" placeholder="Ej: Café La Esquina" /></div>
     <div class="ow-campo"><label class="ow-label" for="ad-correo">Correo del dueño</label><input id="ad-correo" type="email" class="ow-input" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="dueno@correo.com" /><p class="ow-ayuda">Con este correo entrará a Sello. Empieza con meta de 10 visitas y "Un café gratis"; lo cambia en su bienvenida.</p></div>
+    <div class="ow-campo"><label class="ow-label" for="ad-tel-nuevo">WhatsApp del dueño <span class="ow-nota">(opcional)</span></label><input id="ad-tel-nuevo" type="tel" inputmode="tel" class="ow-input" maxlength="20" autocomplete="off" placeholder="Ej: 998 123 4567" /><p class="ow-ayuda">Solo para que el equipo de Sello lo felicite y le avise de novedades.</p></div>
     <button class="ow-btn primario" id="ad-crear">Crear negocio</button>
     <div id="ad-msg"></div>`
   const nombre = h.cuerpo.querySelector('#ad-nombre'); const correo = h.cuerpo.querySelector('#ad-correo')
   const btn = h.cuerpo.querySelector('#ad-crear'); const msg = h.cuerpo.querySelector('#ad-msg')
+  const telefono = h.cuerpo.querySelector('#ad-tel-nuevo')
   setTimeout(() => nombre.focus(), 50)
 
   async function crear() {
@@ -4441,7 +5817,12 @@ function abrirCrearNegocio(alCrear) {
     if (c.length > 254 || !CORREO_VALIDO.test(c)) { msg.innerHTML = avisoError(MENSAJES_ADMIN.CORREO_INVALIDO); correo.focus(); return }
     btn.disabled = true; btn.textContent = 'Creando negocio...'; msg.innerHTML = ''
     try {
-      const datos = await llamarCrearNegocio({ nombre: n, correo: c })
+      const tel = telefono.value.trim()
+      const datos = await llamarCrearNegocio({ nombre: n, correo: c, ...(tel ? { telefono: tel } : {}) })
+      // El negocio se crea aunque el WhatsApp no sea válido: solo se avisa.
+      const avisoTel = datos.telefono_aviso === 'TELEFONO_INVALIDO'
+        ? 'El WhatsApp no era válido y no se guardó; corrígelo en la lista con "WhatsApp". '
+        : datos.telefono_aviso ? 'El WhatsApp no se pudo guardar; agrégalo en la lista con "WhatsApp". ' : ''
       alCrear()
       if (!h.hoja.isConnected) return
       const direccion = `${location.origin}${location.pathname}#/login`
@@ -4449,13 +5830,13 @@ function abrirCrearNegocio(alCrear) {
         titulo: `Listo, ${datos.nombre} ya está en Sello`,
         correo: datos.correo,
         contrasena: datos.contrasena,
-        nota: 'Es una contraseña temporal. Pídele al dueño que la cambie al entrar: Mi panel → Personalización → Tu contraseña.',
+        nota: avisoTel + 'Es una contraseña temporal. Pídele al dueño que la cambie al entrar: Mi panel → menú ☰ → Cambiar contraseña.',
         mensaje: [
           `Hola, ya está lista la cuenta de ${datos.nombre} en Sello.`,
           `1. Abre: ${direccion}`,
           `2. Correo: ${datos.correo}`,
           `3. Contraseña temporal: ${datos.contrasena}`,
-          'Al entrar, cámbiala en Mi panel → Personalización → Tu contraseña.',
+          'Al entrar, cámbiala en Mi panel → menú ☰ → Cambiar contraseña.',
         ].join('\n'),
       })
     } catch (e) {
@@ -4465,8 +5846,82 @@ function abrirCrearNegocio(alCrear) {
     }
   }
   nombre.addEventListener('keydown', e => { if (e.key === 'Enter') correo.focus() })
-  correo.addEventListener('keydown', e => { if (e.key === 'Enter') crear() })
+  correo.addEventListener('keydown', e => { if (e.key === 'Enter') telefono.focus() })
+  telefono.addEventListener('keydown', e => { if (e.key === 'Enter') crear() })
   btn.addEventListener('click', crear)
+}
+
+// ── Logros en el admin (admin_logros, fase 9) ──
+// Solo conteos y el WhatsApp del DUEÑO (para felicitarlo); nunca datos de clientes.
+const ultimoLogroCorto = (tipo, hito) => tipo === 'regresos'
+  ? (Number(hito) === 1 ? 'primer regreso' : `${formatoNumero(hito)} regresos`)
+  : `${formatoNumero(hito)} clientes`
+const textoLogroAdmin = (tipo, hito) => tipo === 'regresos'
+  ? (Number(hito) === 1 ? 'tuvo su primer cliente que regresó' : `llegó a ${formatoNumero(hito)} clientes que regresaron`)
+  : `llegó a ${formatoNumero(hito)} clientes`
+function felicitacionWhatsApp(negocio, tipo, hito) {
+  const logro = tipo === 'regresos'
+    ? (Number(hito) === 1 ? `el primer cliente de ${negocio} ya regresó` : `${formatoNumero(hito)} clientes ya regresaron a ${negocio}`)
+    : `${negocio} ya tiene ${formatoNumero(hito)} clientes en su programa`
+  return `¡Hola! Te escribimos de Sello. ¡Felicidades: ${logro}! Gracias por confiar en nosotros.`
+}
+const enlaceWhatsApp = (tel, texto) => `https://wa.me/${String(tel).replace(/\D/g, '')}?text=${encodeURIComponent(texto)}`
+// "hoy", "ayer", "hace 3 días"; con más de 7 días, fecha corta.
+function cuandoDia(iso, ahora = new Date()) {
+  const f = new Date(iso)
+  if (isNaN(f)) return ''
+  const dias = Math.round((diaEnZona(ahora) - diaEnZona(f)) / 86400000)
+  if (dias <= 0) return 'hoy'
+  if (dias === 1) return 'ayer'
+  if (dias <= 7) return `hace ${dias} días`
+  return tiempoRelativo(iso, ahora)
+}
+
+function logrosRecientesHTML(recientes) {
+  const filas = (recientes || []).filter(r => r.principal === true)
+  if (filas.length === 0) return '<div class="ow-tarjeta"><div class="ow-vacio">Todavía no hay logros.</div></div>'
+  return `<div class="ow-tarjeta">${filas.map(r => `
+    <div class="ow-mesero-fila">
+      <div class="ow-negocio-info">
+        <span><span class="ow-persona">${esc(r.negocio)}</span> ${textoLogroAdmin(r.tipo, r.hito)} · ${esc(cuandoDia(r.celebrado_en))}</span>
+        ${r.telefono_dueno ? `<span class="ow-negocio-datos">${esc(telefonoDuenoLegible(r.telefono_dueno))} · <button type="button" class="ow-enlace" style="min-height:0;padding:0;font-size:13px" data-telefono="${esc(r.negocio_id)}">Corregir</button></span>` : ''}
+      </div>
+      ${r.telefono_dueno
+        ? `<a class="ow-btn primario chico" style="text-decoration:none" href="${esc(enlaceWhatsApp(r.telefono_dueno, felicitacionWhatsApp(r.negocio, r.tipo, r.hito)))}" target="_blank" rel="noopener noreferrer" aria-label="Felicitar a ${esc(r.negocio)} por WhatsApp">WhatsApp</a>`
+        : `<button type="button" class="ow-btn secundario chico" data-telefono="${esc(r.negocio_id)}">Agregar número</button>`}
+    </div>`).join('')}
+  </div>`
+}
+
+// Corregir (o agregar) el WhatsApp del dueño. Vacío = quitarlo.
+function abrirTelefonoDueno(negocio, telActual, alGuardar) {
+  const h = abrirHojaDueno({ titulo: `WhatsApp del dueño de ${esc(negocio.nombre)}`, sub: 'Solo lo usa el equipo de Sello. Sus clientes no lo ven.' })
+  h.cuerpo.innerHTML = `
+    <div class="ow-campo"><label class="ow-label" for="ad-tel">Número de WhatsApp</label>
+      <input id="ad-tel" type="tel" inputmode="tel" class="ow-input" maxlength="20" autocomplete="off" value="${esc(telefonoDuenoLegible(telActual))}" placeholder="Ej: 998 123 4567" />
+      <p class="ow-ayuda">10 dígitos si es de México; si es de otro país, empieza con + y la lada. Déjalo vacío para quitarlo.</p></div>
+    <button class="ow-btn primario" id="ad-tel-guardar">Guardar</button>
+    <div id="ad-tel-msg"></div>`
+  const campo = h.cuerpo.querySelector('#ad-tel'); const btn = h.cuerpo.querySelector('#ad-tel-guardar'); const msg = h.cuerpo.querySelector('#ad-tel-msg')
+  setTimeout(() => campo.focus(), 50)
+  async function guardar() {
+    if (btn.disabled) return
+    btn.disabled = true; btn.textContent = 'Guardando...'; msg.innerHTML = ''
+    try {
+      const { error } = await supabase.rpc('admin_guardar_telefono_dueno', { p_negocio_id: negocio.id, p_telefono: campo.value.trim() })
+      if (error) throw error
+      h.cerrar()
+      alGuardar()
+    } catch (e) {
+      console.error('Error al guardar el WhatsApp del dueño:', e?.message)
+      const m = e?.message || ''
+      msg.innerHTML = avisoError(m.includes('TELEFONO_INVALIDO') ? MENSAJE_TELEFONO_DUENO
+        : m.includes('NEGOCIO_NO_EXISTE') ? MENSAJES_ADMIN.NEGOCIO_NO_ENCONTRADO : mensajeAdmin(e))
+      btn.disabled = false; btn.textContent = 'Guardar'
+    }
+  }
+  btn.addEventListener('click', guardar)
+  campo.addEventListener('keydown', e => { if (e.key === 'Enter') guardar() })
 }
 
 function abrirCambiarActivo(negocio, alCambiar) {
@@ -4509,6 +5964,11 @@ export function paginaAdmin() {
       <header class="ow-cab">${logoSelloHTML(22)}<span class="ow-cab-negocio">Administración</span></header>
       <main class="ow-cuerpo">
         <div id="ad-cifras">${bloqueEsq(88)}</div>
+        <section class="ow-seccion" aria-labelledby="sec-logros-recientes">
+          <h2 class="ow-seccion-titulo" id="sec-logros-recientes">Logros recientes</h2>
+          <p class="ow-seccion-sub">Felicita al dueño por WhatsApp.</p>
+          <div id="ad-logros">${bloqueEsq(120)}</div>
+        </section>
         <section class="ow-seccion" aria-labelledby="sec-negocios">
           <div class="ow-admin-cab">
             <div>
@@ -4548,12 +6008,31 @@ export function initAdmin() {
     if (cargando) return
     cargando = true
     try {
-      const { data, error } = await supabase.rpc('admin_negocios')
+      const [neg, lg] = await Promise.all([supabase.rpc('admin_negocios'), supabase.rpc('admin_logros')])
       if (!vigente()) return
-      if (error) throw error
-      negocios = Array.isArray(data?.negocios) ? data.negocios : []
+      if (neg.error) throw neg.error
+      negocios = Array.isArray(neg.data?.negocios) ? neg.data.negocios : []
+      // Logros: si fallan, la lista de negocios se muestra igual.
+      let porNegocio = null
+      let recientes = []
+      if (lg.error) {
+        console.error('Error al cargar los logros:', lg.error?.message)
+        $('ad-logros').innerHTML = errorPanelHTML(sinInternet(lg.error) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar los logros.', 'ad-reintentar-logros')
+        $('ad-reintentar-logros')?.addEventListener('click', cargar)
+      } else {
+        recientes = Array.isArray(lg.data?.recientes) ? lg.data.recientes : []
+        porNegocio = new Map((lg.data?.negocios || []).map(x => [x.negocio_id, x]))
+        $('ad-logros').innerHTML = logrosRecientesHTML(recientes)
+      }
+      // El número del dueño solo se conoce si ya aparece en un logro.
+      const telefonos = new Map(recientes.filter(r => r.telefono_dueno).map(r => [r.negocio_id, r.telefono_dueno]))
+      const abrirTel = id => {
+        const n = negocios.find(x => x.id === id) || { id, nombre: recientes.find(r => r.negocio_id === id)?.negocio || 'este negocio' }
+        abrirTelefonoDueno(n, telefonos.get(id) || '', cargar)
+      }
       $('ad-cifras').innerHTML = adminCifrasHTML(negocios)
-      $('ad-lista').innerHTML = adminListaHTML(negocios)
+      $('ad-lista').innerHTML = adminListaHTML(negocios, porNegocio)
+      document.querySelectorAll('#ad-lista [data-telefono], #ad-logros [data-telefono]').forEach(b => b.addEventListener('click', () => abrirTel(b.dataset.telefono)))
       cargado = true
       $('ad-lista').querySelectorAll('[data-cambiar]').forEach(b => b.addEventListener('click', () => {
         const n = negocios.find(x => x.id === b.dataset.cambiar)
@@ -4570,6 +6049,7 @@ export function initAdmin() {
       }
       if (!cargado) {
         $('ad-cifras').innerHTML = ''
+        $('ad-logros').innerHTML = ''
         $('ad-lista').innerHTML = errorPanelHTML(sinInternet(e) ? 'Sin conexión. Revisa tu internet.' : 'No pudimos cargar los negocios.', 'ad-reintentar')
         $('ad-reintentar')?.addEventListener('click', cargar)
       }
@@ -4580,3 +6060,6 @@ export function initAdmin() {
 
   cargar()
 }
+
+// Para src/logros-media.js (se carga aparte, solo al celebrar un logro).
+export { DS, esColorHex, textoSobreColor, urlLogo, textoImagenLogro, formatoNumero, lienzoABlob, FRASE_IMAGEN_LOGRO, inyectarEstilosDueno }

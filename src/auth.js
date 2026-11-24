@@ -30,6 +30,13 @@ function borrar(clave) {
   try { localStorage.removeItem(clave) } catch (e) {}
 }
 
+// id del usuario con sesión según la copia local del perfil, sin ir al
+// servidor. Sirve para guardar marcas por persona en este celular (ayudas de
+// primera vez, bienvenida). null si no hay copia (sin sesión o admin).
+export function getUsuarioIdLocal() {
+  return leerJSON(CLAVE_PERFIL)?.user_id || null
+}
+
 function guardarPerfilLocal(p) {
   guardarJSON(CLAVE_PERFIL, {
     user_id: p.user_id, negocio_id: p.negocio_id, role: p.role,

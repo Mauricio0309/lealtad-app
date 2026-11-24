@@ -1,7 +1,9 @@
 // Subir esta versión en cada cambio importante: al activarse, el SW nuevo
 // borra los cachés viejos y la app se recarga sola (ver main.js).
-const CACHE_NAME = 'sello-v15'
+const CACHE_NAME = 'sello-v30'
 
+// Solo lo mínimo para abrir sin internet. Lo demás (JS por partes, fuentes
+// Pacifico y Bricolage) se guarda la primera vez que se usa (ver fetch).
 const STATIC_ASSETS = [
   '/',
   '/index.html',
